@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Loader2, Send, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Loader2, Search, Send, X } from 'lucide-react'
 import type { LinkItem } from '../types'
 import { callAI } from '../utils/ai'
 import { runMistralOcr, type OcrStage } from '../utils/mistralOcrService'
@@ -49,6 +49,14 @@ ${text}${truncNote}
 ---`
 }
 
+// ─── Search types ─────────────────────────────────────────────────────────────
+
+interface SearchResult {
+  snippet: string    // ~120-char window around the match
+  matchText: string  // exact matched substring (preserves original casing)
+  offset: number     // char position in full text (for stable ordering)
+}
+
 // ─── Main modal ───────────────────────────────────────────────────────────────
 
 export function FileViewerModal({ item, courseId, accentColor, onClose }: Props) {
@@ -57,6 +65,15 @@ export function FileViewerModal({ item, courseId, accentColor, onClose }: Props)
   const [leftWidth, setLeftWidth] = useState(70)
   const containerRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
+
+  // Search state
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [searchIdx, setSearchIdx] = useState(0)
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchMsg, setSearchMsg] = useState<string | null>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Convert dataUrl → blob URL for performant iframe rendering
   useEffect(() => {
@@ -77,12 +94,58 @@ export function FileViewerModal({ item, courseId, accentColor, onClose }: Props)
     }
   }, [item.dataUrl])
 
-  // Close on Escape
+  // Close on Escape (or close search bar first if open)
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (searchOpen) { setSearchOpen(false); setSearchResults([]); setSearchMsg(null) }
+        else onClose()
+      }
+    }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+  }, [onClose, searchOpen])
+
+  // Focus search input when opened
+  useEffect(() => {
+    if (searchOpen) setTimeout(() => searchInputRef.current?.focus(), 50)
+  }, [searchOpen])
+
+  const performSearch = useCallback(async (query: string) => {
+    if (!query.trim()) { setSearchResults([]); setSearchMsg(null); return }
+    setSearchLoading(true); setSearchMsg(null)
+
+    let text: string | null = null
+
+    if (item.fileType?.startsWith('text/') || item.fileType?.includes('json') || item.fileType?.includes('xml')) {
+      try { text = atob(item.dataUrl?.split(',')[1] ?? '') } catch { /* ignore */ }
+    } else {
+      text = await loadFile(ocrCacheKey(courseId, item.id))
+    }
+
+    if (!text) {
+      setSearchMsg('No scan available — ask the AI a question first to enable search.')
+      setSearchLoading(false)
+      return
+    }
+
+    const lower = text.toLowerCase()
+    const qLower = query.toLowerCase()
+    const results: SearchResult[] = []
+    let pos = 0
+    while ((pos = lower.indexOf(qLower, pos)) !== -1) {
+      const s = Math.max(0, pos - 60)
+      const e = Math.min(text.length, pos + query.length + 60)
+      results.push({ snippet: text.slice(s, e), matchText: text.slice(pos, pos + query.length), offset: pos })
+      pos += query.length
+      if (results.length >= 200) break
+    }
+
+    setSearchResults(results)
+    setSearchIdx(0)
+    setSearchLoading(false)
+    if (results.length === 0) setSearchMsg(`No matches for "${query}"`)
+  }, [item, courseId])
 
   // Drag divider handlers
   const onDividerMouseDown = () => { isDragging.current = true }
@@ -111,7 +174,7 @@ export function FileViewerModal({ item, courseId, accentColor, onClose }: Props)
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
-        borderBottom: '1px solid var(--border)', flexShrink: 0,
+        borderBottom: searchOpen ? 'none' : '1px solid var(--border)', flexShrink: 0,
       }}>
         <button onClick={onClose} style={{
           background: 'none', border: 'none', cursor: 'pointer',
@@ -130,7 +193,98 @@ export function FileViewerModal({ item, courseId, accentColor, onClose }: Props)
             {(item.fileSize / (1024 * 1024)).toFixed(1)} MB
           </span>
         )}
+        <button
+          onClick={() => {
+            setSearchOpen(o => !o)
+            if (searchOpen) { setSearchResults([]); setSearchQuery(''); setSearchMsg(null) }
+          }}
+          title="Search in document (Ctrl+F)"
+          style={{
+            background: searchOpen ? accentColor : 'none', border: 'none', cursor: 'pointer',
+            color: searchOpen ? '#fff' : 'var(--text-secondary)',
+            display: 'flex', alignItems: 'center', gap: 4, fontSize: 12,
+            padding: '4px 8px', borderRadius: 6,
+          }}
+        >
+          <Search size={14} />
+        </button>
       </div>
+
+      {/* Search bar */}
+      {searchOpen && (
+        <div style={{
+          padding: '8px 14px 10px', borderBottom: '1px solid var(--border)', flexShrink: 0,
+          background: 'var(--bg-primary)',
+        }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              ref={searchInputRef}
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') void performSearch(searchQuery) }}
+              placeholder="Search in document…"
+              style={{
+                flex: 1, fontSize: 13, padding: '6px 10px', borderRadius: 8,
+                border: '1px solid var(--border)', background: 'var(--bg-input)',
+                color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none',
+              }}
+            />
+            <button
+              onClick={() => void performSearch(searchQuery)}
+              disabled={!searchQuery.trim() || searchLoading}
+              style={{
+                padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: !searchQuery.trim() || searchLoading ? 'var(--border)' : accentColor,
+                color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4,
+              }}
+            >
+              {searchLoading ? <Loader2 size={13} className="spin" /> : 'Search'}
+            </button>
+            {searchResults.length > 0 && (
+              <>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                  {searchIdx + 1} of {searchResults.length}
+                </span>
+                <button onClick={() => setSearchIdx(i => Math.max(0, i - 1))} disabled={searchIdx === 0}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', padding: 2 }}>
+                  <ChevronUp size={15} />
+                </button>
+                <button onClick={() => setSearchIdx(i => Math.min(searchResults.length - 1, i + 1))} disabled={searchIdx === searchResults.length - 1}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', padding: 2 }}>
+                  <ChevronDown size={15} />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Results strip */}
+          {searchMsg && (
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-dim)' }}>{searchMsg}</div>
+          )}
+          {searchResults.length > 0 && (
+            <div style={{
+              marginTop: 8, maxHeight: 160, overflowY: 'auto',
+              display: 'flex', flexDirection: 'column', gap: 4,
+            }}>
+              {searchResults.map((r, i) => (
+                <div
+                  key={r.offset}
+                  onClick={() => setSearchIdx(i)}
+                  style={{
+                    padding: '5px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 12,
+                    fontFamily: 'DM Mono, monospace', lineHeight: 1.5,
+                    background: i === searchIdx ? `${accentColor}22` : 'var(--bg-card)',
+                    border: i === searchIdx ? `1px solid ${accentColor}66` : '1px solid transparent',
+                    color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  }}
+                >
+                  <SnippetText snippet={r.snippet} matchText={r.matchText} accentColor={accentColor} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Body: resizable split */}
       <div ref={containerRef} style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -215,6 +369,20 @@ function CenteredMsg({ children }: { children: ReactNode }) {
     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: 13 }}>
       {children}
     </div>
+  )
+}
+
+function SnippetText({ snippet, matchText, accentColor }: { snippet: string; matchText: string; accentColor: string }) {
+  const idx = snippet.toLowerCase().indexOf(matchText.toLowerCase())
+  if (idx === -1) return <span>{snippet}</span>
+  return (
+    <>
+      <span style={{ color: 'var(--text-dim)' }}>{snippet.slice(0, idx)}</span>
+      <span style={{ background: `${accentColor}55`, borderRadius: 2, padding: '0 1px', color: 'var(--text-primary)', fontWeight: 700 }}>
+        {snippet.slice(idx, idx + matchText.length)}
+      </span>
+      <span style={{ color: 'var(--text-dim)' }}>{snippet.slice(idx + matchText.length)}</span>
+    </>
   )
 }
 
