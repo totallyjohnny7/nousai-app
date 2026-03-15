@@ -5,7 +5,7 @@ import {
   Key, Brain, Eye, EyeOff, Palette, BookOpen, Volume2, VolumeX,
   Globe, Zap, Bug, Lightbulb, LogOut, LogIn, UserPlus, Check,
   AlertTriangle, Settings, Shield, Clock, Minus, Plus, ExternalLink, FolderPlus,
-  Bell, Mic, Sun, Clipboard, HardDrive, FileText, Wifi
+  Bell, Mic, Sun, Clipboard, HardDrive, FileText, Wifi, Headphones
 } from 'lucide-react'
 import { useStore, normalizeData, forceWriteToIDB, clearPWACache, saveBackupHandle, loadBackupHandle, clearBackupHandle } from '../store'
 import { checkForUpdates, getAppVersion, getStoredUpdate, dismissUpdate, getPlatform } from '../utils/updater'
@@ -26,7 +26,7 @@ import { getSpotifyAuthUrl, isSpotifyConnected, disconnectSpotify } from '../uti
 type SectionId = 'account' | 'ai' | 'extensions' | 'study' | 'display' | 'permissions' | 'data' | 'howto' | 'appinfo' | 'spotify'
 
 // ─── AI Provider Types ─────────────────────────────────────
-type AIProvider = 'none' | 'openai' | 'anthropic' | 'openrouter' | 'google' | 'groq' | 'custom'
+type AIProvider = 'none' | 'openai' | 'anthropic' | 'openrouter' | 'google' | 'groq' | 'mistral' | 'custom'
 
 const PROVIDER_INFO: Record<string, { label: string; color: string; url: string; keyPrefix: string }> = {
   openai: { label: 'OpenAI', color: '#10a37f', url: 'https://platform.openai.com/api-keys', keyPrefix: 'sk-' },
@@ -34,7 +34,42 @@ const PROVIDER_INFO: Record<string, { label: string; color: string; url: string;
   openrouter: { label: 'OpenRouter', color: '#6366f1', url: 'https://openrouter.ai/keys', keyPrefix: 'sk-or-' },
   google: { label: 'Google AI', color: '#4285f4', url: 'https://aistudio.google.com/apikey', keyPrefix: 'AI' },
   groq: { label: 'Groq', color: '#f55036', url: 'https://console.groq.com/keys', keyPrefix: 'gsk_' },
+  mistral: { label: 'Mistral', color: '#f97316', url: 'https://console.mistral.ai/api-keys', keyPrefix: '' },
   custom: { label: 'Custom', color: '#888', url: '', keyPrefix: '' },
+}
+
+// ─── Feature Slot Types ─────────────────────────────────────
+type AIFeatureSlot = 'chat' | 'generation' | 'analysis' | 'ocr' | 'japanese' | 'physics'
+
+const SLOT_INFO: Record<AIFeatureSlot, { label: string; description: string }> = {
+  chat:       { label: 'Chat & Tutor',  description: 'AI Tutor, chat, Feynman mode, quiz chat' },
+  generation: { label: 'Generation',    description: 'Flashcard, quiz, course & schedule generation' },
+  analysis:   { label: 'Analysis',      description: 'Fact-check, TLDR, re-explain, formula analysis' },
+  ocr:        { label: 'PDF & Image OCR', description: 'Document / image text extraction (requires Mistral key for OCR)' },
+  japanese:   { label: 'Japanese',      description: 'Japanese study tools, JP quiz & flashcards' },
+  physics:    { label: 'Physics',       description: 'Physics lab simulation code generation' },
+}
+
+interface SlotConfig { provider: string; apiKey: string; model: string }
+
+function getSlotConfig(slot: AIFeatureSlot): SlotConfig {
+  return {
+    provider: localStorage.getItem(`nousai-ai-slot-${slot}-provider`) || '',
+    apiKey:   localStorage.getItem(`nousai-ai-slot-${slot}-apikey`) || '',
+    model:    localStorage.getItem(`nousai-ai-slot-${slot}-model`) || '',
+  }
+}
+
+function saveSlotConfig(slot: AIFeatureSlot, cfg: SlotConfig) {
+  if (!cfg.provider) {
+    localStorage.removeItem(`nousai-ai-slot-${slot}-provider`)
+    localStorage.removeItem(`nousai-ai-slot-${slot}-apikey`)
+    localStorage.removeItem(`nousai-ai-slot-${slot}-model`)
+  } else {
+    localStorage.setItem(`nousai-ai-slot-${slot}-provider`, cfg.provider)
+    localStorage.setItem(`nousai-ai-slot-${slot}-apikey`, cfg.apiKey)
+    localStorage.setItem(`nousai-ai-slot-${slot}-model`, cfg.model)
+  }
 }
 
 const OPENAI_MODELS = [
@@ -81,6 +116,14 @@ const GOOGLE_MODELS = [
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
+]
+
+const MISTRAL_MODELS = [
+  { value: 'mistral-large-latest', label: 'Mistral Large (Latest)' },
+  { value: 'mistral-medium-latest', label: 'Mistral Medium' },
+  { value: 'mistral-small-latest', label: 'Mistral Small' },
+  { value: 'mistral-nemo', label: 'Mistral Nemo' },
+  { value: 'codestral-latest', label: 'Codestral (Code)' },
 ]
 
 const GROQ_MODELS = [
@@ -471,6 +514,11 @@ export default function SettingsPage() {
   const [lastSync, setLastSync] = useState<string | null>(localStorage.getItem('nousai-last-sync'))
   const [autoSync, setAutoSync] = useState(localStorage.getItem('nousai-auto-sync') === 'true')
 
+  // Omi device
+  const [omiApiKey, setOmiApiKey] = useState(localStorage.getItem('nousai-omi-api-key') || '')
+  const [omiKeyInput, setOmiKeyInput] = useState('')
+  const [omiTesting, setOmiTesting] = useState(false)
+
   // Auto-backup state
   const [autoBackup, setAutoBackup] = useState(localStorage.getItem('nousai-auto-backup') === 'true')
   const [backupFolder, setBackupFolder] = useState<string | null>(null)
@@ -543,6 +591,35 @@ export default function SettingsPage() {
   const [showApiKey, setShowApiKey] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionResult, setConnectionResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  // Feature slot overrides state
+  const SLOTS: AIFeatureSlot[] = ['chat', 'generation', 'analysis', 'ocr', 'japanese', 'physics']
+  const [slotConfigs, setSlotConfigs] = useState<Record<AIFeatureSlot, SlotConfig>>(() =>
+    Object.fromEntries(SLOTS.map(s => [s, getSlotConfig(s)])) as Record<AIFeatureSlot, SlotConfig>
+  )
+  const [expandedSlot, setExpandedSlot] = useState<AIFeatureSlot | null>(null)
+
+  function updateSlotConfig(slot: AIFeatureSlot, patch: Partial<SlotConfig>) {
+    const next = { ...slotConfigs[slot], ...patch }
+    if (patch.provider && patch.provider !== slotConfigs[slot].provider) {
+      // Auto-set default model when changing provider
+      if (patch.provider === 'openai') next.model = 'gpt-4.1'
+      else if (patch.provider === 'anthropic') next.model = 'claude-sonnet-4-20250514'
+      else if (patch.provider === 'openrouter') next.model = 'anthropic/claude-sonnet-4'
+      else if (patch.provider === 'google') next.model = 'gemini-2.5-flash'
+      else if (patch.provider === 'groq') next.model = 'llama-3.3-70b-versatile'
+      else if (patch.provider === 'mistral') next.model = slot === 'ocr' ? 'mistral-large-latest' : 'mistral-large-latest'
+      else next.model = ''
+    }
+    setSlotConfigs(prev => ({ ...prev, [slot]: next }))
+    saveSlotConfig(slot, next)
+  }
+
+  function clearSlotConfig(slot: AIFeatureSlot) {
+    const cleared: SlotConfig = { provider: '', apiKey: '', model: '' }
+    setSlotConfigs(prev => ({ ...prev, [slot]: cleared }))
+    saveSlotConfig(slot, cleared)
+  }
 
   // Study prefs state
   const [studyPrefs, setStudyPrefsState] = useState(getStudyPrefs)
@@ -749,14 +826,18 @@ export default function SettingsPage() {
       const cloudData = await syncFromCloud(authUser.uid)
       console.log('[SYNC] syncFromCloud returned:', cloudData ? 'data found' : 'null')
       if (cloudData) {
-        // Conflict detection: warn if local data was modified after last sync
+        // Conflict detection: warn before overwriting local data
         const localModifiedAt = localStorage.getItem('nousai-data-modified-at')
         const lastSyncAt = localStorage.getItem('nousai-last-sync')
-        if (localModifiedAt && lastSyncAt && localModifiedAt > lastSyncAt) {
+        const localCourses = data?.pluginData?.coachData?.courses || []
+        const isFirstSync = !lastSyncAt
+        const hasUnsyncedChanges = !!(localModifiedAt && lastSyncAt && localModifiedAt > lastSyncAt)
+        if ((isFirstSync && localCourses.length > 0) || hasUnsyncedChanges) {
           const proceed = confirm(
-            'Your local data has been modified since the last sync. ' +
-            'Loading cloud data will overwrite these local changes.\n\n' +
-            'Continue?'
+            isFirstSync
+              ? `Loading from cloud will replace your local data (${localCourses.length} course${localCourses.length !== 1 ? 's' : ''}).\n\nContinue?`
+              : 'Your local data has been modified since the last sync. ' +
+                'Loading cloud data will overwrite these local changes.\n\nContinue?'
           )
           if (!proceed) {
             showToast('Cloud sync cancelled.')
@@ -766,7 +847,6 @@ export default function SettingsPage() {
 
         // Safety check: warn if cloud data has no courses but local data does
         const normalized = normalizeData(cloudData)
-        const localCourses = data?.pluginData?.coachData?.courses || []
         const cloudCourses = normalized.pluginData?.coachData?.courses || []
         if (localCourses.length > 0 && cloudCourses.length === 0) {
           const proceed = confirm(
@@ -884,6 +964,7 @@ export default function SettingsPage() {
       else if (patch.provider === 'openrouter') { next.model = 'anthropic/claude-sonnet-4'; next.baseUrl = 'https://openrouter.ai/api/v1' }
       else if (patch.provider === 'google') { next.model = 'gemini-2.5-flash-preview-05-20'; next.baseUrl = '' }
       else if (patch.provider === 'groq') { next.model = 'llama-3.3-70b-versatile'; next.baseUrl = 'https://api.groq.com/openai/v1' }
+      else if (patch.provider === 'mistral') { next.model = 'mistral-large-latest'; next.baseUrl = '' }
       else if (patch.provider === 'none') { next.model = ''; next.apiKey = ''; next.baseUrl = '' }
       else next.model = ''
     }
@@ -1187,7 +1268,15 @@ export default function SettingsPage() {
                   </div>
                   <button
                     className="btn btn-primary btn-sm"
-                    onClick={() => { updatePluginData({ userProfile: profileDraft }); showToast('Profile saved'); }}
+                    onClick={() => {
+                      const trimmed = {
+                        ...profileDraft,
+                        customDisplayName: profileDraft.customDisplayName?.trim() || undefined,
+                        bio: profileDraft.bio?.trim() || undefined,
+                      };
+                      updatePluginData({ userProfile: trimmed });
+                      showToast('Profile saved');
+                    }}
                   >Save Profile</button>
                 </div>
 
@@ -1540,8 +1629,8 @@ export default function SettingsPage() {
                   </button>
                 ))}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: 6 }}>
-                {(['google', 'groq', 'custom'] as AIProvider[]).map(p => (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginTop: 6 }}>
+                {(['google', 'groq', 'mistral', 'custom'] as AIProvider[]).map(p => (
                   <button
                     key={p}
                     style={{
@@ -1580,6 +1669,10 @@ export default function SettingsPage() {
                     </a>
                   </div>
                 )}
+
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>
+                  Your queries are sent directly to {PROVIDER_INFO[aiConfig.provider]?.label || 'your AI provider'}. NousAI does not store or log your conversations.
+                </div>
 
                 {/* API Key */}
                 <div style={fieldGroupStyle}>
@@ -1682,6 +1775,16 @@ export default function SettingsPage() {
                     <label style={labelStyle}>Model</label>
                     <select style={selectStyle} value={aiConfig.model} onChange={e => updateAiConfig({ model: e.target.value })}>
                       {GROQ_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {/* Model selector - Mistral */}
+                {aiConfig.provider === 'mistral' && (
+                  <div style={fieldGroupStyle}>
+                    <label style={labelStyle}>Model</label>
+                    <select style={selectStyle} value={aiConfig.model} onChange={e => updateAiConfig({ model: e.target.value })}>
+                      {MISTRAL_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                     </select>
                   </div>
                 )}
@@ -1823,6 +1926,136 @@ export default function SettingsPage() {
                   }}>{f}</span>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ════════════════════════════════════════════════════
+           SECTION 2b: Feature AI Slot Overrides
+         ════════════════════════════════════════════════════ */}
+      <div style={cardStyle}>
+        <SectionHeader
+          id="ai"
+          icon={<Zap size={18} />}
+          title="AI Providers — Feature Overrides"
+          subtitle="Assign different AI providers to specific features (optional)"
+        />
+        {expanded.ai && (
+          <div style={cardBodyStyle}>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+              Each feature can use a different AI provider and model. Leave a feature on "Using Default" to inherit from the Default configuration above.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
+              {SLOTS.map(slot => {
+                const cfg = slotConfigs[slot]
+                const info = SLOT_INFO[slot]
+                const isConfigured = !!cfg.provider
+                const isOpen = expandedSlot === slot
+                return (
+                  <div key={slot} style={{
+                    border: `1px solid ${isConfigured ? 'var(--accent, #F5A623)' : 'var(--border)'}`,
+                    borderRadius: 'var(--radius-sm)',
+                    overflow: 'hidden',
+                    opacity: 1,
+                  }}>
+                    {/* Tile header */}
+                    <button
+                      onClick={() => setExpandedSlot(isOpen ? null : slot)}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 12px', background: 'var(--bg-primary)', border: 'none',
+                        cursor: 'pointer', color: 'var(--text-primary)', fontFamily: 'inherit',
+                      }}
+                    >
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{info.label}</div>
+                        {isConfigured
+                          ? <div style={{ fontSize: 11, color: PROVIDER_INFO[cfg.provider]?.color || 'var(--accent)', marginTop: 1 }}>
+                              {PROVIDER_INFO[cfg.provider]?.label || cfg.provider} {cfg.model ? `— ${cfg.model}` : ''}
+                            </div>
+                          : <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Using Default</div>
+                        }
+                      </div>
+                      {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </button>
+
+                    {/* Tile body */}
+                    {isOpen && (
+                      <div style={{ padding: '0 12px 12px', borderTop: '1px solid var(--border)' }}>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '10px 0 10px' }}>{info.description}</p>
+
+                        {/* Provider */}
+                        <div style={{ ...fieldGroupStyle }}>
+                          <label style={labelStyle}>Provider</label>
+                          <select
+                            style={selectStyle}
+                            value={cfg.provider || ''}
+                            onChange={e => updateSlotConfig(slot, { provider: e.target.value })}
+                          >
+                            <option value="">Using Default</option>
+                            {(['openai', 'anthropic', 'openrouter', 'google', 'groq', 'mistral', 'custom'] as AIProvider[]).map(p => (
+                              <option key={p} value={p}>{PROVIDER_INFO[p]?.label || p}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {cfg.provider && (
+                          <>
+                            {/* API Key */}
+                            <div style={fieldGroupStyle}>
+                              <label style={labelStyle}>API Key</label>
+                              <input
+                                type="password"
+                                placeholder={PROVIDER_INFO[cfg.provider]?.keyPrefix ? `${PROVIDER_INFO[cfg.provider].keyPrefix}...` : 'Enter API key'}
+                                style={inputStyle}
+                                value={cfg.apiKey}
+                                onChange={e => updateSlotConfig(slot, { apiKey: e.target.value })}
+                              />
+                            </div>
+
+                            {/* Model */}
+                            {slot === 'ocr' && cfg.provider === 'mistral' ? (
+                              <div style={fieldGroupStyle}>
+                                <label style={labelStyle}>Model <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(chat, not OCR engine)</span></label>
+                                <select style={selectStyle} value={cfg.model} onChange={e => updateSlotConfig(slot, { model: e.target.value })}>
+                                  {MISTRAL_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                </select>
+                                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                                  OCR always uses mistral-ocr-latest. This model is used for card generation.
+                                </p>
+                              </div>
+                            ) : (
+                              <div style={fieldGroupStyle}>
+                                <label style={labelStyle}>Model</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. gpt-4.1, claude-sonnet-4..."
+                                  style={inputStyle}
+                                  value={cfg.model}
+                                  onChange={e => updateSlotConfig(slot, { model: e.target.value })}
+                                />
+                              </div>
+                            )}
+
+                            {/* Clear override */}
+                            <button
+                              onClick={() => clearSlotConfig(slot)}
+                              style={{
+                                fontSize: 12, color: 'var(--text-muted)', background: 'none',
+                                border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline',
+                                textUnderlineOffset: 2,
+                              }}
+                            >
+                              Clear override (revert to Default)
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -2514,6 +2747,13 @@ export default function SettingsPage() {
               </button>
             </div>
 
+            {/* Storage warning when approaching browser limit */}
+            {stats && stats.size > 4_000_000 && (
+              <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.4)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--accent)' }}>
+                ⚠️ Storage is {formatBytes(stats.size)} — approaching the browser limit (~5–10 MB). Consider exporting a backup and clearing old data to free space.
+              </div>
+            )}
+
             {/* Auto-Backup */}
             <div style={{ marginBottom: 16, padding: 14, background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
               <div style={rowStyle}>
@@ -2740,6 +2980,94 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border)', margin: '12px 0' }} />
+
+            {/* Omi AI Wearable */}
+            <div style={{ ...rowStyle, flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: '#1a1a2e', border: '1px solid #F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Headphones size={18} color="#F5A623" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>Omi AI Wearable</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Sync conversations & transcriptions</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6, margin: '4px 0' }}>
+                Connect your Omi device to sync recorded conversations into your NousAI library.
+                Get your Developer API key from the Omi app: <strong>Settings → Developer → Create Key</strong>
+              </p>
+              {omiApiKey ? (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ flex: 1, fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>
+                    ✓ API key configured ({omiApiKey.slice(0, 12)}…)
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: 11 }}
+                    onClick={() => {
+                      localStorage.removeItem('nousai-omi-api-key');
+                      setOmiApiKey('');
+                      setOmiKeyInput('');
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <input
+                    type="password"
+                    placeholder="omi_dev_..."
+                    value={omiKeyInput}
+                    onChange={e => setOmiKeyInput(e.target.value)}
+                    style={{ ...inputStyle, fontSize: 12 }}
+                  />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ flex: 1, fontSize: 11 }}
+                      disabled={omiTesting || !omiKeyInput.trim()}
+                      onClick={async () => {
+                        const key = omiKeyInput.trim();
+                        if (!key) return;
+                        setOmiTesting(true);
+                        try {
+                          const res = await fetch(`/api/omi-proxy?endpoint=user%2Fconversations&limit=1`, {
+                            headers: { 'x-omi-key': key },
+                          });
+                          if (res.ok) {
+                            localStorage.setItem('nousai-omi-api-key', key);
+                            setOmiApiKey(key);
+                            setOmiKeyInput('');
+                            showToast('Omi connected! Go to AI Tools → Omi to sync.');
+                          } else {
+                            const err = await res.json().catch(() => ({})) as { error?: string };
+                            showToast(`Connection failed: ${err.error || res.status}`);
+                          }
+                        } catch {
+                          showToast('Connection failed. Check your API key.');
+                        } finally {
+                          setOmiTesting(false);
+                        }
+                      }}
+                    >
+                      <Key size={12} /> {omiTesting ? 'Testing...' : 'Save & Test'}
+                    </button>
+                    <a
+                      href="https://docs.omi.me/doc/developer/api/overview"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary btn-sm"
+                      style={{ textDecoration: 'none', fontSize: 11 }}
+                    >
+                      <ExternalLink size={12} /> Docs
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ borderTop: '1px solid var(--border)', margin: '12px 0' }} />
