@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useStore } from '../../store';
 import {
   BookOpen, Trophy, Play, Upload, Download, Plus, Search, X,
   CheckCircle2, Circle, Trash2, ChevronLeft, ChevronRight,
@@ -92,6 +93,7 @@ export default function VocabTab({
   setData: { (d: NousAIData): void; (fn: (prev: NousAIData) => NousAIData): void };
   accentColor: string;
 }) {
+  const { setPageContext } = useStore();
   const [vocabMode, setVocabMode] = useState<'list' | 'quiz' | 'drill' | 'import'>('list');
   const [viewMode, setViewMode] = useState<'cards' | 'rows'>('cards');
   const [searchTerm, setSearchTerm] = useState('');
@@ -109,6 +111,18 @@ export default function VocabTab({
     (course.flashcards || []).map(f => ({ term: f.front, definition: f.back })),
     [course.flashcards]
   );
+
+  // ── Page context publisher ──
+  useEffect(() => {
+    setPageContext({
+      page: 'Course — Vocab',
+      summary: `${course.name} — Vocab (${vocab.length} terms)`,
+      fullContent: vocab.slice(0, 30).map((v) =>
+        `${v.term}: ${v.definition}`
+      ).join('\n'),
+    })
+    return () => setPageContext(null)
+  }, [course.name, vocab])
 
   const filtered = useMemo(() => {
     if (!searchTerm) return vocab;

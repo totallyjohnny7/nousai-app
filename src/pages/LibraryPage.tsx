@@ -108,7 +108,7 @@ const PRESET_COLORS = [
 
 /* ── Main Component ─────────────────────────────────── */
 export default function LibraryPage() {
-  const { data, setData, updatePluginData, loaded, courses, quizHistory } = useStore();
+  const { data, setData, updatePluginData, loaded, courses, quizHistory, setPageContext } = useStore();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<LibraryTab>(() => {
@@ -140,6 +140,18 @@ export default function LibraryPage() {
   const [renameFolderValue, setRenameFolderValue] = useState('');
   const [folderHover, setFolderHover] = useState<string | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+
+  // ─── Page context publisher ───
+  useEffect(() => {
+    const selectedNote = notes.find(n => n.id === selectedId) ?? null
+    setPageContext({
+      page: 'Library',
+      summary: selectedNote ? `Viewing: ${selectedNote.title}` : `Library — ${notes.length} notes`,
+      activeItem: selectedNote?.content ? selectedNote.content.slice(0, 3000) : undefined,
+      fullContent: notes.slice(0, 50).map(n => n.title).join('\n'),
+    })
+    return () => setPageContext(null)
+  }, [notes, selectedId])
 
   // ─── Topic name resolver (for displaying linked topic tags) ───
   const topicNameMap = useMemo(() => {

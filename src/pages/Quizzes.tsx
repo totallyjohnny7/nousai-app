@@ -132,7 +132,7 @@ function buildBatchFromSession(session: ProgressiveQuizSession): PlayableQuiz | 
 }
 
 export default function Quizzes() {
-  const { loaded, data, setData } = useStore()
+  const { loaded, data, setData, setPageContext } = useStore()
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const initialTab = (['create', 'bank', 'history', 'merge'].includes(searchParams.get('tab') || '') ? searchParams.get('tab') : 'history') as QuizTab
@@ -190,6 +190,26 @@ export default function Quizzes() {
       window.history.replaceState({}, '')
     }
   }, [location.state, activeSession])
+
+  // ── Page context publisher ──
+  useEffect(() => {
+    if (activeQuiz) {
+      setPageContext({
+        page: 'Quiz',
+        summary: `Quiz: ${activeQuiz.subject} — ${activeQuiz.questions.length} questions`,
+        activeItem: activeQuiz.questions[0]
+          ? `Q: ${activeQuiz.questions[0].question}\nOptions: ${(activeQuiz.questions[0].options ?? []).join(', ')}`
+          : undefined,
+      })
+    } else {
+      const recentCount = (data?.pluginData?.quizHistory ?? []).length
+      setPageContext({
+        page: 'Quizzes',
+        summary: `Quiz history — ${recentCount} attempts`,
+      })
+    }
+    return () => setPageContext(null)
+  }, [activeQuiz, data?.pluginData?.quizHistory])
 
   // ── Shared folder state (lifted from tabs so both Bank & History stay in sync) ──
   const [folders, setFolders] = useState<QuizFolder[]>(loadQuizFolders)

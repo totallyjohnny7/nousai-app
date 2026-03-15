@@ -64,7 +64,7 @@ function StudyPageAnnotation({
 }
 
 export default function StudyPage() {
-  const { loaded, courses, quizHistory } = useStore();
+  const { loaded, courses, quizHistory, setPageContext } = useStore();
   const [view, setView] = useState<StudyView>('menu');
   const [session, setSession] = useState<QuizSession | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
@@ -76,6 +76,21 @@ export default function StudyPage() {
   const [answers, setAnswers] = useState<Array<{ correct: boolean; timeMs: number; concept: string }>>([]);
   const [showSidecar, setShowSidecar] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // ── Page context publisher ──
+  useEffect(() => {
+    const courseName = courses.find(c => c.id === selectedCourse)?.name ?? selectedCourse
+    setPageContext({
+      page: 'Study',
+      summary: session
+        ? `Studying: ${courseName} — Q${session.currentIndex + 1} of ${session.questions.length}`
+        : `Study — ${courseName || 'No course selected'}`,
+      activeItem: session?.questions[session.currentIndex]
+        ? `Question: ${session.questions[session.currentIndex].question}`
+        : undefined,
+    })
+    return () => setPageContext(null)
+  }, [selectedCourse, session, courses])
 
   // Get questions from courses' flashcards (converted to quiz questions)
   const getQuestionsFromCourse = useCallback((courseId: string): QuizQuestion[] => {

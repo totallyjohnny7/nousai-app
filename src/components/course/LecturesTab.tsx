@@ -6,6 +6,7 @@ import {
   Calendar, Check, Microscope,
 } from 'lucide-react';
 import { lazyWithRetry } from '../../utils/lazyWithRetry';
+import { useStore } from '../../store';
 import type { Course } from '../../types';
 import { getLecturesForCourse, type LectureItem } from '../../data/lectureContent';
 import { callAI, isAIConfigured } from '../../utils/ai';
@@ -80,6 +81,7 @@ export default function LecturesTab({
   course: Course;
   accentColor: string;
 }) {
+  const { setPageContext } = useStore();
   const storageKey = `nousai-lectures-${course.id}`;
   const [userNotes, setUserNotes] = useState<LectureNote[]>(() => {
     try {
@@ -113,6 +115,16 @@ export default function LecturesTab({
   viewModeRef.current = viewMode;
   activeNoteRef.current = activeNote;
   userNotesRef.current = userNotes;
+
+  // ── Page context publisher ──
+  useEffect(() => {
+    setPageContext({
+      page: 'Course — Lectures',
+      summary: `${course.name} — Lectures${expandedLecture ? ` (viewing: ${expandedLecture})` : ''}`,
+      activeItem: activeNote ? `${activeNote.title}\n\n${activeNote.content?.slice(0, 2000) ?? ''}` : undefined,
+    })
+    return () => setPageContext(null)
+  }, [course.name, expandedLecture, activeNote])
 
   // Auto-save on unmount — ensures notes are never lost when navigating away
   useEffect(() => {

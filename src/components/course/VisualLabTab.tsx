@@ -34,7 +34,7 @@ interface LectureNote {
 
 export default function VisualLabTab({ course, accentColor }: { course: Course; accentColor: string }) {
   const navigate = useNavigate();
-  const { data, setData, updatePluginData } = useStore();
+  const { data, setData, updatePluginData, setPageContext } = useStore();
   const [question, setQuestion] = useState('');
   const [generating, setGenerating] = useState(false);
   const [labs, setLabs] = useState<GeneratedLab[]>(() => {
@@ -60,6 +60,18 @@ export default function VisualLabTab({ course, accentColor }: { course: Course; 
 
   // Reset loading state when switching labs
   useEffect(() => { setIframeLoaded(false); setShowSource(false); }, [activeLab?.id]);
+
+  // ── Page context publisher ──
+  useEffect(() => {
+    setPageContext({
+      page: 'Course — Lab',
+      summary: activeLab
+        ? `${course.name} — Lab: ${activeLab.title ?? 'Active simulation'}`
+        : `${course.name} — Visual Lab`,
+      activeItem: activeLab?.question ?? undefined,
+    })
+    return () => setPageContext(null)
+  }, [course.name, activeLab])
 
   // Persist to localStorage + pluginData (skip initial mount to avoid render loop)
   const labsMountedRef = useRef(false);
