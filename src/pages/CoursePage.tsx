@@ -21,7 +21,7 @@ import { useStore } from '../store';
 import { calculateProficiency, isProficient } from '../utils/proficiency';
 import { callAI, isAIConfigured } from '../utils/ai';
 import { speak, stopSpeaking } from '../utils/speechTools';
-import type { Course, CourseTopic, FlashcardItem, QuizAttempt, ProficiencyEntry, Note, NousAIData } from '../types';
+import type { Course, CourseTopic, FlashcardItem, QuizAttempt, ProficiencyEntry, Note, NousAIData, LinkItem } from '../types';
 import { getTextbookChapters } from '../data/textbookChapters';
 import { getStudyContent, hasStudyContent } from '../data/studyContentIndex';
 import { getLecturesForCourse, getLecturesForChapter, hasLectureContent, type LectureItem } from '../data/lectureContent';
@@ -2895,15 +2895,6 @@ function SyllabusTab({ course, accentColor }: { course: Course; accentColor: str
 /* ================================================================
    19. LINKS & FILES TAB
    ================================================================ */
-interface LinkItem {
-  id: string;
-  name: string;
-  url: string;
-  type: 'link' | 'file';
-  fileType?: string; // mime type for files
-  fileSize?: number; // bytes
-  dataUrl?: string;  // base64 data URL for files
-}
 
 function getFileIcon(fileType?: string): string {
   if (!fileType) return '🔗';

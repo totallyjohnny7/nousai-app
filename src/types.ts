@@ -367,3 +367,15 @@ export interface AttachedFile {
   mimeType: string
   sizeBytes: number
 }
+
+// ─── Links & Files ────────────────────────────────────────────────────────────
+
+export interface LinkItem {
+  id: string
+  name: string
+  url: string
+  type: 'link' | 'file'
+  fileType?: string   // MIME type, e.g. 'application/pdf'
+  fileSize?: number   // bytes
+  dataUrl?: string    // base64 data URL (only for files, loaded from IndexedDB)
+}
