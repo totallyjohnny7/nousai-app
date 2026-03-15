@@ -6,7 +6,7 @@
  */
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Brain, X, Trash2, Copy, Check, Send } from 'lucide-react'
+import { Brain, X, Trash2, Copy, Check, Send, Paperclip, Settings, Maximize2, Minimize2 } from 'lucide-react'
 import { useStore } from '../store'
 import { callAI, isAIConfigured } from '../utils/ai'
 import { safeRenderMd } from '../utils/renderMd'
@@ -93,6 +93,18 @@ export default function NousPanel() {
   const [copied, setCopied] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // ── Floating / drag state ────────────────────────────────
+  const [isFloating, setIsFloating] = useState(() => {
+    try { return localStorage.getItem('nous_panel_floating') === 'true' } catch { return false }
+  })
+  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
+    try {
+      const saved = localStorage.getItem('nous_panel_pos')
+      return saved ? JSON.parse(saved) : { x: window.innerWidth - 400, y: 80 }
+    } catch { return { x: window.innerWidth - 400, y: 80 } }
+  })
+  const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null)
   const location = useLocation()
   const navigate = useNavigate()
   const { courses, srData } = useStore()
@@ -101,6 +113,14 @@ export default function NousPanel() {
   useEffect(() => {
     try { localStorage.setItem('nous_panel_open', String(open)) } catch { /* ignore */ }
   }, [open])
+
+  useEffect(() => {
+    try { localStorage.setItem('nous_panel_floating', String(isFloating)) } catch { /* ignore */ }
+  }, [isFloating])
+
+  useEffect(() => {
+    try { localStorage.setItem('nous_panel_pos', JSON.stringify(pos)) } catch { /* ignore */ }
+  }, [pos])
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -204,6 +224,23 @@ export default function NousPanel() {
     setMessages([])
   }, [messages.length])
 
+  const handleDragStart = useCallback((e: React.PointerEvent) => {
+    if (!isFloating) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragRef.current = { startX: e.clientX, startY: e.clientY, originX: pos.x, originY: pos.y }
+  }, [isFloating, pos])
+
+  const handleDragMove = useCallback((e: React.PointerEvent) => {
+    if (!dragRef.current) return
+    const dx = e.clientX - dragRef.current.startX
+    const dy = e.clientY - dragRef.current.startY
+    setPos({ x: dragRef.current.originX + dx, y: dragRef.current.originY + dy })
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
+    dragRef.current = null
+  }, [])
+
   const provider = localStorage.getItem('nousai-ai-provider') || 'none'
   const model = localStorage.getItem('nousai-ai-model') || ''
   const providerLabel = model ? `${provider}/${model.split('-').slice(-2).join('-')}` : provider
@@ -224,18 +261,32 @@ export default function NousPanel() {
 
       {/* ── Panel drawer ── */}
       <div
-        className={`nous-panel${open ? ' nous-panel--open' : ''}`}
+        className={`nous-panel${open ? ' nous-panel--open' : ''}${isFloating ? ' nous-panel--floating' : ''}`}
+        style={isFloating ? { transform: `translate(${pos.x}px, ${pos.y}px)` } : undefined}
         role="complementary"
         aria-label="Nous AI assistant panel"
       >
         {/* Header */}
-        <div className="nous-panel-header">
+        <div
+          className={`nous-panel-header${isFloating ? ' nous-panel-drag-handle' : ''}`}
+          onPointerDown={handleDragStart}
+          onPointerMove={handleDragMove}
+          onPointerUp={handleDragEnd}
+          onPointerCancel={handleDragEnd}
+        >
           <div className="nous-panel-header-left">
             <Brain size={16} style={{ color: 'var(--accent)' }} />
             <span className="nous-panel-title">Nous AI</span>
             <span className="nous-panel-badge">{providerLabel}</span>
           </div>
           <div className="nous-panel-header-actions">
+            <button
+              className="nous-panel-icon-btn"
+              onClick={() => setIsFloating(f => !f)}
+              title={isFloating ? 'Dock panel' : 'Float panel'}
+            >
+              {isFloating ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
             <button
               className="nous-panel-icon-btn"
               onClick={clearChat}
