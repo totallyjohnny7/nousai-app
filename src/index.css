@@ -272,6 +272,7 @@ html, body {
 .animate-in { animation: fadeIn 0.2s ease both; }
 .animate-slide { animation: slideUp 0.3s ease both; }
 .xp-bar.syncing { animation: syncPulse 1.5s ease-in-out 3; }
+.spin { animation: spin 1s linear infinite; }
 
 /* ── Utilities ───────────────────────────────────────── */
 .flex { display: flex; }

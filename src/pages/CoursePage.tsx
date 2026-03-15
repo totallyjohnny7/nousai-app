@@ -57,6 +57,7 @@ import PathTab from '../components/course/PathTab';
 import LecturesTab from '../components/course/LecturesTab';
 import TutorTab from '../components/course/TutorTab';
 import VisualLabTab from '../components/course/VisualLabTab';
+import { FileViewerModal } from '../components/FileViewerModal'
 
 /* ================================================================
    TYPES
@@ -2926,6 +2927,7 @@ function LinksTab({ course, accentColor }: { course: Course; accentColor: string
   const [newName, setNewName] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const [previewItem, setPreviewItem] = useState<LinkItem | null>(null);
+  const [viewerItem, setViewerItem] = useState<LinkItem | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'link' | 'file'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -2999,18 +3001,9 @@ function LinksTab({ course, accentColor }: { course: Course; accentColor: string
 
   const openFile = (item: LinkItem) => {
     if (item.type === 'link') {
-      window.open(item.url, '_blank', 'noopener,noreferrer');
+      window.open(item.url, '_blank', 'noopener,noreferrer')
     } else if (item.dataUrl) {
-      // For images and PDFs, show preview; for others, trigger download
-      if (item.fileType?.startsWith('image/') || item.fileType === 'application/pdf') {
-        setPreviewItem(item);
-      } else {
-        // Trigger download
-        const a = document.createElement('a');
-        a.href = item.dataUrl;
-        a.download = item.name;
-        a.click();
-      }
+      setViewerItem(item)
     }
   };
 
@@ -3020,6 +3013,14 @@ function LinksTab({ course, accentColor }: { course: Course; accentColor: string
 
   return (
     <div>
+      {viewerItem && (
+        <FileViewerModal
+          item={viewerItem}
+          courseId={course.id}
+          accentColor={accentColor}
+          onClose={() => setViewerItem(null)}
+        />
+      )}
       {/* Preview modal */}
       {previewItem && (
         <div style={{
