@@ -107,7 +107,22 @@ export default function NousPanel() {
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null)
   const location = useLocation()
   const navigate = useNavigate()
-  const { courses, srData } = useStore()
+  const { courses, srData, activePageContext } = useStore()
+
+  // ── Settings state ───────────────────────────────────────
+  const [showSettings, setShowSettings] = useState(false)
+  const [contextDepth, setContextDepthState] = useState<'minimal' | 'smart' | 'deep'>(() =>
+    (localStorage.getItem('nous_context_depth') as 'minimal' | 'smart' | 'deep') || 'smart'
+  )
+  const [maxAttachments, setMaxAttachmentsState] = useState<number>(() =>
+    parseInt(localStorage.getItem('nous_max_attachments') || '4', 10)
+  )
+  const [floatOnOpen, setFloatOnOpenState] = useState(() =>
+    localStorage.getItem('nous_float_on_open') === 'true'
+  )
+  const [clearOnNavigate, setClearOnNavigateState] = useState(() =>
+    localStorage.getItem('nous_clear_on_navigate') === 'true'
+  )
 
   // Persist panel open/closed state
   useEffect(() => {
@@ -129,6 +144,34 @@ export default function NousPanel() {
     }
   }, [pos])
 
+  const setContextDepth = useCallback((v: 'minimal' | 'smart' | 'deep') => {
+    setContextDepthState(v)
+    try { localStorage.setItem('nous_context_depth', v) } catch { /* ignore */ }
+  }, [])
+
+  const setMaxAttachments = useCallback((v: number) => {
+    setMaxAttachmentsState(v)
+    try { localStorage.setItem('nous_max_attachments', String(v)) } catch { /* ignore */ }
+  }, [])
+
+  const setFloatOnOpen = useCallback((v: boolean) => {
+    setFloatOnOpenState(v)
+    try { localStorage.setItem('nous_float_on_open', String(v)) } catch { /* ignore */ }
+  }, [])
+
+  const setClearOnNavigate = useCallback((v: boolean) => {
+    setClearOnNavigateState(v)
+    try { localStorage.setItem('nous_clear_on_navigate', String(v)) } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    if (open && floatOnOpen) setIsFloating(true)
+  }, [open, floatOnOpen])
+
+  useEffect(() => {
+    if (clearOnNavigate) setMessages([])
+  }, [location.pathname, clearOnNavigate])
+
   // Auto-scroll to latest message
   useEffect(() => {
     if (open) {
@@ -146,15 +189,33 @@ export default function NousPanel() {
 
   const getContext = useCallback(() => {
     const activeView = getViewName(location.pathname)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const courseNames = (courses || []).map((c: any) => c.name).join(', ')
     const cards = srData?.cards || []
     const total = cards.length
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mastered = cards.filter((c: any) => (c.stability || 0) > 10).length
     const learning = total - mastered
     const provider = localStorage.getItem('nousai-ai-provider') || 'none'
     const model = localStorage.getItem('nousai-ai-model') || 'default'
-    return buildSystemPrompt(activeView, courseNames, total, mastered, learning, provider, model)
-  }, [location.pathname, courses, srData])
+
+    let pageCtxBlock = ''
+    if (activePageContext && contextDepth !== 'minimal') {
+      const lines = [
+        `- Current page summary: ${activePageContext.summary}`,
+      ]
+      if (contextDepth === 'smart' && activePageContext.activeItem) {
+        lines.push(`- Active item:\n${activePageContext.activeItem}`)
+      }
+      if (contextDepth === 'deep') {
+        if (activePageContext.activeItem) lines.push(`- Active item:\n${activePageContext.activeItem}`)
+        if (activePageContext.fullContent) lines.push(`- Full page content:\n${activePageContext.fullContent}`)
+      }
+      pageCtxBlock = '\n\nPage context:\n' + lines.join('\n')
+    }
+
+    return buildSystemPrompt(activeView, courseNames, total, mastered, learning, provider, model) + pageCtxBlock
+  }, [location.pathname, courses, srData, activePageContext, contextDepth])
 
   const sendMessage = useCallback(async () => {
     const text = input.trim()
@@ -300,6 +361,13 @@ export default function NousPanel() {
               {isFloating ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             </button>
             <button
+              className={`nous-panel-icon-btn${showSettings ? ' nous-panel-icon-btn--active' : ''}`}
+              onClick={() => setShowSettings(s => !s)}
+              title="Panel settings"
+            >
+              <Settings size={14} />
+            </button>
+            <button
               className="nous-panel-icon-btn"
               onClick={clearChat}
               title="Clear conversation"
@@ -316,6 +384,58 @@ export default function NousPanel() {
             </button>
           </div>
         </div>
+
+        {/* Settings drawer */}
+        {showSettings && (
+          <div className="nous-panel-settings">
+            <div className="nous-settings-row">
+              <span className="nous-settings-label">Context depth</span>
+              <div className="nous-settings-options">
+                {(['minimal', 'smart', 'deep'] as const).map(d => (
+                  <button
+                    key={d}
+                    className={`nous-settings-opt${contextDepth === d ? ' nous-settings-opt--active' : ''}`}
+                    onClick={() => setContextDepth(d)}
+                  >
+                    {d.charAt(0).toUpperCase() + d.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="nous-settings-row">
+              <span className="nous-settings-label">Max attachments</span>
+              <div className="nous-settings-options">
+                {[2, 4, 8].map(n => (
+                  <button
+                    key={n}
+                    className={`nous-settings-opt${maxAttachments === n ? ' nous-settings-opt--active' : ''}`}
+                    onClick={() => setMaxAttachments(n)}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="nous-settings-row">
+              <span className="nous-settings-label">Float on open</span>
+              <button
+                className={`nous-settings-toggle${floatOnOpen ? ' nous-settings-toggle--on' : ''}`}
+                onClick={() => setFloatOnOpen(!floatOnOpen)}
+              >
+                {floatOnOpen ? 'On' : 'Off'}
+              </button>
+            </div>
+            <div className="nous-settings-row">
+              <span className="nous-settings-label">Clear on navigate</span>
+              <button
+                className={`nous-settings-toggle${clearOnNavigate ? ' nous-settings-toggle--on' : ''}`}
+                onClick={() => setClearOnNavigate(!clearOnNavigate)}
+              >
+                {clearOnNavigate ? 'On' : 'Off'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="nous-panel-messages">
