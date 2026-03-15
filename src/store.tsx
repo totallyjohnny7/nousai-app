@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
-import type { NousAIData, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState } from './types';
+import type { NousAIData, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext } from './types';
 import { writeClipboard, saveFilePicker, openFilePicker, getPermPref } from './utils/permissions';
 import { syncToCloud, syncFromCloud, subscribeToMetadataChanges } from './utils/auth';
 import { runMigrations } from './utils/migrations';
@@ -172,6 +172,9 @@ interface StoreCtx {
   stopRemoteWatch: () => void;
   loadRemoteData: () => Promise<void>;
   dismissRemoteBanner: () => void;
+  // Page context for Nous AI Panel
+  activePageContext: PageContext | null
+  setPageContext: (ctx: PageContext | null) => void
 }
 
 const Ctx = createContext<StoreCtx>({} as StoreCtx);
@@ -193,6 +196,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     localStorage.getItem('nousai-last-sync')
   );
   const [remoteUpdateAvailable, setRemoteUpdateAvailable] = useState(false);
+  const [activePageContext, setPageContext] = useState<PageContext | null>(null);
   const snapshotUnsubRef = useRef<(() => void) | null>(null);
 
   // Keep ref in sync so functional updaters always read latest
@@ -564,10 +568,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     timerState, setTimerState, einkMode, setEinkMode, betaMode, setBetaMode, backupNow,
     syncStatus, lastSyncAt, remoteUpdateAvailable,
     startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
+    activePageContext, setPageContext,
   }), [data, loaded, matchSets, events, quizHistory, courses, gamification, proficiency, srData, timerState, einkMode, betaMode, // eslint-disable-line react-hooks/exhaustive-deps
     setData, updatePluginData, copyToClipboard, exportToFile, backupNow,
     syncStatus, lastSyncAt, remoteUpdateAvailable,
-    startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner]);
+    startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
+    activePageContext]);
 
   return (
     <Ctx.Provider value={ctxValue}>
