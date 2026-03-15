@@ -10,6 +10,8 @@ import { Brain, X, Trash2, Copy, Check, Send, Paperclip, Settings, Maximize2, Mi
 import { useStore } from '../store'
 import { callAI, isAIConfigured } from '../utils/ai'
 import { safeRenderMd } from '../utils/renderMd'
+import { extractFileContent, FileExtractError } from '../utils/fileExtract'
+import type { AttachedFile } from '../types'
 
 /* ── Types ─────────────────────────────────────────────── */
 interface Message {
@@ -93,6 +95,9 @@ export default function NousPanel() {
   const [copied, setCopied] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [attachments, setAttachments] = useState<AttachedFile[]>([])
+  const [attachError, setAttachError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ── Floating / drag state ────────────────────────────────
   const [isFloating, setIsFloating] = useState(() => {
@@ -239,10 +244,21 @@ export default function NousPanel() {
 
     try {
       const systemPrompt = getContext()
+      // Build attachment block to append to user message
+      // TODO: upgrade to vision content array when callAI supports image_url content blocks
+      const attachBlock = attachments.length > 0
+        ? '\n\n---\nAttached files:\n' + attachments.map(a => {
+            if (a.type === 'image') return `[Image: ${a.name}]`
+            if (a.type === 'pdf') return `[PDF: ${a.name}]\n\`\`\`\n${a.content.slice(0, 8000)}\n\`\`\``
+            return `[File: ${a.name}]\n\`\`\`\n${a.content.slice(0, 8000)}\n\`\`\``
+          }).join('\n\n')
+        : ''
       // Build messages array: inject fresh system prompt on every send
-      const history = [...messages, userMsg]
+      const history = [...messages, { ...userMsg, content: userMsg.content + attachBlock }]
         .filter(m => m.content) // skip empty placeholder
         .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+      // Clear attachments after send
+      setAttachments([])
 
       const allMessages = [
         { role: 'system' as const, content: systemPrompt },
@@ -292,6 +308,51 @@ export default function NousPanel() {
     setMessages([])
   }, [messages.length])
 
+  const addAttachment = useCallback(async (file: File) => {
+    setAttachError(null)
+    let tooMany = false
+    setAttachments(prev => {
+      if (prev.length >= maxAttachments) { tooMany = true; return prev }
+      return prev
+    })
+    if (tooMany) {
+      setAttachError(`Max ${maxAttachments} attachments per message`)
+      return
+    }
+    try {
+      const extracted = await extractFileContent(file)
+      setAttachments(prev => {
+        if (prev.length >= maxAttachments) return prev
+        return [...prev, extracted]
+      })
+    } catch (err) {
+      if (err instanceof FileExtractError) {
+        setAttachError(err.message)
+      } else {
+        setAttachError('Failed to read file')
+      }
+    }
+  }, [maxAttachments])
+
+  const removeAttachment = useCallback((index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
+  }, [])
+
+  // Paste handler for images
+  useEffect(() => {
+    if (!open) return
+    const handler = async (e: ClipboardEvent) => {
+      const items = Array.from(e.clipboardData?.items || [])
+      const imageItem = items.find(i => i.type.startsWith('image/'))
+      if (!imageItem) return
+      e.preventDefault()
+      const file = imageItem.getAsFile()
+      if (file) await addAttachment(file)
+    }
+    window.addEventListener('paste', handler)
+    return () => window.removeEventListener('paste', handler)
+  }, [open, addAttachment])
+
   const handleDragStart = useCallback((e: React.PointerEvent) => {
     if (!isFloating) return
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -338,6 +399,14 @@ export default function NousPanel() {
         style={isFloating ? { transform: `translate(${pos.x}px, ${pos.y}px)` } : undefined}
         role="complementary"
         aria-label="Nous AI assistant panel"
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }}
+        onDrop={async (e) => {
+          e.preventDefault()
+          const files = Array.from(e.dataTransfer.files)
+          for (const file of files.slice(0, maxAttachments)) {
+            await addAttachment(file)
+          }
+        }}
       >
         {/* Header */}
         <div
@@ -503,8 +572,52 @@ export default function NousPanel() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Attachment chips */}
+        {(attachments.length > 0 || attachError) && (
+          <div className="nous-attachments">
+            {attachError && (
+              <span className="nous-attach-error">{attachError}</span>
+            )}
+            {attachments.map((a, i) => (
+              <span key={i} className="nous-attach-chip">
+                <span className="nous-attach-chip-name">
+                  {a.type === 'image' ? '[img] ' : a.type === 'pdf' ? '[pdf] ' : '[txt] '}
+                  {a.name}
+                </span>
+                <button
+                  className="nous-attach-chip-remove"
+                  onClick={() => removeAttachment(i)}
+                  aria-label={`Remove ${a.name}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Input */}
         <div className="nous-panel-input-row">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,.pdf,.txt,.md,.js,.ts,.jsx,.tsx,.py,.java,.cs,.cpp,.c,.json,.csv,.html,.css"
+            style={{ display: 'none' }}
+            onChange={async (e) => {
+              const files = Array.from(e.target.files || [])
+              for (const file of files) await addAttachment(file)
+              e.target.value = ''
+            }}
+          />
+          <button
+            className="nous-panel-icon-btn nous-panel-attach-btn"
+            onClick={() => fileInputRef.current?.click()}
+            title="Attach file"
+            disabled={attachments.length >= maxAttachments}
+          >
+            <Paperclip size={14} />
+          </button>
           <textarea
             ref={textareaRef}
             className="nous-panel-textarea"
