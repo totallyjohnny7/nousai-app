@@ -16,7 +16,7 @@ import { getSpotifyAuthUrl, exchangeSpotifyCode, getCurrentlyPlaying, getSpotify
 type DashTab = 'overview' | 'courses' | 'analytics' | 'plan'
 
 export default function Dashboard() {
-  const { loaded } = useStore()
+  const { loaded, gamification, srData, setPageContext } = useStore()
   const [tab, setTab] = useState<DashTab>('overview')
 
   const tabs = useMemo<{ key: DashTab; label: string; icon: React.ReactNode }[]>(() => [
@@ -25,6 +25,19 @@ export default function Dashboard() {
     { key: 'analytics', label: 'Analytics', icon: <BarChart3 size={14} /> },
     { key: 'plan', label: 'Plan', icon: <CalendarDays size={14} /> },
   ], [])
+
+  // Publish page context for Dashboard page
+  useEffect(() => {
+    const xp = gamification?.xp ?? 0
+    const streak = gamification?.streak ?? 0
+    const dueCards = (srData?.cards ?? []).filter(c => new Date(c.nextReview) <= new Date()).length
+
+    setPageContext({
+      page: 'Dashboard',
+      summary: `${xp} XP · ${streak}-day streak · ${dueCards} cards due`,
+    })
+    return () => setPageContext(null)
+  }, [gamification, srData, setPageContext])
 
   if (!loaded) {
     return (

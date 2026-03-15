@@ -808,7 +808,7 @@ function BulkImport({ courses, data, setData }: {
       description: 'Simple question / answer pairs',
       buildPrompt: () => {
         const topicStr = importTopic.trim() ? ` on "${importTopic.trim()}"` : ''
-        return `Generate flashcards for ${getCourseName()}${topicStr}. Output ONLY a JSON array, no markdown, no extra text.\nEach object: {"front": "question", "back": "answer"}\nMake 15-20 cards covering key concepts.\n\nExample:\n[{"front": "What is the normal resting heart rate for adults?", "back": "60–100 beats per minute"},{"front": "What does NPO mean?", "back": "Nothing by mouth (nil per os)"}]`
+        return `Generate flashcards for ${getCourseName()}${topicStr}. Output ONLY a JSON array, no markdown, no extra text.\nEach object: {"front": "question", "back": "structured answer"}\nMake 15-20 cards covering key concepts.\n\nFor the "back" field, use pipe-separated labeled sections where helpful. Supported labels: MNEMONIC, STEPS, WHY, KEY POINT, NORMAL, SIGNS, CAUSES, RULE.\nFormat: "LABEL: content | LABEL: content"\nFor STEPS use numbered items: "STEPS: 1) first 2) second 3) third"\nSimple answers can be plain text without labels.\n\nExample:\n[{"front": "What are the steps to take a manual blood pressure?", "back": "MNEMONIC: 'Place Inflate Listen Note' | STEPS: 1) Place cuff 1 inch above elbow 2) Inflate 30 mmHg above systolic 3) Listen for Korotkoff sounds 4) Note systolic and diastolic | WHY: Deflating too fast misses the reading"},{"front": "What is the normal resting heart rate for adults?", "back": "NORMAL: 60–100 bpm | KEY POINT: Below 60 = bradycardia, above 100 = tachycardia"}]`
       },
     },
     {
@@ -817,7 +817,7 @@ function BulkImport({ courses, data, setData }: {
       description: 'Term on front, definition on back',
       buildPrompt: () => {
         const topicStr = importTopic.trim() ? ` related to "${importTopic.trim()}"` : ''
-        return `Generate vocabulary flashcards for ${getCourseName()}${topicStr}. Output ONLY a JSON array, no markdown.\nEach object: {"front": "term", "back": "concise definition"}\nMake 20-25 key terms.\n\nExample:\n[{"front": "Tachycardia", "back": "Heart rate above 100 bpm"},{"front": "Dyspnea", "back": "Difficult or labored breathing"}]`
+        return `Generate vocabulary flashcards for ${getCourseName()}${topicStr}. Output ONLY a JSON array, no markdown.\nEach object: {"front": "term", "back": "structured definition"}\nMake 20-25 key terms.\n\nFor the "back" field, use pipe-separated labeled sections. Supported labels: DEFINITION, NORMAL, SIGNS, CAUSES, MNEMONIC, KEY POINT, NOTE.\nFormat: "LABEL: content | LABEL: content"\nSimple one-line definitions can be plain text.\n\nExample:\n[{"front": "Tachycardia", "back": "DEFINITION: Heart rate above 100 bpm | CAUSES: Pain, fever, dehydration, anxiety, medications | KEY POINT: Always assess patient — rate alone doesn't determine severity"},{"front": "Dyspnea", "back": "DEFINITION: Difficult or labored breathing | SIGNS: Accessory muscle use, nasal flaring, tripod position | NOTE: Always position patient upright"}]`
       },
     },
     {
@@ -826,7 +826,7 @@ function BulkImport({ courses, data, setData }: {
       description: 'Situation-based cards with rationale',
       buildPrompt: () => {
         const topicStr = importTopic.trim() ? ` for "${importTopic.trim()}"` : ''
-        return `Generate scenario-based flashcards for ${getCourseName()}${topicStr}. Output ONLY a JSON array, no markdown.\nEach object: {"front": "brief patient scenario or situation", "back": "correct action and rationale"}\nMake 12-15 cards.\n\nExample:\n[{"front": "A patient's blood pressure is 180/110 mmHg and they are asymptomatic. What do you do?", "back": "Report to the nurse immediately — this is hypertensive urgency even without symptoms."}]`
+        return `Generate scenario-based flashcards for ${getCourseName()}${topicStr}. Output ONLY a JSON array, no markdown.\nEach object: {"front": "brief patient scenario or situation", "back": "structured response with steps and rationale"}\nMake 12-15 cards.\n\nFor the "back" field, use pipe-separated labeled sections. Supported labels: STEPS, WHY, KEY POINT, PRIORITY, REPORT, NOTE.\nFormat: "LABEL: content | LABEL: content"\nFor STEPS use numbered items: "STEPS: 1) first 2) second"\n\nExample:\n[{"front": "A patient's blood pressure is 180/110 mmHg and they are asymptomatic. What do you do?", "back": "STEPS: 1) Stay calm and reassess in 5 minutes 2) Do NOT leave patient alone 3) Report to nurse immediately | WHY: Hypertensive urgency — dangerous even without symptoms | KEY POINT: CNAs do not treat, only observe and report"}]`
       },
     },
     {
@@ -835,7 +835,7 @@ function BulkImport({ courses, data, setData }: {
       description: 'Includes a YouTube video on the back',
       buildPrompt: () => {
         const topicStr = importTopic.trim() ? ` on "${importTopic.trim()}"` : ''
-        return `Generate flashcards for ${getCourseName()}${topicStr} that each include a YouTube video. Output ONLY a JSON array, no markdown.\nEach object: {"front": "question or term", "back": "answer or definition", "youtube": "YOUTUBE_VIDEO_URL_HERE"}\nReplace YOUTUBE_VIDEO_URL_HERE with an actual relevant YouTube URL for each card. Make 10-15 cards.\n\nExample:\n[{"front": "How do you measure blood pressure manually?", "back": "Place cuff 1 inch above elbow, inflate to 30 mmHg above systolic, deflate at 2-3 mmHg/sec, note Korotkoff sounds.", "youtube": "https://www.youtube.com/watch?v=EXAMPLE_ID"}]`
+        return `Generate flashcards for ${getCourseName()}${topicStr} that each include a YouTube video. Output ONLY a JSON array, no markdown.\nEach object: {"front": "question or term", "back": "structured answer", "youtube": "REAL_YOUTUBE_URL"}\nReplace REAL_YOUTUBE_URL with a real, relevant YouTube video URL for each card. Make 10-15 cards.\n\nFor the "back" field, use pipe-separated labeled sections where helpful. Supported labels: STEPS, WHY, MNEMONIC, KEY POINT, NOTE, NORMAL.\nFormat: "LABEL: content | LABEL: content"\nFor STEPS use numbered items: "STEPS: 1) first 2) second"\n\nExample:\n[{"front": "How do you measure blood pressure manually?", "back": "STEPS: 1) Place cuff 1 inch above elbow 2) Inflate 30 mmHg above palpated systolic 3) Deflate at 2–3 mmHg/sec 4) Note first and last Korotkoff sound | WHY: Deflating too fast gives inaccurate readings", "youtube": "https://www.youtube.com/watch?v=AbcXyzExample"}]`
       },
     },
     {
@@ -1140,7 +1140,7 @@ function ExportButton({ courses }: { courses: Course[] }) {
 }
 
 export default function Flashcards() {
-  const { loaded, courses, data, setData, updatePluginData, matchSets } = useStore()
+  const { loaded, courses, data, setData, updatePluginData, matchSets, setPageContext } = useStore()
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null) // null=browse topics, string=study that topic
   const [showCreate, setShowCreate] = useState(false)
@@ -1201,6 +1201,24 @@ export default function Flashcards() {
       return sum + Math.min(count, remaining)
     }, 0)
   }, [courseDueMap, getCap, dailyProgress])
+
+  // Publish page context for Flashcards page
+  useEffect(() => {
+    if (!selectedCourse) {
+      setPageContext({ page: 'Flashcards', summary: 'No deck selected' })
+      return () => setPageContext(null)
+    }
+    const allFSRS = loadFcFSRS()
+    const allCards = selectedCourse.flashcards ?? []
+    const dueCount = allCards.filter(c => isFcCardDue(selectedCourse.id, c, allFSRS)).length
+
+    setPageContext({
+      page: 'Flashcards',
+      summary: `Reviewing: ${selectedCourse.name} — ${dueCount} cards due`,
+      fullContent: allCards.slice(0, 20).map(c => `Q: ${c.front}\nA: ${c.back}`).join('\n\n'),
+    })
+    return () => setPageContext(null)
+  }, [selectedCourse, setPageContext])
 
   function createFolder() {
     if (!newFolderName.trim() || !data) return
@@ -1753,6 +1771,33 @@ export default function Flashcards() {
   )
 }
 
+/** Converts plain-text card content with common patterns into formatted HTML */
+function formatCardText(text: string): string {
+  // Split into sections by pipe separators (e.g. "MNEMONIC: ... | STEPS: ... | WHY: ...")
+  const sections = text.split(/\s*\|\s*/);
+  const html = sections.map(section => {
+    const labelMatch = section.match(/^([A-Z][A-Z\s\/]{1,20}):\s*([\s\S]+)$/);
+    if (!labelMatch) return `<p>${section}</p>`;
+    const [, label, body] = labelMatch;
+
+    // Numbered steps: "1) text 2) text" → <ol>
+    if (/\d\)/.test(body)) {
+      const items = body.split(/(?=\d+\))/).filter(Boolean);
+      const liHtml = items.map(i => `<li>${i.replace(/^\d+\)\s*/, '')}</li>`).join('');
+      return `<div class="fc-section"><span class="fc-label">${label}</span><ol>${liHtml}</ol></div>`;
+    }
+
+    // Mnemonic: styled callout
+    if (label.includes('MNEMONIC')) {
+      return `<div class="fc-section fc-mnemonic"><span class="fc-label">${label}</span><span class="fc-mnemonic-text">${body}</span></div>`;
+    }
+
+    // Default: bold label + paragraph
+    return `<div class="fc-section"><span class="fc-label">${label}</span><p>${body}</p></div>`;
+  }).join('');
+  return html;
+}
+
 function FlashcardReview({ cards, courseId = '_fc', title, onBack, onCardReviewed }: { cards: FlashcardItem[]; courseId?: string; title: string; onBack: () => void; onCardReviewed?: (reviewedCourseId: string) => void }) {
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
@@ -2018,7 +2063,9 @@ function FlashcardReview({ cards, courseId = '_fc', title, onBack, onCardReviewe
               <div className="flashcard-label">Back</div>
               {/<[a-z][\s\S]*>/i.test(card.back)
                 ? <div className="flashcard-text" dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.back) }} />
-                : <div className="flashcard-text" style={card.back.length > 200 ? { fontSize: 13, fontWeight: 500 } : undefined}>{card.back}</div>}
+                : /\s*\|\s*[A-Z]/.test(card.back)
+                  ? <div className="flashcard-text flashcard-text--structured" dangerouslySetInnerHTML={{ __html: sanitizeHtml(formatCardText(card.back)) }} />
+                  : <div className="flashcard-text" style={card.back.length > 200 ? { fontSize: 13, fontWeight: 500 } : undefined}>{card.back}</div>}
               {card.media && (card.media.side === 'back' || card.media.side === 'both') && (
                 <FlashcardMedia media={card.media} isActive={flipped} />
               )}
