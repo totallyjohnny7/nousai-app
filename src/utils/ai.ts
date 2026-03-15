@@ -5,7 +5,8 @@
  * `callAI()` function for all 6 supported providers.
  */
 
-export type AIProvider = 'none' | 'openai' | 'anthropic' | 'openrouter' | 'google' | 'groq' | 'custom'
+export type AIProvider = 'none' | 'openai' | 'anthropic' | 'openrouter' | 'google' | 'groq' | 'mistral' | 'custom'
+export type AIFeatureSlot = 'chat' | 'generation' | 'analysis' | 'ocr' | 'japanese' | 'physics'
 
 export type AIContentPart =
   | { type: 'text'; text: string }
@@ -54,6 +55,26 @@ export function isAIConfigured(): boolean {
   return c.provider !== 'none' && !!c.apiKey
 }
 
+export function getConfigForSlot(slot: AIFeatureSlot): AIConfig {
+  const provider = localStorage.getItem(`nousai-ai-slot-${slot}-provider`) || ''
+  if (!provider || provider === 'none') return getConfig()
+  const def = getConfig()
+  const model = localStorage.getItem(`nousai-ai-slot-${slot}-model`) || ''
+  return {
+    ...def,
+    provider: provider as AIProvider,
+    apiKey: localStorage.getItem(`nousai-ai-slot-${slot}-apikey`) || '',
+    model,
+    customModel: provider === 'custom' ? model : '',
+    baseUrl: provider === 'mistral' ? 'https://api.mistral.ai/v1' : def.baseUrl,
+  }
+}
+
+export function isSlotConfigured(slot: AIFeatureSlot): boolean {
+  const provider = localStorage.getItem(`nousai-ai-slot-${slot}-provider`) || ''
+  return provider !== '' && provider !== 'none'
+}
+
 // ─── In-memory response cache (non-streaming only) ──────
 const AI_CACHE = new Map<string, { response: string; timestamp: number }>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
@@ -69,8 +90,9 @@ const CACHE_MAX = 20
 export async function callAI(
   messages: AIMessage[],
   options: AIOptions = {},
+  slot?: AIFeatureSlot,
 ): Promise<string> {
-  const cfg = getConfig()
+  const cfg = slot ? getConfigForSlot(slot) : getConfig()
 
   if (cfg.provider === 'none' || !cfg.apiKey) {
     throw new Error('AI not configured. Go to Settings → AI Provider to set up your API key.')
@@ -85,7 +107,9 @@ export async function callAI(
     : messages
 
   // Check cache for non-streaming requests
-  const cacheKey = !options.onChunk ? JSON.stringify(allMessages) : null
+  const cacheKey = !options.onChunk
+    ? JSON.stringify({ messages: allMessages, provider: cfg.provider, model: cfg.model })
+    : null
   if (cacheKey) {
     const cached = AI_CACHE.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -133,6 +157,16 @@ export async function callAI(
         'https://api.groq.com/openai/v1',
         cfg.apiKey,
         cfg.model || 'llama-3.3-70b-versatile',
+        allMessages, temp, maxTokens, options,
+        { Authorization: `Bearer ${cfg.apiKey}` },
+      )
+      break
+
+    case 'mistral':
+      result = await callOpenAICompatible(
+        'https://api.mistral.ai/v1',
+        cfg.apiKey,
+        cfg.model || 'mistral-small-latest',
         allMessages, temp, maxTokens, options,
         { Authorization: `Bearer ${cfg.apiKey}` },
       )
@@ -241,6 +275,9 @@ async function callOpenAICompatible(
       const retryAfter = res.headers.get('Retry-After')
       const wait = retryAfter ? ` Please wait ${retryAfter} seconds.` : ' Please wait a moment.'
       throw new Error(`Rate limit reached.${wait}`)
+    }
+    if (res.status === 404) {
+      throw new Error(`Model not found — check your model name in Settings → AI Configuration. (HTTP 404)`)
     }
     throw new Error(err?.error?.message || `AI request failed (HTTP ${res.status})`)
   }
