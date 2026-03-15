@@ -148,7 +148,7 @@ Be encouraging but honest. Keep feedback under 2 sentences.`,
           streamRef.current += chunk
           setAiStreaming(streamRef.current)
         },
-      })
+      }, 'japanese')
 
       if (!mountedRef.current) return
 

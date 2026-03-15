@@ -559,7 +559,7 @@ Rules:
         const result = await callAI([
           { role: 'system', content: 'You are a study planning assistant. Output only valid JSON.' },
           { role: 'user', content: prompt },
-        ]);
+        ], {}, 'analysis');
 
         // Parse AI response
         const jsonMatch = result.match(/\[[\s\S]*\]/);

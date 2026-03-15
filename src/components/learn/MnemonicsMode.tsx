@@ -28,7 +28,7 @@ export default function MnemonicsMode({ onBack }: { onBack: () => void }) {
     setSaved(false);
     try {
       const prompt = `Generate memory aids for this concept: "${concept}". Respond with JSON only, no markdown: {"acronym": "string", "acronymExplanation": "string", "story": "string", "visualAssociation": "string"}`;
-      const raw = await callAI([{ role: 'user', content: prompt }], { json: true });
+      const raw = await callAI([{ role: 'user', content: prompt }], { json: true }, 'analysis');
       const cleaned = raw.replace(/```json|```/g, '').trim();
       setResult(JSON.parse(cleaned));
     } catch {

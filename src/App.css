@@ -422,6 +422,7 @@ html.eink .sidebar-logo-text { transition: none; }
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  cursor: default;
 }
 .nous-panel-icon-btn {
   display: flex;
@@ -448,6 +449,7 @@ html.eink .sidebar-logo-text { transition: none; }
 /* Messages scroll area */
 .nous-panel-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 12px;
   display: flex;
@@ -598,9 +600,12 @@ html.eink .sidebar-logo-text { transition: none; }
   -webkit-tap-highlight-color: transparent;
 }
 .nous-panel-textarea:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
   border-color: var(--border-strong);
+}
+.nous-panel-textarea:focus-visible {
+  outline: none;
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
 }
 .nous-panel-textarea::placeholder { color: var(--text-dim); }
 .nous-panel-textarea:disabled { opacity: 0.5; }

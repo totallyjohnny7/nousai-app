@@ -287,6 +287,7 @@ export default function QuestionEditor({ questions, onChange, onBack }: Props) {
             setAiOutput(accumulated)
           },
         },
+        'japanese',
       )
       const cleaned = accumulated.replace(/```json|```/g, '').trim()
       const parsed = JSON.parse(cleaned)

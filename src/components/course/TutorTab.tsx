@@ -136,11 +136,11 @@ Guidelines:
               m.id === responseId ? { ...m, content: streamedText } : m
             ));
           },
-        });
+        }, 'chat');
 
         // Finalize if streaming didn't produce output
         if (!streamedText) {
-          const fullText = await callAI(aiMessages);
+          const fullText = await callAI(aiMessages, {}, 'chat');
           setMessages(prev => prev.map(m =>
             m.id === responseId ? { ...m, content: fullText } : m
           ));

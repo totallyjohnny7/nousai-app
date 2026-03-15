@@ -1433,7 +1433,7 @@ function SolverTool({ onBack }: { onBack: () => void }) {
       const resp = await callAI([{
         role: 'user',
         content: `Solve this step by step. Format your response as numbered steps, one per line, like "1. [step]\\n2. [step]\\n...". Do not use markdown headers. Problem: ${problem}`,
-      }]);
+      }], {}, 'chat');
       const lines = (resp || '').split('\n').filter(l => /^\d+\./.test(l.trim()));
       setSteps(lines.length > 0 ? lines : (resp || '').split('\n').filter(l => l.trim()));
     } catch {

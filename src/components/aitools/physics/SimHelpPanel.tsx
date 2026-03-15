@@ -63,7 +63,7 @@ export function SimHelpPanel({ open, onToggle, simTitle, params, sliderLabels, n
             return m;
           });
         },
-      });
+      }, 'physics');
     } catch (e: any) {
       setMessages(m => {
         const last = m[m.length - 1];

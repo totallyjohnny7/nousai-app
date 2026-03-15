@@ -13,7 +13,7 @@ export default function SyncStatusBanner({ onLoad, onDismiss }: Props) {
   }, [onDismiss])
 
   return (
-    <div className="sync-banner">
+    <div className="sync-banner" role="status" aria-live="polite" aria-atomic="true">
       <span className="sync-banner-text">New data available from another device</span>
       <button className="sync-banner-btn" onClick={onLoad}>
         <RefreshCw size={12} /> Load Now

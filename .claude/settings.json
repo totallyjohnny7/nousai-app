@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:/Users/johnn/Desktop/NousAI-App/scripts/clear-pwa-cache.js\"",
+            "conditions": {
+              "toolInput.command": ".*vercel.*--prod.*"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

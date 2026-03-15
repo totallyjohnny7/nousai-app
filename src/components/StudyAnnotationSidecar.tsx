@@ -116,7 +116,7 @@ function ScholarChat({ sessionId, session, questionText, subject, options }: Sch
             return copy;
           });
         },
-      });
+      }, 'chat');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to get response';
       setMessages(prev => {
@@ -144,7 +144,7 @@ function ScholarChat({ sessionId, session, questionText, subject, options }: Sch
             return copy;
           });
         },
-      });
+      }, 'chat');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to regenerate';
       setMessages(prev => {

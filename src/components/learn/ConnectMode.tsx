@@ -47,7 +47,7 @@ export default function ConnectMode({ onBack }: { onBack: () => void }) {
     setError('');
     try {
       const prompt = `Evaluate this connection between "${conceptA}" and "${conceptB}". Respond with JSON only, no markdown: {"score": 1-10, "feedback": "string", "idealConnection": "string", "relatedConcepts": ["string"]}.\n\nUser's connection: ${connection}`;
-      const raw = await callAI([{ role: 'user', content: prompt }], { json: true });
+      const raw = await callAI([{ role: 'user', content: prompt }], { json: true }, 'chat');
       const cleaned = raw.replace(/```json|```/g, '').trim();
       setResult(JSON.parse(cleaned));
       setPhase('results');

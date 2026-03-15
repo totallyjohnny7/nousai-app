@@ -18,7 +18,7 @@ interface ChatSession {
   updatedAt: string;
 }
 
-const SYSTEM_PROMPT = `You are a study assistant inside Nous AI. Help the student with coursework, explain concepts, answer questions, and assist with anything academic. Be concise and use Markdown formatting.`;
+const SYSTEM_PROMPT = `You are a study assistant inside Nous AI. Help the student with coursework, explain concepts, answer questions, and assist with anything academic. Be concise and use Markdown formatting. IMPORTANT: Do not provide specific drug dosages, prescribing protocols, clinical treatment decisions, or patient-specific medical advice. For such questions, redirect the student to consult clinical resources, their course instructor, or a licensed healthcare professional.`;
 
 function AIChatTool() {
   const { data, setData } = useStore();
@@ -127,7 +127,7 @@ function AIChatTool() {
             return { ...s, messages: msgs };
           }));
         },
-      });
+      }, 'chat');
     } catch (e: any) {
       updateSessions(prev => prev.map(s => {
         if (s.id !== sid) return s;

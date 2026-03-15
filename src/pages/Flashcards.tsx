@@ -8,23 +8,14 @@ import { matchesShortcut, getShortcutKey, formatKey } from '../utils/shortcuts'
 import { sanitizeHtml } from '../utils/sanitize'
 import { exportFlashcardsAsAnki } from '../utils/exportFormats'
 import { reviewCard, type FSRSCard, type Grade } from '../utils/fsrs'
+import { loadFcFSRS, saveFcFSRS, loadDailyProgress, saveDailyProgress, type DailyProgress, todayDateStr } from '../utils/fsrsStorage'
 import { useSwipeGesture } from '../hooks/useSwipeGesture'
 import { SwipeableCard } from '../components/flashcards/SwipeableCard'
 import FlashcardMedia from '../components/FlashcardMedia'
 import { validateMedia, getYouTubeId, getYouTubeEmbedUrl } from '../utils/mediaUtils'
 import type { FlashcardMedia as FlashcardMediaType } from '../utils/mediaUtils'
 
-// ── FSRS persistence for flashcards ──────────────────────────
-const FC_FSRS_KEY = 'nousai-fc-fsrs'
-
-function loadFcFSRS(): Record<string, FSRSCard> {
-  try { return JSON.parse(localStorage.getItem(FC_FSRS_KEY) || '{}') } catch { return {} }
-}
-
-function saveFcFSRS(cards: Record<string, FSRSCard>) {
-  try { localStorage.setItem(FC_FSRS_KEY, JSON.stringify(cards)) } catch {}
-}
-
+// ── FSRS helpers ──────────────────────────────────────────────
 function fcCardKey(courseId: string, card: FlashcardItem): string {
   return `${courseId}::${card.front.slice(0, 50)}`
 }
@@ -45,24 +36,7 @@ function isFcCardDue(courseId: string, card: FlashcardItem, allFSRS: Record<stri
 }
 
 // ── Daily card cap ─────────────────────────────────────────────
-const DAILY_PROGRESS_KEY = 'nousai-daily-card-progress'
 const DEFAULT_CAP = 50
-
-interface DailyProgress { date: string; counts: Record<string, number> }
-
-function todayDateStr(): string { return new Date().toISOString().split('T')[0] }
-
-function loadDailyProgress(): DailyProgress {
-  try {
-    const raw = JSON.parse(localStorage.getItem(DAILY_PROGRESS_KEY) || '{}') as Partial<DailyProgress>
-    if (raw.date !== todayDateStr()) return { date: todayDateStr(), counts: {} }
-    return { date: raw.date!, counts: raw.counts ?? {} }
-  } catch { return { date: todayDateStr(), counts: {} } }
-}
-
-function saveDailyProgress(p: DailyProgress): void {
-  try { localStorage.setItem(DAILY_PROGRESS_KEY, JSON.stringify(p)) } catch {}
-}
 
 /** Inline helper: shows YouTube thumbnail or error for a URL string */
 function YouTubeLivePreview({ url }: { url: string }) {
@@ -1263,11 +1237,13 @@ export default function Flashcards() {
       if (!topicMap.has(t)) topicMap.set(t, [])
       topicMap.get(t)!.push(f)
     })
-    const topics = Array.from(topicMap.entries()).sort((a, b) => a[0].localeCompare(b[0]))
-    const hasTopics = topics.length > 1 || (topics.length === 1 && topics[0][0] !== 'Uncategorized')
+    // Only show named topics — filter out the catch-all 'Uncategorized' bucket
+    const topics = Array.from(topicMap.entries())
+      .filter(([name]) => name !== 'Uncategorized')
+      .sort((a, b) => a[0].localeCompare(b[0]))
 
-    // If no topic organization, go straight to review
-    if (!hasTopics) {
+    // No named topics (or empty course) → go straight to review
+    if (topics.length === 0) {
       return <FlashcardReview cards={cards} courseId={selectedCourse.id} title={selectedCourse.shortName || selectedCourse.name} onBack={() => setSelectedCourse(null)} onCardReviewed={handleCardReviewed} />
     }
 
@@ -1489,8 +1465,8 @@ export default function Flashcards() {
             const cappedDue = Math.min(courseDueMap[c.id] || 0, Math.max(0, cap - reviewed))
             const doneFraction = Math.min(1, reviewed / cap)
             return (
-              <div key={c.id} className="card mb-3" style={{ borderLeftColor: c.color, borderLeftWidth: 3 }}>
-                <div className="flex items-center justify-between" style={{ cursor: 'pointer' }} onClick={() => setSelectedCourse(c)}>
+              <div key={c.id} className="card mb-3" style={{ borderLeftColor: c.color, borderLeftWidth: 3, cursor: 'pointer' }} onClick={() => setSelectedCourse(c)}>
+                <div className="flex items-center justify-between">
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{c.shortName || c.name}</div>
                     <div className="text-xs text-muted">{(c.flashcards || []).length} cards</div>
@@ -1510,9 +1486,9 @@ export default function Flashcards() {
                 <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }} onClick={e => e.stopPropagation()}>
                   <div className="flex items-center gap-2" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     <span>Daily cap:</span>
-                    <button onClick={() => saveCap(c.id, Math.max(5, cap - 5))} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 4, color: 'var(--text-muted)', width: 22, height: 22, cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>−</button>
+                    <button onClick={e => { e.stopPropagation(); saveCap(c.id, Math.max(5, cap - 5)) }} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 4, color: 'var(--text-muted)', width: 22, height: 22, cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>−</button>
                     <span style={{ fontWeight: 700, color: 'var(--text-primary)', minWidth: 28, textAlign: 'center' }}>{cap}</span>
-                    <button onClick={() => saveCap(c.id, cap + 5)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 4, color: 'var(--text-muted)', width: 22, height: 22, cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
+                    <button onClick={e => { e.stopPropagation(); saveCap(c.id, cap + 5) }} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 4, color: 'var(--text-muted)', width: 22, height: 22, cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
                     <span>cards/day</span>
                   </div>
                   {reviewed > 0 && (
@@ -1942,7 +1918,7 @@ function FlashcardReview({ cards, courseId = '_fc', title, onBack, onCardReviewe
       // Customizable shortcuts
       if (matchesShortcut(e, 'fc_next') || e.key === 'd' || e.key === 'D') { next(); return }
       if (matchesShortcut(e, 'fc_prev') || e.key === 'a' || e.key === 'A') { prev(); return }
-      if (matchesShortcut(e, 'fc_flip')) { e.preventDefault(); setFlipped(f => !f); return }
+      if (matchesShortcut(e, 'fc_flip')) { e.preventDefault(); if (!flipped) setShowConfidence(true); setFlipped(f => !f); return }
       if (matchesShortcut(e, 'fc_star') && !e.ctrlKey && !e.metaKey) { toggleStar(); return }
       if (matchesShortcut(e, 'fc_restart') && !e.ctrlKey && !e.metaKey) { restart(); return }
       if (matchesShortcut(e, 'fc_auto')) { setAutoAdvance(a => !a); return }
@@ -2086,7 +2062,7 @@ function FlashcardReview({ cards, courseId = '_fc', title, onBack, onCardReviewe
           tabIndex={0}
           aria-label={flipped ? `Card back: ${card.back.substring(0, 100)}. Press Space to flip back.` : `Card front: ${card.front}. Press Space to flip.`}
           onClick={() => { setFlipped(f => !f); if (!flipped) setShowConfidence(true); }}
-          onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setFlipped(f => !f); if (!flipped) setShowConfidence(true); } }}
+          onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); e.preventDefault(); setFlipped(f => !f); if (!flipped) setShowConfidence(true); } }}
         >
           <div className={`flashcard${flipped ? ' flipped' : ''}`} style={card.media ? { minHeight: 480 } : undefined}>
             <div className="flashcard-face flashcard-front">

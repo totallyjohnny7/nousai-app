@@ -58,7 +58,7 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
     return () => clearTimeout(t);
   }, [onClose]);
   return (
-    <div style={{
+    <div role="status" aria-live="polite" aria-atomic="true" style={{
       position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
       background: '#222', color: '#fff', padding: '10px 18px', borderRadius: 8,
       fontSize: 13, fontWeight: 500, zIndex: 9999, boxShadow: '0 4px 16px rgba(0,0,0,0.4)',

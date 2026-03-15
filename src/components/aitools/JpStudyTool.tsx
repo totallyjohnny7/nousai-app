@@ -234,7 +234,7 @@ Return ONLY valid JSON:
   ]
 }`;
 
-      const response = await callAI([{ role: 'user', content: prompt }], { json: true, maxTokens: 4096 });
+      const response = await callAI([{ role: 'user', content: prompt }], { json: true, maxTokens: 4096 }, 'japanese');
       let jsonStr = response.trim();
       const codeBlock = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (codeBlock) jsonStr = codeBlock[1].trim();
@@ -317,7 +317,7 @@ Return ONLY valid JSON:
   ]
 }`;
 
-      const response = await callAI([{ role: 'user', content: prompt }], { json: true, maxTokens: 4096 });
+      const response = await callAI([{ role: 'user', content: prompt }], { json: true, maxTokens: 4096 }, 'japanese');
       let jsonStr = response.trim();
       const codeBlock = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (codeBlock) jsonStr = codeBlock[1].trim();

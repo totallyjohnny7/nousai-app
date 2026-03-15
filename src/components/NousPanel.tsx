@@ -13,6 +13,15 @@ import { safeRenderMd } from '../utils/renderMd'
 import { extractFileContent, FileExtractError } from '../utils/fileExtract'
 import type { AttachedFile } from '../types'
 
+/* ── Inline tooltip ────────────────────────────────────── */
+function SettingTooltip({ text }: { text: string }) {
+  return (
+    <span className="nous-setting-tooltip-wrap">
+      <span className="nous-setting-tooltip-box">{text}</span>
+    </span>
+  )
+}
+
 /* ── Types ─────────────────────────────────────────────── */
 interface Message {
   id: string
@@ -109,7 +118,9 @@ export default function NousPanel() {
       return saved ? JSON.parse(saved) : { x: window.innerWidth - 400, y: 80 }
     } catch { return { x: window.innerWidth - 400, y: 80 } }
   })
-  const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null)
+  const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number; currentX: number; currentY: number } | null>(null)
+  const posRef = useRef(pos)
+  const panelRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
   const navigate = useNavigate()
   const { courses, srData, activePageContext } = useStore()
@@ -273,7 +284,7 @@ export default function NousPanel() {
             m.id === assistantId ? { ...m, content: accumulated } : m
           ))
         },
-      })
+      }, 'chat')
 
       // If no streaming happened (provider returned full response), accumulated may be empty
       // In that case, callAI returned the full text — but we used onChunk so it should stream
@@ -353,11 +364,20 @@ export default function NousPanel() {
     return () => window.removeEventListener('paste', handler)
   }, [open, addAttachment])
 
+  // Keep posRef in sync so handleDragStart doesn't need pos as a dependency
+  posRef.current = pos
+
   const handleDragStart = useCallback((e: React.PointerEvent) => {
     if (!isFloating) return
+    // Don't start drag if clicking a button or interactive element
+    if ((e.target as HTMLElement).closest('button, a, input, select, textarea')) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    dragRef.current = { startX: e.clientX, startY: e.clientY, originX: pos.x, originY: pos.y }
-  }, [isFloating, pos])
+    dragRef.current = {
+      startX: e.clientX, startY: e.clientY,
+      originX: posRef.current.x, originY: posRef.current.y,
+      currentX: posRef.current.x, currentY: posRef.current.y,
+    }
+  }, [isFloating])
 
   const handleDragMove = useCallback((e: React.PointerEvent) => {
     if (!dragRef.current) return
@@ -368,11 +388,20 @@ export default function NousPanel() {
     // Clamp so at least 80px of the panel remains visible on each axis
     const clampedX = Math.max(-300, Math.min(newX, window.innerWidth - 80))
     const clampedY = Math.max(0, Math.min(newY, window.innerHeight - 80))
-    setPos({ x: clampedX, y: clampedY })
+    // Direct DOM mutation — no React re-render during drag (smooth 60fps)
+    dragRef.current.currentX = clampedX
+    dragRef.current.currentY = clampedY
+    if (panelRef.current) {
+      panelRef.current.style.transform = `translate(${clampedX}px, ${clampedY}px)`
+    }
   }, [])
 
   const handleDragEnd = useCallback(() => {
+    if (!dragRef.current) return
+    const { currentX, currentY } = dragRef.current
     dragRef.current = null
+    // Commit final position to React state (triggers save to localStorage)
+    setPos({ x: currentX, y: currentY })
   }, [])
 
   const provider = localStorage.getItem('nousai-ai-provider') || 'none'
@@ -395,6 +424,7 @@ export default function NousPanel() {
 
       {/* ── Panel drawer ── */}
       <div
+        ref={panelRef}
         className={`nous-panel${open ? ' nous-panel--open' : ''}${isFloating ? ' nous-panel--floating' : ''}`}
         style={isFloating ? { transform: `translate(${pos.x}px, ${pos.y}px)` } : undefined}
         role="complementary"
@@ -421,7 +451,7 @@ export default function NousPanel() {
             <span className="nous-panel-title">Nous AI</span>
             <span className="nous-panel-badge">{providerLabel}</span>
           </div>
-          <div className="nous-panel-header-actions">
+          <div className="nous-panel-header-actions" onPointerDown={(e) => e.stopPropagation()}>
             <button
               className="nous-panel-icon-btn"
               onClick={() => setIsFloating(f => !f)}
@@ -460,48 +490,66 @@ export default function NousPanel() {
             <div className="nous-settings-row">
               <span className="nous-settings-label">Context depth</span>
               <div className="nous-settings-options">
-                {(['minimal', 'smart', 'deep'] as const).map(d => (
-                  <button
-                    key={d}
-                    className={`nous-settings-opt${contextDepth === d ? ' nous-settings-opt--active' : ''}`}
-                    onClick={() => setContextDepth(d)}
-                  >
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
-                  </button>
+                {([
+                  { val: 'minimal', label: 'Minimal', tip: 'Only basic stats — fastest & cheapest. No page content sent.' },
+                  { val: 'smart',   label: 'Smart',   tip: 'Sends page summary + active item. Best balance of context & cost.' },
+                  { val: 'deep',    label: 'Deep',    tip: 'Sends full page content. Most context-aware, uses more tokens.' },
+                ] as const).map(({ val, label, tip }) => (
+                  <span key={val} className="nous-setting-tip-target">
+                    <button
+                      className={`nous-settings-opt${contextDepth === val ? ' nous-settings-opt--active' : ''}`}
+                      onClick={() => setContextDepth(val)}
+                    >
+                      {label}
+                    </button>
+                    <SettingTooltip text={tip} />
+                  </span>
                 ))}
               </div>
             </div>
             <div className="nous-settings-row">
               <span className="nous-settings-label">Max attachments</span>
               <div className="nous-settings-options">
-                {[2, 4, 8].map(n => (
-                  <button
-                    key={n}
-                    className={`nous-settings-opt${maxAttachments === n ? ' nous-settings-opt--active' : ''}`}
-                    onClick={() => setMaxAttachments(n)}
-                  >
-                    {n}
-                  </button>
+                {([
+                  { val: 2, tip: 'Up to 2 files per message. Great for quick questions.' },
+                  { val: 4, tip: 'Up to 4 files per message. Recommended balance.' },
+                  { val: 8, tip: 'Up to 8 files per message. For complex multi-file analysis.' },
+                ] as const).map(({ val, tip }) => (
+                  <span key={val} className="nous-setting-tip-target">
+                    <button
+                      className={`nous-settings-opt${maxAttachments === val ? ' nous-settings-opt--active' : ''}`}
+                      onClick={() => setMaxAttachments(val)}
+                    >
+                      {val}
+                    </button>
+                    <SettingTooltip text={tip} />
+                  </span>
                 ))}
               </div>
             </div>
             <div className="nous-settings-row">
               <span className="nous-settings-label">Float on open</span>
-              <button
-                className={`nous-settings-toggle${floatOnOpen ? ' nous-settings-toggle--on' : ''}`}
-                onClick={() => setFloatOnOpen(!floatOnOpen)}
-              >
-                {floatOnOpen ? 'On' : 'Off'}
-              </button>
+              <span className="nous-setting-tip-target">
+                <button
+                  className={`nous-settings-toggle${floatOnOpen ? ' nous-settings-toggle--on' : ''}`}
+                  onClick={() => setFloatOnOpen(!floatOnOpen)}
+                >
+                  {floatOnOpen ? 'On' : 'Off'}
+                </button>
+                <SettingTooltip text="Panel detaches and floats freely when opened. Drag the header to reposition." />
+              </span>
             </div>
             <div className="nous-settings-row">
               <span className="nous-settings-label">Clear on navigate</span>
-              <button
-                className={`nous-settings-toggle${clearOnNavigate ? ' nous-settings-toggle--on' : ''}`}
-                onClick={() => setClearOnNavigate(!clearOnNavigate)}
-              >
-                {clearOnNavigate ? 'On' : 'Off'}
-              </button>
+              <span className="nous-setting-tip-target">
+                <button
+                  className={`nous-settings-toggle${clearOnNavigate ? ' nous-settings-toggle--on' : ''}`}
+                  onClick={() => setClearOnNavigate(!clearOnNavigate)}
+                >
+                  {clearOnNavigate ? 'On' : 'Off'}
+                </button>
+                <SettingTooltip text="Conversation resets automatically when you navigate to a new page." />
+              </span>
             </div>
           </div>
         )}

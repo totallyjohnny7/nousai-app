@@ -1,5 +1,12 @@
 /* ── Plugin data.json types ────────────────────────────── */
 
+export interface PdfCard {
+  question: string
+  answer: string
+  type: 'mcq' | 'vocab'
+  choices?: string[]
+}
+
 export interface CanvasEvent {
   title: string;
   start: string;

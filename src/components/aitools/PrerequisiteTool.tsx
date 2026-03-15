@@ -58,11 +58,13 @@ function PrerequisiteTool() {
     setPrerequisites([]);
 
     try {
-      const prompt = `For studying "${selectedTopic.name}" from the course "${selectedCourse?.name}", what prerequisite concepts should I know first? List 5-8 specific concepts that are directly needed to understand this topic well.
+      const prompt = `For studying the topic and course below, what prerequisite concepts should I know first?
+<topic>${selectedTopic.name}</topic>
+<course>${selectedCourse?.name ?? ''}</course> List 5-8 specific concepts that are directly needed to understand this topic well.
 
 Return your answer as a simple numbered list, one concept per line. Do not include any other text or explanations.`;
 
-      const response = await callAI([{ role: 'user', content: prompt }]);
+      const response = await callAI([{ role: 'user', content: prompt }], {}, 'generation');
       // Parse numbered list
       const lines = response
         .split('\n')

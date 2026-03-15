@@ -88,7 +88,8 @@ export default function GraphSolverMode({ onBack }: { onBack: () => void }) {
             accumulated += chunk;
             setStreamText(accumulated);
           },
-        }
+        },
+        'analysis'
       );
       setResult(parseResult(accumulated || streamText));
     } catch {

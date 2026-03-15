@@ -2,7 +2,7 @@
  * LearnPage — 15 interactive learning modes
  * Each mode is a standalone tool with its own UI and state.
  */
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Zap, Lightbulb, Clock, MessageCircle, Search, Brain,
@@ -10,7 +10,8 @@ import {
   Repeat, Users, BookOpen, ChevronLeft, CheckCircle, XCircle,
   ArrowRight, RotateCcw, Play, Trophy,
   Sparkles, HelpCircle, GripVertical, Loader2,
-  BarChart3, Plus, Eye, EyeOff, Library, Star, BookOpenCheck, Volume2, Camera
+  BarChart3, Plus, Eye, EyeOff, Library, Star, BookOpenCheck, Volume2, Camera,
+  Atom, Languages
 } from 'lucide-react';
 import { useStore } from '../store';
 import { sanitizeHtml } from '../utils/sanitize';
@@ -41,12 +42,16 @@ import TLDRMode from '../components/learn/TLDRMode';
 import ConnectMode from '../components/learn/ConnectMode';
 import { getLevel } from '../utils/gamification';
 
+const JpQuizTab = lazy(() => import('../components/jpquiz/JpQuizTab'));
+const PhysicsQuizTab = lazy(() => import('../components/physquiz/PhysicsQuizTab'));
+
 // ─── Types ─────────────────────────────────────────────
 
 type ModeId =
   | 'rapid' | 'feynman' | 'exam' | 'socratic' | 'gap'
   | 'mnemonics' | 'interleave' | 'formula' | 'errors'
-  | 'tldr' | 'connect' | 'match' | 'spaced' | 'tutors' | 'solver';
+  | 'tldr' | 'connect' | 'match' | 'spaced' | 'tutors' | 'solver'
+  | 'japanese-practicum' | 'physics-practicum';
 
 interface ModeConfig {
   id: ModeId;
@@ -88,6 +93,11 @@ const MODES: ModeConfig[] = [
   { id: 'spaced', name: 'Spaced Rep', icon: Repeat, desc: 'FSRS review', color: '#22c55e' },
   { id: 'tutors', name: 'Tutors', icon: Users, desc: 'AI teaching styles', color: '#e11d48' },
   { id: 'solver', name: 'Solver', icon: HelpCircle, desc: 'Step-by-step help', color: '#0ea5e9' },
+];
+
+const PRACTICUM_MODES: ModeConfig[] = [
+  { id: 'japanese-practicum', name: 'Japanese Practicum', icon: Languages, desc: 'Typing & speaking quiz for Japanese courses', color: '#F5A623' },
+  { id: 'physics-practicum', name: 'Physics Practicum', icon: Atom, desc: 'Problem sets, AI grading & analytics for Physics', color: '#F5A623' },
 ];
 
 // ─── Helpers ───────────────────────────────────────────
@@ -311,6 +321,54 @@ export default function LearnPage() {
         })}
       </div>
 
+      {/* ── Practicum Section ── */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{
+          fontSize: 9, fontWeight: 800, letterSpacing: '0.15em',
+          color: '#666', marginBottom: 8, paddingLeft: 4,
+          textTransform: 'uppercase',
+        }}>
+          PRACTICUM
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
+          gap: 6,
+        }}>
+          {PRACTICUM_MODES.map(m => {
+            const Icon = m.icon;
+            const isActive = activeMode === m.id;
+            return (
+              <button
+                key={m.id}
+                onClick={() => setActiveMode(isActive ? null : m.id)}
+                style={{
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  textAlign: 'center', padding: '6px 2px', transition: 'all 0.15s',
+                }}
+              >
+                <div style={{
+                  width: 40, height: 40, borderRadius: '50%',
+                  border: isActive ? '2px solid #F5A623' : '1px solid #555',
+                  background: isActive ? 'rgba(245,166,35,0.15)' : 'transparent',
+                  color: isActive ? '#F5A623' : '#aaa',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 4px', transition: 'all 0.15s',
+                }}>
+                  <Icon size={16} />
+                </div>
+                <div style={{
+                  fontSize: 9, fontWeight: 600, lineHeight: 1.2,
+                  color: isActive ? '#F5A623' : '#999',
+                }}>
+                  {m.name}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* ── Course Selector Bar ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
@@ -411,8 +469,9 @@ export default function LearnPage() {
 // ─── Mode Router ───────────────────────────────────────
 
 function ModePanel({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
-  const config = MODES.find(m => m.id === mode)!;
+  const config = [...MODES, ...PRACTICUM_MODES].find(m => m.id === mode)!;
   const Icon = config.icon;
+  const { courses } = useStore();
 
   return (
     <div style={{ ...cardStyle, borderColor: '#555', borderWidth: 1 }}>
@@ -446,6 +505,33 @@ function ModePanel({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
       {mode === 'spaced' && <SpacedRepMode />}
       {mode === 'tutors' && <TutorsMode />}
       {mode === 'solver' && <SolverMode />}
+      {mode === 'japanese-practicum' && (() => {
+        const course = courses.find(c =>
+          c.shortName?.toUpperCase().startsWith('JAPN') ||
+          c.name.toLowerCase().includes('japanese')
+        );
+        if (!course) return (
+          <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '16px 0' }}>
+            Select a Japanese course in the dropdown above to use Japanese Practicum.
+          </div>
+        );
+        return (
+          <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading...</div>}>
+            <JpQuizTab course={course} />
+          </Suspense>
+        );
+      })()}
+      {mode === 'physics-practicum' && (() => {
+        const course = courses.find(c =>
+          (c.shortName?.match(/PHYS|PHY|SCI/i) != null) ||
+          c.name.toLowerCase().match(/physics|physical science/) != null
+        ) ?? { id: 'global-physics', name: 'Physics', shortName: 'PHY', color: '#F5A623', topics: [], flashcards: [] };
+        return (
+          <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading...</div>}>
+            <PhysicsQuizTab course={course} />
+          </Suspense>
+        );
+      })()}
     </div>
   );
 }
@@ -578,7 +664,7 @@ function RapidLearnMode() {
           content: `Topic: ${topic || 'General Review'}\nCourse: ${course?.name || 'All courses'}\nContent sources: ${selected.length} items from quizzes, notes, and flashcards\n\nStudy material:\n${sourceText}`,
         }], {
           onChunk: (chunk: string) => { result += chunk; setOutput(result.split('\n')); },
-        });
+        }, 'analysis');
         if (!result) {
           setOutput(result.split('\n'));
         }
@@ -710,7 +796,7 @@ function SocraticMode() {
         const aiReply = await callAI([{
           role: 'system',
           content: `You are a Socratic teacher exploring the topic "${topic}" with a student. Never give direct answers. Always respond with 1-2 probing follow-up questions that build on the student's response and push them to think deeper. Be encouraging but challenging. Keep responses to 2-3 sentences. If the student has explored deeply (${newDepth}+ exchanges), acknowledge their depth and suggest they summarize their insights.`,
-        }, ...context], { temperature: 0.7, maxTokens: 256 });
+        }, ...context], { temperature: 0.7, maxTokens: 256 }, 'analysis');
 
         if (aiReply.trim()) {
           setMessages(prev => [...prev, { role: 'ai', text: aiReply.trim() }]);
@@ -794,3 +880,4 @@ function SocraticMode() {
     </div>
   );
 }
+

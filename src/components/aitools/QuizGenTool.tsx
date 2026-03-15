@@ -54,8 +54,10 @@ function QuizGenTool() {
 
     try {
       const subtopics = topic.subtopics?.map(s => s.name).join(', ') || '';
-      const prompt = `Generate ${questionCount} multiple choice quiz questions about "${topic.name}" from the course "${selectedCourse?.name}".
-${subtopics ? `Subtopics to cover: ${subtopics}` : ''}
+      const prompt = `Generate ${questionCount} multiple choice quiz questions about the topic and course specified below.
+${subtopics ? `Subtopics to cover: <subtopics>${subtopics}</subtopics>` : ''}
+<topic>${topic.name}</topic>
+<course>${selectedCourse?.name ?? ''}</course>
 
 Return ONLY a valid JSON array. Each question must have:
 - "question": the question text
@@ -65,7 +67,7 @@ Return ONLY a valid JSON array. Each question must have:
 
 Format: [{"question":"...","options":["A","B","C","D"],"answer":"A","explanation":"..."},...]`;
 
-      const response = await callAI([{ role: 'user', content: prompt }]);
+      const response = await callAI([{ role: 'user', content: prompt }], {}, 'generation');
       const parsed = parseJsonArray(response);
       if (!parsed || parsed.length === 0) {
         setError('Could not parse questions from AI response. Please try again.');

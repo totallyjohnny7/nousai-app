@@ -40,7 +40,7 @@ function ReExplainTool() {
 
 Concept: ${concept.trim()}`;
 
-      const response = await callAI([{ role: 'user', content: prompt }]);
+      const response = await callAI([{ role: 'user', content: prompt }], {}, 'analysis');
       setOutput(response);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'An error occurred.');

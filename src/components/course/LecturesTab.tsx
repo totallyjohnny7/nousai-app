@@ -557,7 +557,7 @@ export default function LecturesTab({
                 try {
                   const plain = activeNote.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
                   const prompt = `Create a Cornell Note from the following content.\nTitle: ${activeNote.title}\nContent: ${plain.slice(0, 3000)}\n\nReturn ONLY a JSON object (no markdown fences):\n{"cues":"HTML key questions/keywords (use <ul><li>)","notes":"HTML detailed notes (use <h3>,<p>,<ul><li>,<strong>)","summary":"HTML summary in 2-3 sentences"}`;
-                  const result = await callAI([{ role: 'user', content: prompt }]);
+                  const result = await callAI([{ role: 'user', content: prompt }], {}, 'generation');
                   const jsonStr = result.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim();
                   const parsed = JSON.parse(jsonStr);
                   if (parsed.cues) {
@@ -589,7 +589,7 @@ export default function LecturesTab({
                 try {
                   const plain = activeNote.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
                   const prompt = `Create 5-10 flashcards from the following content.\nTitle: ${activeNote.title}\nContent: ${plain.slice(0, 3000)}\n\nReturn ONLY a JSON array (no markdown fences):\n[{"front":"question or term","back":"answer or definition"}]`;
-                  const result = await callAI([{ role: 'user', content: prompt }]);
+                  const result = await callAI([{ role: 'user', content: prompt }], {}, 'generation');
                   const jsonStr = result.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim();
                   const parsed = JSON.parse(jsonStr);
                   if (Array.isArray(parsed) && parsed.length > 0) {

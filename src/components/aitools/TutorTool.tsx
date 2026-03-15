@@ -60,14 +60,18 @@ function TutorTool() {
       const subtopicNames = selectedTopic?.subtopics?.map(s => s.name).join(', ') || 'general concepts';
       const scoreText = profScore !== null ? `${profScore}%` : 'unknown';
 
-      const systemPrompt = `You are a tutor helping me study ${selectedTopic?.name || 'this topic'} from the course "${selectedCourse?.name || 'my course'}". My current proficiency is ${scoreText}. Subtopics: ${subtopicNames}. Focus on areas I find difficult and ask me questions to test my understanding. Keep responses concise and educational. IMPORTANT: Do not provide specific drug dosages, prescribing protocols, clinical treatment decisions, or patient-specific medical advice. For such questions, redirect the student to consult clinical resources, their instructor, or a licensed healthcare professional.`;
+      const systemPrompt = `You are a tutor. The student's topic, course, and proficiency are provided below. Focus on areas the student finds difficult and ask questions to test understanding. Keep responses concise and educational. IMPORTANT: Do not provide specific drug dosages, prescribing protocols, clinical treatment decisions, or patient-specific medical advice. For such questions, redirect the student to consult clinical resources, their instructor, or a licensed healthcare professional.
+<topic>${selectedTopic?.name || 'this topic'}</topic>
+<course>${selectedCourse?.name || 'my course'}</course>
+<proficiency>${scoreText}</proficiency>
+<subtopics>${subtopicNames}</subtopics>`;
 
       const aiMessages: AIMessage[] = [
         { role: 'system', content: systemPrompt },
         ...newMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
       ];
 
-      const response = await callAI(aiMessages);
+      const response = await callAI(aiMessages, {}, 'chat');
       setMessages(prev => [...prev, { role: 'assistant', content: response }]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'An error occurred.');

@@ -8,7 +8,7 @@ import {
   ScanLine, Mic, Lightbulb, GitBranch, BookOpen,
   Edit3, CheckCircle, Atom, Headphones, Languages, MessageSquare,
   Layers, HelpCircle, GraduationCap, RefreshCw, Dumbbell, GitMerge, CalendarDays,
-  AlertCircle, Download, FileText,
+  AlertCircle, Download, FileText, ScanSearch,
 } from 'lucide-react';
 import { useStore } from '../store';
 import { isAIConfigured } from '../utils/ai';
@@ -18,7 +18,8 @@ type AITool =
   | 'rename' | 'factcheck' | 'physics' | 'aichat' | 'omi' | 'nihongo'
   | 'flashcardgen' | 'quizgen' | 'tutor' | 'reexplain' | 'practice' | 'prerequisites' | 'schedule'
   | 'ankiimport'
-  | 'quizletimport';
+  | 'quizletimport'
+  | 'pdfocr';
 
 interface ToolDef {
   id: AITool;
@@ -45,8 +46,9 @@ const TOOLS: ToolDef[] = [
   { id: 'practice',     icon: Dumbbell,      label: 'Practice' },
   { id: 'prerequisites',icon: GitMerge,      label: 'Prerequisites' },
   { id: 'schedule',     icon: CalendarDays,  label: 'Schedule' },
-  { id: 'ankiimport',    icon: Download,  label: 'Anki Import' },
-  { id: 'quizletimport', icon: FileText,  label: 'Quizlet Import' },
+  { id: 'ankiimport',    icon: Download,    label: 'Anki Import' },
+  { id: 'quizletimport', icon: FileText,    label: 'Quizlet Import' },
+  { id: 'pdfocr',        icon: ScanSearch,  label: 'PDF → Cards' },
 ];
 
 const OcrTool            = lazyWithRetry(() => import('../components/aitools/OcrTool'));
@@ -69,6 +71,7 @@ const PrerequisiteTool   = lazyWithRetry(() => import('../components/aitools/Pre
 const StudyScheduleTool  = lazyWithRetry(() => import('../components/aitools/StudyScheduleTool'));
 const AnkiImportTool       = lazyWithRetry(() => import('../components/aitools/AnkiImportTool'));
 const QuizletImportTool    = lazyWithRetry(() => import('../components/aitools/QuizletImportTool'));
+const PdfUploaderTool      = lazyWithRetry(() => import('../components/aitools/PdfUploaderTool'));
 
 function ToolFallback() {
   return (
@@ -180,6 +183,7 @@ export default function AIToolsPage() {
           {activeTool === 'schedule'      && <StudyScheduleTool />}
           {activeTool === 'ankiimport'      && <AnkiImportTool />}
           {activeTool === 'quizletimport'   && <QuizletImportTool />}
+          {activeTool === 'pdfocr'          && <PdfUploaderTool />}
         </div>
       </Suspense>
     </div>

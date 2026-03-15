@@ -115,7 +115,7 @@ export default function PathTab({
     try {
       const subtopicNames = (topic.subtopics || []).map(st => st.name).join(', ');
       const prompt = `Write a concise study summary (3-5 sentences) for the topic "${topic.name}" in the course "${course.name}".${subtopicNames ? ` It covers: ${subtopicNames}.` : ''} Focus on key concepts, main ideas, and what a student should understand.`;
-      const result = await callAI([{ role: 'user', content: prompt }]);
+      const result = await callAI([{ role: 'user', content: prompt }], {}, 'analysis');
       const summary = result?.trim() || '';
       if (summary) {
         updateCourseTopics(chapters.map(t => t.id === topic.id ? { ...t, summary } : t));

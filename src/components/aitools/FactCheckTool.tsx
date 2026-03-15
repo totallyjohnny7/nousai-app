@@ -57,7 +57,7 @@ ${claimsToCheck.join('\n')}${contextBlock}
 
 Return ONLY a valid JSON array.`;
 
-        const response = await callAI([{ role: 'user', content: prompt }], { json: true });
+        const response = await callAI([{ role: 'user', content: prompt }], { json: true }, 'analysis');
         try {
           let jsonStr = response.trim();
           const codeBlock = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);

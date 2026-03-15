@@ -56,7 +56,9 @@ function PracticeGenTool() {
         Hard: 'challenging problems that require deeper analysis and synthesis',
       };
 
-      const prompt = `Generate 3 ${difficulty.toLowerCase()} practice problems for "${selectedTopic.name}" from "${selectedCourse?.name}".
+      const prompt = `Generate 3 ${difficulty.toLowerCase()} practice problems for the topic and course below.
+<topic>${selectedTopic.name}</topic>
+<course>${selectedCourse?.name ?? ''}</course>
 
 Difficulty: ${difficulty} — ${difficultyDesc[difficulty]}
 
@@ -66,7 +68,7 @@ Return ONLY a valid JSON array with exactly 3 items. Each item must have:
 
 Format: [{"problem":"...","answer":"..."},...]`;
 
-      const response = await callAI([{ role: 'user', content: prompt }]);
+      const response = await callAI([{ role: 'user', content: prompt }], {}, 'generation');
       const parsed = parseJsonArray(response);
       if (!parsed || parsed.length === 0) {
         setError('Could not parse problems from AI response. Please try again.');

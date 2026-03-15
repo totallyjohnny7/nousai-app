@@ -62,9 +62,9 @@ function StudyScheduleTool() {
         return `${t.name} (proficiency: ${score}%)`;
       }).join('\n');
 
-      const prompt = `Create a ${weeksUntilExam}-week study schedule for the goal: "${goalName}".
-
-Course: ${selectedCourse.name}
+      const prompt = `Create a ${weeksUntilExam}-week study schedule for the goal and course below.
+<goal>${goalName}</goal>
+<course>${selectedCourse.name}</course>
 Exam/Goal date: ${examDate} (${daysUntilExam} days from now)
 Available hours per week: ${hoursPerWeek}
 
@@ -76,7 +76,7 @@ Create a realistic weekly plan. Prioritize lower-proficiency topics. Return ONLY
 
 Include all ${weeksUntilExam} weeks. Distribute hours realistically (total should sum to ~${hoursPerWeek * weeksUntilExam}).`;
 
-      const response = await callAI([{ role: 'user', content: prompt }]);
+      const response = await callAI([{ role: 'user', content: prompt }], {}, 'generation');
       const parsed = parseJsonArray(response);
       if (!parsed || parsed.length === 0) {
         setError('Could not parse schedule from AI response. Please try again.');

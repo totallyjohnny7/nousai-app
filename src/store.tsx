@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
-import type { NousAIData, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext } from './types';
+import type { NousAIData, FlashcardItem, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext } from './types';
 import { writeClipboard, saveFilePicker, openFilePicker, getPermPref } from './utils/permissions';
 import { syncToCloud, syncFromCloud, subscribeToMetadataChanges } from './utils/auth';
 import { runMigrations } from './utils/migrations';
@@ -18,6 +18,60 @@ const emptyTimer: TimerState = {
   pomoLongBreakMin: 15, pomoPhase: 'idle', pomoSession: 0, pomoTotalSessions: 0,
   pomoRemainingMs: 0, savedAt: Date.now()
 };
+
+/* ── Card-level merge: preserve local topic/media when cloud data lacks them ──
+ *
+ * Called before replacing local state with cloud data. Cards are matched by
+ * their front+back content fingerprint (FlashcardItem has no id field).
+ * Rule: cloud wins on conflicts; local fills in gaps (never overwrites cloud).
+ * This prevents a cloud sync from silently wiping locally-set topic tags or
+ * media attachments that haven't been uploaded to cloud yet.
+ */
+export function mergeLocalCardMeta(local: NousAIData | null, cloud: NousAIData): NousAIData {
+  const localCourses = local?.pluginData?.coachData?.courses ?? [];
+  const cloudCourses = cloud.pluginData?.coachData?.courses ?? [];
+  if (localCourses.length === 0 || cloudCourses.length === 0) return cloud;
+
+  // Build lookup: courseId → Map<"front\0back" → FlashcardItem>
+  const localCardsByCourse = new Map<string, Map<string, FlashcardItem>>();
+  for (const course of localCourses) {
+    const byKey = new Map<string, FlashcardItem>();
+    for (const card of course.flashcards ?? []) {
+      byKey.set(`${card.front}\0${card.back}`, card);
+    }
+    localCardsByCourse.set(course.id, byKey);
+  }
+
+  const mergedCourses = cloudCourses.map(course => {
+    const localCards = localCardsByCourse.get(course.id);
+    if (!localCards) return course;
+
+    const flashcards = (course.flashcards ?? []).map(cloudCard => {
+      const localCard = localCards.get(`${cloudCard.front}\0${cloudCard.back}`);
+      if (!localCard) return cloudCard;
+
+      const cloudHasTopic = cloudCard.topic && cloudCard.topic !== '__none__';
+      const localHasTopic = localCard.topic && localCard.topic !== '__none__';
+      const merged: FlashcardItem = { ...cloudCard };
+      if (!cloudHasTopic && localHasTopic) merged.topic = localCard.topic;
+      if (!cloudCard.media && localCard.media) merged.media = localCard.media;
+      return merged;
+    });
+
+    return { ...course, flashcards };
+  });
+
+  return {
+    ...cloud,
+    pluginData: {
+      ...cloud.pluginData,
+      coachData: {
+        ...cloud.pluginData.coachData,
+        courses: mergedCourses,
+      },
+    },
+  };
+}
 
 /* ── Data normalization — fills in missing optional fields ── */
 export function normalizeData(d: NousAIData): NousAIData {
@@ -358,7 +412,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const cloudData = await syncFromCloud(uid);
       if (cloudData) {
         const normalized = normalizeData(cloudData);
-        setData(normalized);
+        // Preserve locally-set topic/media that the cloud snapshot may lack
+        const merged = mergeLocalCardMeta(data, normalized);
+        setData(merged);
         const now = new Date().toISOString();
         localStorage.setItem('nousai-last-sync', now);
         localStorage.setItem('nousai-data-modified-at', now);

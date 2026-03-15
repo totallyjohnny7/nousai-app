@@ -25,8 +25,8 @@ export default function Timer() {
   const courses: Course[] = data?.pluginData?.coachData?.courses ?? []
   const [studyCourseId, setStudyCourseId] = useState('')
 
-  const [workMin, setWorkMin] = useState(timerState.pomoWorkMin || 25)
-  const [breakMin, setBreakMin] = useState(timerState.pomoBreakMin || 5)
+  const [workMin, setWorkMin] = useState(timerState.pomoWorkMin || 20)
+  const [breakMin, setBreakMin] = useState(timerState.pomoBreakMin || 10)
   const [longBreakMin, setLongBreakMin] = useState(timerState.pomoLongBreakMin || 15)
 
   const [phase, setPhase] = useState<Phase>((timerState.pomoPhase as Phase) || 'idle')

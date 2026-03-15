@@ -449,7 +449,7 @@ export default function Quizzes() {
                 <Save size={12} /> Pause & Save
               </button>
             </div>
-            <div className="progress-bar" style={{ height: 6, marginBottom: 6 }}>
+            <div className="progress-bar" style={{ height: 6, marginBottom: 6 }} role="progressbar" aria-valuenow={sessionProgress.pct} aria-valuemin={0} aria-valuemax={100} aria-label={`Quiz progress: ${sessionProgress.answered} of ${sessionProgress.total} answered`}>
               <div className="progress-fill" style={{ width: `${sessionProgress.pct}%`, transition: 'width 0.3s', background: sessionProgress.phase === 'review-wrong' ? '#f59e0b' : 'var(--accent)' }} />
             </div>
             <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-muted)' }}>
@@ -773,10 +773,10 @@ function CreateTab({ onPlay }: { onPlay: (quiz: PlayableQuiz) => void }) {
         (selectedCourseObj?.flashcards || []).map(f => `${f.front}: ${f.back}`).join('\n') ||
         'General knowledge quiz'
       const prompt = buildQuizPrompt(
-        { count: questionCount, types: getTypes(), difficulty: diffMap[difficulty], focusArea: selectedTopic || undefined },
+        { count: Math.min(50, Math.max(1, questionCount)), types: getTypes(), difficulty: diffMap[difficulty], focusArea: selectedTopic || undefined },
         source,
       )
-      const response = await callAI([{ role: 'user', content: prompt }], { json: true })
+      const response = await callAI([{ role: 'user', content: prompt }], { json: true }, 'chat')
       const questions = parseAIQuizResponse(response)
       if (questions.length === 0) {
         setGenError('AI returned no valid questions. Try adding more source material or adjusting settings.')
@@ -1017,21 +1017,22 @@ function CreateTab({ onPlay }: { onPlay: (quiz: PlayableQuiz) => void }) {
         <div style={{ marginBottom: 14 }}>
           <div className="text-xs text-muted" style={{ marginBottom: 4 }}>Quiz Name</div>
           <input type="text" value={quizName} onChange={e => setQuizName(e.target.value)}
-            placeholder="e.g., Biology Ch.5 Review" style={inputStyle} />
+            placeholder="e.g., Biology Ch.5 Review" style={inputStyle}
+            aria-label="Quiz Name" aria-required="true" required />
         </div>
 
         {/* Course + Topic */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
           <div>
             <div className="text-xs text-muted" style={{ marginBottom: 4 }}>Course / Subject</div>
-            <select value={selectedCourse} onChange={e => { setSelectedCourse(e.target.value); setSelectedTopic('') }} style={inputStyle}>
+            <select value={selectedCourse} onChange={e => { setSelectedCourse(e.target.value); setSelectedTopic('') }} style={inputStyle} aria-label="Course / Subject">
               <option value="">Select course...</option>
               {courses.map(c => <option key={c.id} value={c.id}>{c.shortName || c.name}</option>)}
             </select>
           </div>
           <div>
             <div className="text-xs text-muted" style={{ marginBottom: 4 }}>Topic</div>
-            <select value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} style={inputStyle}>
+            <select value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} style={inputStyle} aria-label="Topic">
               <option value="">All topics</option>
               {topics.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
             </select>
@@ -1044,11 +1045,11 @@ function CreateTab({ onPlay }: { onPlay: (quiz: PlayableQuiz) => void }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               <div>
                 <div className="text-xs text-muted" style={{ marginBottom: 4 }}>Number of Questions</div>
-                <input type="number" value={questionCount} onChange={e => setQuestionCount(+e.target.value)} min={1} max={50} style={inputStyle} />
+                <input type="number" value={questionCount} onChange={e => setQuestionCount(+e.target.value)} min={1} max={50} style={inputStyle} aria-label="Number of Questions" />
               </div>
               <div>
                 <div className="text-xs text-muted" style={{ marginBottom: 4 }}>Difficulty</div>
-                <select value={difficulty} onChange={e => setDifficulty(e.target.value as typeof difficulty)} style={inputStyle}>
+                <select value={difficulty} onChange={e => setDifficulty(e.target.value as typeof difficulty)} style={inputStyle} aria-label="Difficulty">
                   <option value="easy">Easy</option>
                   <option value="medium">Medium</option>
                   <option value="hard">Hard</option>
@@ -2385,7 +2386,7 @@ function HistoryTab({ onSelectAttempt, onPlay, folders, folderMap, folderActions
                   </div>
                   <div className="quiz-attempt-meta">
                     {new Date(q.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    &nbsp;&bull;&nbsp; {q.correct}/{q.questionCount} &nbsp;&bull;&nbsp; {q.mode}
+                    &nbsp;&bull;&nbsp; {typeof q.correct === 'number' ? q.correct : '-'}/{typeof q.questionCount === 'number' ? q.questionCount : '-'} &nbsp;&bull;&nbsp; {q.mode || ''}
                     {q.subject && <>&nbsp;&bull;&nbsp; {q.subject}</>}
                   </div>
                 </div>

@@ -118,7 +118,7 @@ Help the student understand. Be encouraging, concise, and teach relevant Japanes
           streamRef.current += chunk
           setMessages([...newMsgs, { role: 'ai', text: streamRef.current }])
         },
-      })
+      }, 'japanese')
 
       if (!mountedRef.current) return
       const finalMsgs: JpQuizChatMsg[] = [...newMsgs, { role: 'ai', text: result }]

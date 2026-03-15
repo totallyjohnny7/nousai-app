@@ -155,7 +155,7 @@ Return ONLY the complete HTML code, nothing else. No markdown code fences. Start
       const html = await callAI([
         { role: 'system', content: 'You generate interactive HTML5/Canvas simulations. Return ONLY valid HTML code. No explanations, no markdown.' },
         { role: 'user', content: prompt },
-      ], { temperature: 0.3, maxTokens: 16384 });
+      ], { temperature: 0.3, maxTokens: 16384 }, 'analysis');
 
       // Clean up response — strip markdown fences if AI included them
       let cleaned = html.trim();
@@ -288,7 +288,7 @@ input[type=range]{width:200px;}</style>
         { role: 'system', content: context },
         ...aiMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.text })),
         { role: 'user', content: userMsg },
-      ], { temperature: 0.4, maxTokens: 1024 });
+      ], { temperature: 0.4, maxTokens: 1024 }, 'analysis');
       setAiMessages(prev => [...prev, { role: 'assistant', text: response.trim() }]);
     } catch (e: any) {
       setAiMessages(prev => [...prev, { role: 'assistant', text: `Error: ${e?.message || 'Failed to get response'}` }]);

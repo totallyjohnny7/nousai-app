@@ -36,7 +36,7 @@ export default function TLDRMode({ onBack }: { onBack: () => void }) {
     try {
       const bulletText = bulletLines.map((b, i) => `${i + 1}. ${b.replace(/^[-•*]\s*/, '')}`).join('\n');
       const prompt = `Evaluate this TLDR summary of "${topic}". Respond with JSON only, no markdown: {"coverageScore": 1-10, "accuracyScore": 1-10, "missingConcepts": ["string"], "praise": "string"}.\n\nSummary bullets:\n${bulletText}`;
-      const raw = await callAI([{ role: 'user', content: prompt }], { json: true });
+      const raw = await callAI([{ role: 'user', content: prompt }], { json: true }, 'analysis');
       const cleaned = raw.replace(/```json|```/g, '').trim();
       setResult(JSON.parse(cleaned));
       setPhase('results');

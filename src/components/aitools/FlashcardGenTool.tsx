@@ -48,15 +48,16 @@ function FlashcardGenTool() {
     setCards([]);
 
     try {
-      const prompt = `Generate 10 question-and-answer flashcard pairs based on the following note content. Return ONLY a valid JSON array with objects having "front" (the question) and "back" (the answer) fields.
+      const prompt = `Generate 10 question-and-answer flashcard pairs based on the note content below. Return ONLY a valid JSON array with objects having "front" (the question) and "back" (the answer) fields.
 
-Note title: ${note.title}
-Note content:
+<note_title>${note.title}</note_title>
+<note_content>
 ${note.content.slice(0, 4000)}
+</note_content>
 
 Return format: [{"front":"Question?","back":"Answer."},...]`;
 
-      const response = await callAI([{ role: 'user', content: prompt }]);
+      const response = await callAI([{ role: 'user', content: prompt }], {}, 'generation');
       const parsed = parseJsonArray(response);
       if (!parsed || parsed.length === 0) {
         setError('Could not parse flashcards from AI response. Please try again.');

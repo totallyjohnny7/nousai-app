@@ -91,6 +91,7 @@ Keep responses concise (under 200 words). Use markdown formatting.`;
               setConversation([{ role: 'tutor', text: streamed }]);
             },
           },
+          'chat',
         );
         if (!streamed) {
           const text = await callAI(
@@ -98,6 +99,8 @@ Keep responses concise (under 200 words). Use markdown formatting.`;
               { role: 'system', content: systemPrompt },
               { role: 'user', content: `I want to study "${topic}". Start our tutoring session.` },
             ],
+            {},
+            'chat',
           );
           setConversation([{ role: 'tutor', text }]);
         }
@@ -185,9 +188,9 @@ Keep responses concise. Use markdown.`;
               i === placeholderIdx ? { ...m, text: streamed } : m
             ));
           },
-        });
+        }, 'chat');
         if (!streamed) {
-          const text = await callAI(aiMessages);
+          const text = await callAI(aiMessages, {}, 'chat');
           setConversation(prev => prev.map((m, i) =>
             i === placeholderIdx ? { ...m, text } : m
           ));

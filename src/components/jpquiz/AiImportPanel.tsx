@@ -239,7 +239,7 @@ export default function AiImportPanel({ bank, onSave }: Props) {
       const raw = await callAI([
         { role: 'system', content: AI_SYSTEM_PROMPT },
         { role: 'user', content: lines.join('\n') },
-      ], { json: true })
+      ], { json: true }, 'generation')
 
       const clean = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
       let parsed: AiResult[]

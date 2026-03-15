@@ -97,7 +97,7 @@ export default function FormulaMode({ onBack }: { onBack: () => void }) {
     setError('');
     try {
       const prompt = `Generate 5 important formulas for the topic "${topic}". Respond with JSON only, no markdown: [{"formula": "E = mc^2", "description": "Mass-energy equivalence"}, ...]`;
-      const raw = await callAI([{ role: 'user', content: prompt }], { json: true });
+      const raw = await callAI([{ role: 'user', content: prompt }], { json: true }, 'analysis');
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const items: { formula: string; description: string }[] = JSON.parse(cleaned);
 

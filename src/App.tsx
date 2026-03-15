@@ -15,6 +15,7 @@ import {
   registerSaveCallback, subscribeToTranscribe, getTranscribeState,
 } from './utils/transcribeStore'
 import { getDueCount } from './utils/getDueCount'
+import { initFsrsCache } from './utils/fsrsStorage'
 import './App.css'
 
 /* ── Error Boundary to prevent blank page crashes ──── */
@@ -322,6 +323,9 @@ export default function App() {
 
   // Mark app as successfully loaded (clears chunk-reload flag for future attempts)
   useEffect(() => { markAppLoaded(); }, [])
+
+  // Migrate large localStorage keys to IndexedDB on first run
+  useEffect(() => { initFsrsCache(); }, [])
 
   // #46 Online/Offline Sync — trigger backup when connection is restored
   useEffect(() => {

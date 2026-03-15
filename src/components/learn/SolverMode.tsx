@@ -292,10 +292,10 @@ Respond as JSON:
             return copy;
           });
         },
-      });
+      }, 'chat');
 
       if (!streamed) {
-        streamed = await callAI(aiMsgs, { json: true });
+        streamed = await callAI(aiMsgs, { json: true }, 'chat');
       }
 
       const parsed = parseSolverJSON(streamed);
@@ -376,9 +376,9 @@ Respond as JSON:
             return copy;
           });
         },
-      });
+      }, 'chat');
       if (!streamed) {
-        streamed = await callAI(chatAiMsgs);
+        streamed = await callAI(chatAiMsgs, {}, 'chat');
         setChatMessages(prev => {
           const copy = [...prev];
           copy[copy.length - 1] = { role: 'ai', text: streamed };
@@ -406,7 +406,7 @@ Respond as JSON:
       const resp = await callAI([
         { role: 'system', content: 'Extract key term/definition pairs from this solution for study flashcards. Return ONLY a JSON array of objects with "term" and "definition" fields. Aim for 4-8 pairs.' },
         { role: 'user', content: `Question: ${question}\n\nSolution:\n${stepsText}` },
-      ], { json: true });
+      ], { json: true }, 'chat');
 
       try {
         let cleaned = resp.trim();

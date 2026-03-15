@@ -416,7 +416,7 @@ export default function OmniSearch({ onClose }: Props) {
             )}
           </div>
         ) : effectiveQuery.length >= 2 && !showActions ? (
-          <div className="omni-empty">No results for "{effectiveQuery}"</div>
+          <div className="omni-empty">No results for "{effectiveQuery}" — try different keywords, or type <kbd style={{ background: 'var(--surface-2, #222)', borderRadius: 4, padding: '1px 5px', fontSize: 11 }}>&gt; new note</kbd> to create content</div>
         ) : (
           <div className="omni-hint">
             <span>Start typing to search · Type <kbd style={{ background: 'var(--surface-2, #222)', borderRadius: 4, padding: '1px 5px', fontSize: 11 }}>&gt;</kbd> for commands</span>

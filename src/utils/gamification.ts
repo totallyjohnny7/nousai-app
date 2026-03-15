@@ -254,7 +254,7 @@ export function getAllBadgeDefs(): Array<{ id: string; name: string; icon: strin
 /** Daily goal targets */
 export const DAILY_TARGETS = {
   xp: 100,
-  minutes: 30,
+  minutes: 45,
   questions: 20,
 };
 

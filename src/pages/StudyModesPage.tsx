@@ -1491,7 +1491,7 @@ ${JSON.stringify([exampleNote], null, 2)}
     setBulkAiStatus('Generating notes with AI...')
     try {
       const prompt = generateImportPrompt()
-      const result = await callAI([{ role: 'user', content: prompt }])
+      const result = await callAI([{ role: 'user', content: prompt }], {}, 'analysis')
 
       setBulkAiStatus('Parsing & importing...')
       const { notes: newNotes, fixes } = autoFormatJson(result)
@@ -1558,7 +1558,7 @@ Return ONLY a JSON object with three fields (no markdown code fences):
 
 Make the content educational, specific, and detailed. Use proper HTML formatting.`
 
-      const result = await callAI([{ role: 'user', content: prompt }])
+      const result = await callAI([{ role: 'user', content: prompt }], {}, 'analysis')
       // Parse JSON from result (handle possible markdown code fences)
       const jsonStr = result.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim()
       const parsed = JSON.parse(jsonStr)
@@ -2568,7 +2568,7 @@ function StudyStreaksMode() {
   const { gamification, quizHistory, courses } = useStore()
 
   const [goals, setGoals] = useState(() => lsGet('streak-goals', {
-    dailyXp: 100, dailyMinutes: 30, dailyQuizzes: 3, weeklyQuizzes: 15,
+    dailyXp: 100, dailyMinutes: 45, dailyQuizzes: 3, weeklyQuizzes: 15,
   }))
   const [editGoals, setEditGoals] = useState(false)
 

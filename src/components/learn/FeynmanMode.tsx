@@ -34,7 +34,7 @@ export default function FeynmanMode({ onBack }: { onBack: () => void }) {
     setError('');
     try {
       const prompt = `Grade this Feynman explanation of '${topic}'. Respond with JSON only, no markdown: {"clarityScore": 1-10, "accuracyScore": 1-10, "feedback": "string", "gaps": ["string"], "suggestion": "string"}. Explanation: ${explanation}`;
-      const raw = await callAI([{ role: 'user', content: prompt }], { json: true });
+      const raw = await callAI([{ role: 'user', content: prompt }], { json: true }, 'chat');
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const parsed: FeynmanResult = JSON.parse(cleaned);
       setResult(parsed);

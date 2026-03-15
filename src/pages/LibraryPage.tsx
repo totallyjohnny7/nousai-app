@@ -20,6 +20,7 @@ import {
 const DrawPage = lazyWithRetry(() => import('./DrawPage'));
 const StudyModesPage = lazyWithRetry(() => import('./StudyModesPage'));
 import { useStore } from '../store';
+import { useSessionStore } from '../store/sessionStore';
 import type { Course } from '../types';
 import { speak, stopSpeaking } from '../utils/speechTools';
 import { callAI, isAIConfigured } from '../utils/ai';
@@ -109,6 +110,7 @@ const PRESET_COLORS = [
 /* ── Main Component ─────────────────────────────────── */
 export default function LibraryPage() {
   const { data, setData, updatePluginData, loaded, courses, quizHistory, setPageContext } = useStore();
+  const annotationCount = useSessionStore(s => Object.keys(s.sessions).length);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<LibraryTab>(() => {
@@ -296,7 +298,7 @@ export default function LibraryPage() {
     setView('viewer');
     // #16 Auto-tag: call AI for new notes with no tags (beta only)
     if (isAIConfigured() && !exists && (!note.tags || note.tags.length === 0) && note.content.length > 50) {
-      callAI([{ role: 'user', content: `Generate 3-5 short topic tags for this note. Respond with only a JSON array of strings, no explanation.\n\nNote title: ${note.title}\n\nContent: ${note.content.slice(0, 800)}` }])
+      callAI([{ role: 'user', content: `Generate 3-5 short topic tags for this note. Respond with only a JSON array of strings, no explanation.\n\nNote title: ${note.title}\n\nContent: ${note.content.slice(0, 800)}` }], {}, 'analysis')
         .then(res => {
           try {
             const tags = JSON.parse(res.replace(/```json|```/g, '').trim()) as string[];
@@ -452,7 +454,8 @@ export default function LibraryPage() {
       subN === cShortN || subN === cNameN ||
       qName.includes(cName) || qName.includes(cShort) ||
       (cShort && sub.includes(cShort)) ||
-      (cShortN && subN.includes(cShortN))
+      (cShortN && subN.includes(cShortN)) ||
+      (subN && cNameN.includes(subN))
     );
   }
 
@@ -595,7 +598,7 @@ export default function LibraryPage() {
             borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 800,
             marginLeft: 2,
           }}>
-            {useSessionStore.getState().getAllSessions().length || 0}
+            {annotationCount}
           </span>
         </button>
       </div>
@@ -751,13 +754,13 @@ export default function LibraryPage() {
                     {/* Stats badges */}
                     <div className="course-card-stats">
                       <span className="badge" style={{ fontSize: 9 }} title={`${chCount} chapters`}>
-                        <BookOpen size={9} /> {chCount} ch
+                        <BookOpen size={9} /> {chCount} chapters
                       </span>
                       <span className="badge" style={{ fontSize: 9 }} title={`${qCount} quizzes`}>
-                        <Trophy size={9} /> {qCount} quiz
+                        <Trophy size={9} /> {qCount} quizzes
                       </span>
                       <span className="badge" style={{ fontSize: 9 }} title={`${fcCount} flashcards`}>
-                        <Brain size={9} /> {fcCount} fc
+                        <Brain size={9} /> {fcCount} flashcards
                       </span>
                     </div>
 
@@ -1280,6 +1283,12 @@ export default function LibraryPage() {
                         {note.folder && <><span style={{ opacity: 0.4 }}>|</span><span>{note.folder}</span></>}
                         <span style={{ opacity: 0.4 }}>|</span>
                         <span>{formatDateShort(note.updatedAt)}</span>
+                        {note.content && note.content.trim().length > 0 && (
+                          <>
+                            <span style={{ opacity: 0.4 }}>|</span>
+                            <span>{note.content.trim().split(/\s+/).length} words</span>
+                          </>
+                        )}
                       </div>
                       {/* Topic tags */}
                       {note.topicIds && note.topicIds.length > 0 && (
@@ -1461,7 +1470,7 @@ export default function LibraryPage() {
 }
 
 /* ── Annotations Tab (Scribe OS sessions) ────────────── */
-import { useSessionStore, type ScribeSession } from '../store/sessionStore';
+import type { ScribeSession } from '../store/sessionStore';
 import { loadFile, deleteFile } from '../utils/fileStore';
 
 function AnnotationsTab() {
@@ -2174,7 +2183,7 @@ function NoteViewer({ note, onBack, onEdit, onDelete, onDuplicate, onExport, onE
     try {
       const plainContent = note.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
       const prompt = `Create a Cornell Note from the following content.\nTitle: ${note.title}\nContent: ${plainContent.slice(0, 3000)}\n\nReturn ONLY a JSON object (no markdown fences):\n{"cues":"HTML key questions/keywords (use <ul><li>)","notes":"HTML detailed notes (use <h3>,<p>,<ul><li>,<strong>)","summary":"HTML summary in 2-3 sentences"}`;
-      const result = await callAI([{ role: 'user', content: prompt }]);
+      const result = await callAI([{ role: 'user', content: prompt }], {}, 'analysis');
       const jsonStr = result.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim();
       const parsed = JSON.parse(jsonStr);
       if (parsed.cues) {
@@ -2212,7 +2221,7 @@ function NoteViewer({ note, onBack, onEdit, onDelete, onDuplicate, onExport, onE
     try {
       const plainContent = note.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
       const prompt = `Create 5-10 flashcards from the following content.\nTitle: ${note.title}\nContent: ${plainContent.slice(0, 3000)}\n\nReturn ONLY a JSON array (no markdown fences):\n[{"front":"question or term","back":"answer or definition"}]`;
-      const result = await callAI([{ role: 'user', content: prompt }]);
+      const result = await callAI([{ role: 'user', content: prompt }], {}, 'analysis');
       const jsonStr = result.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim();
       const parsed = JSON.parse(jsonStr);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -2248,7 +2257,8 @@ Rules:
       const userPrompt = `Concept: ${note.title}\nContext: ${plainContent.slice(0, 200)}`;
       const html = await callAI(
         [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
-        { temperature: 0.3, maxTokens: 8192 }
+        { temperature: 0.3, maxTokens: 8192 },
+        'analysis'
       );
       if (!html || html.length < 200) throw new Error('Invalid HTML response');
       const sanitized = sanitizeHtml(html);
@@ -2760,6 +2770,7 @@ function NoteEditor({ note, folders, courses, onSave, onCancel }: {
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Note title..."
+        maxLength={120}
         style={{
           width: '100%', padding: '10px 12px', marginBottom: 10,
           border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',

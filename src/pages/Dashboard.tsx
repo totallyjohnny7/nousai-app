@@ -1275,6 +1275,7 @@ function AnalyticsTab() {
         <div className="card mb-4 empty-state" style={{ textAlign: 'center', padding: '24px 16px' }}>
           <p style={{ margin: 0, fontWeight: 600 }}>No quiz data yet</p>
           <p className="text-muted text-sm" style={{ margin: '6px 0 0' }}>Take your first quiz to see analytics here</p>
+          <a href="#/quiz?tab=create" className="btn btn-primary btn-sm" style={{ marginTop: 12, display: 'inline-flex' }}>Take your first quiz →</a>
         </div>
       )}
 

@@ -16,7 +16,7 @@
   --text-primary: #e8e8e8;
   --text-secondary: #999999;
   --text-muted: #7a7a7a;  /* was #666666 — bumped to 5.0:1 on #0a0a0a for WCAG AA */
-  --text-dim: #6e6e6e;    /* was #444444 — bumped to 4.5:1 on #0a0a0a for WCAG AA */
+  --text-dim: #797979;    /* 4.55:1 contrast on #0a0a0a — WCAG AA compliant */
 
   /* ── Typography ── */
   --font-heading: 'Sora', system-ui, sans-serif;
@@ -1024,10 +1024,18 @@ div[data-video-embed] video {
   right: unset !important;
   top: 0 !important;
   width: 360px !important;
+  height: auto !important;
   max-height: 80vh;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   z-index: 9999;
+  overflow: hidden;
+}
+
+/* When floating but closed, the inline transform overrides translateX(100%) — hide it explicitly */
+.nous-panel--floating:not(.nous-panel--open) {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .nous-panel-drag-handle {
@@ -1156,4 +1164,42 @@ div[data-video-embed] video {
 
 .nous-panel-attach-btn {
   flex-shrink: 0;
+}
+
+/* ── NousPanel — Settings tooltips ───────────────────── */
+.nous-setting-tip-target {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.nous-setting-tooltip-wrap {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  white-space: nowrap;
+}
+
+.nous-setting-tip-target:hover .nous-setting-tooltip-wrap {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.nous-setting-tooltip-box {
+  display: block;
+  background: #1e1e1e;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 5px 8px;
+  border-radius: 6px;
+  max-width: 200px;
+  white-space: normal;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
 }

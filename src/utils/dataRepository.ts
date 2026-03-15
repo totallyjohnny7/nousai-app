@@ -123,29 +123,44 @@ export class DataRepository {
 
   /**
    * Set a value by key.
-   * Writes to IDB (primary) and localStorage (backup) in parallel.
-   * Logs which storage was used.
+   * Writes to IDB (primary). Falls back to localStorage only if IDB is unavailable.
    */
   static async set<T>(key: string, value: T): Promise<void> {
     const useIDB = await DataRepository.checkIDB();
-    let idbSuccess = false;
 
     if (useIDB) {
       try {
         await idbSet<T>(key, value);
-        idbSuccess = true;
+        return;
       } catch (e) {
-        console.warn(`[DataRepository] IDB write failed for "${key}":`, e);
+        console.warn(`[DataRepository] IDB write failed for "${key}", falling back to localStorage:`, e);
       }
     }
 
-    // Always write to localStorage as backup (belt-and-suspenders)
+    // Only reach here if IDB is unavailable or failed
     lsSet<T>(key, value);
+  }
 
-    if (idbSuccess) {
-      console.debug(`[DataRepository] Wrote "${key}" to IDB + localStorage backup`);
-    } else {
-      console.warn(`[DataRepository] Wrote "${key}" to localStorage only (IDB unavailable)`);
+  /**
+   * Migrate a list of localStorage keys into IDB, then delete them from localStorage.
+   * Safe to call multiple times — skips keys that don't exist in localStorage.
+   */
+  static async migrateFromLocalStorage(keys: string[]): Promise<void> {
+    const useIDB = await DataRepository.checkIDB();
+    if (!useIDB) return;
+
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw === null) continue;
+        const parsed = JSON.parse(raw);
+        await idbSet(key, parsed);
+        localStorage.removeItem(key);
+        // Also clean up old __repo_ backup if present
+        localStorage.removeItem(`__repo_${key}`);
+      } catch (e) {
+        console.warn(`[DataRepository] Migration failed for "${key}":`, e);
+      }
     }
   }
 

@@ -57,7 +57,11 @@ async function extractPdf(file: File): Promise<AttachedFile> {
       .map((item: any) => item.str ?? '')
       .join(' ')
     pages.push(`[Page ${i}]\n${pageText}`)
+    // Release page from memory — without this, all pages accumulate in the
+    // pdfjs internal cache and cause an OOM crash on large documents.
+    page.cleanup()
   }
+  await pdf.destroy()
 
   return {
     name: file.name,

@@ -1598,7 +1598,7 @@ export default function RichTextEditor({
                   setJpLoading(true);
                   try {
                     const prompt = `${JP_COLOR_PROMPT}\n\nText to format:\n${selectedText}`;
-                    const response = await callAI([{ role: 'user', content: prompt }]);
+                    const response = await callAI([{ role: 'user', content: prompt }], {}, 'analysis');
                     let html = response.trim();
                     const fenceMatch = html.match(/```(?:html)?\s*([\s\S]*?)```/);
                     if (fenceMatch) html = fenceMatch[1].trim();

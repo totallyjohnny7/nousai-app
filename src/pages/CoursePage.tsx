@@ -29,7 +29,6 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { saveFile, loadFile, deleteFile, migrateFromLocalStorage } from '../utils/fileStore';
 const RichTextEditor = lazyWithRetry(() => import('../components/RichTextEditor'));
-const JpQuizTab = lazyWithRetry(() => import('../components/jpquiz/JpQuizTab'));
 const markdownToHtml = (md: string): string => {
   if (!md || md.startsWith('<')) return md;
   return md
@@ -62,7 +61,7 @@ import VisualLabTab from '../components/course/VisualLabTab';
 /* ================================================================
    TYPES
    ================================================================ */
-type SubTab = 'home' | 'chapters' | 'notes' | 'quizzes' | 'matches' | 'mindmaps' | 'ocr' | 'ai-outputs' | 'files' | 'modules' | 'assignments' | 'grades' | 'syllabus' | 'links' | 'lab' | 'tutor' | 'vocab' | 'stats' | 'lectures' | 'cram' | 'japanese' | 'jpquiz';
+type SubTab = 'home' | 'chapters' | 'notes' | 'quizzes' | 'matches' | 'mindmaps' | 'ocr' | 'ai-outputs' | 'files' | 'modules' | 'assignments' | 'grades' | 'syllabus' | 'links' | 'lab' | 'tutor' | 'vocab' | 'stats' | 'lectures' | 'cram' | 'japanese';
 
 interface VocabItem {
   term: string;
@@ -311,13 +310,11 @@ export default function CoursePage() {
     const isJapanese = course?.shortName?.toUpperCase().startsWith('JAPN') ||
       course?.name?.toLowerCase().includes('japanese');
     if (isJapanese) {
-      // Hide generic Quizzes tab; JP Quiz becomes the unified quiz hub
       const base = SUB_TABS.filter(t => t.key !== 'quizzes');
       const tutorIdx = base.findIndex(t => t.key === 'tutor');
       const copy = [...base];
       copy.splice(tutorIdx + 1, 0,
         { key: 'japanese' as SubTab, label: 'Japanese', icon: Languages },
-        { key: 'jpquiz' as SubTab, label: 'JP Quiz', icon: ClipboardList },
       );
       return copy;
     }
@@ -570,11 +567,6 @@ export default function CoursePage() {
           )}
           {activeTab === 'japanese' && (
             <JapaneseMode />
-          )}
-          {activeTab === 'jpquiz' && (
-            <Suspense fallback={<div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Loading quiz...</div>}>
-              <JpQuizTab course={course} onGoToCourseQuizzes={() => setActiveTab('quizzes')} />
-            </Suspense>
           )}
         </div>
       </div>
