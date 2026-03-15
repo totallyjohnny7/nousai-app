@@ -62,14 +62,17 @@ export function FileViewerModal({ item, courseId, accentColor, onClose }: Props)
   useEffect(() => {
     if (!item.dataUrl) return
     let url: string
+    let unmounted = false
     fetch(item.dataUrl)
       .then(r => r.blob())
       .then(blob => {
         url = URL.createObjectURL(blob)
-        setBlobUrl(url)
+        if (!unmounted) setBlobUrl(url)
+        else URL.revokeObjectURL(url)
       })
-      .catch(() => setBlobUrl(null))
+      .catch(() => { if (!unmounted) setBlobUrl(null) })
     return () => {
+      unmounted = true
       if (url) URL.revokeObjectURL(url)
     }
   }, [item.dataUrl])
@@ -279,7 +282,7 @@ function FileViewerChat({ item, courseId, accentColor }: ChatProps) {
     void saveFile(ocrCacheKey(courseId, item.id), markdown)
     ocrTextRef.current = markdown
     return markdown
-  }, [item, courseId])
+  }, [item.id, item.dataUrl, item.fileType, item.name, courseId])
 
   const sendMessage = useCallback(async (overrideText?: string) => {
     const text = (overrideText ?? input).trim()
@@ -338,9 +341,9 @@ function FileViewerChat({ item, courseId, accentColor }: ChatProps) {
       setMessages(prev => prev.slice(0, -1))
       setOcrStage(null)
       setOcrPct(0)
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }, [input, loading, messages, getOcrText, item.name])
 
   const isOcrRunning = ocrStage !== null && ocrStage !== 'done'
