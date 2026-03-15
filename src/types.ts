@@ -343,3 +343,20 @@ export interface NousAIData {
   };
   pluginData: PluginData;
 }
+
+// ── Nous AI Panel — Page Context ─────────────────────────
+export interface PageContext {
+  page: string          // Display name, e.g. "Flashcards"
+  summary: string       // One-line summary, e.g. "Reviewing: Cell Biology — 12 cards due"
+  activeItem?: string   // Content of the focused item (card front/back, open note, current question)
+  fullContent?: string  // Broader page content (all cards, all note titles, quiz history)
+}
+
+// ── Nous AI Panel — Attached File ────────────────────────
+export interface AttachedFile {
+  name: string
+  type: 'image' | 'pdf' | 'text'
+  content: string       // base64 data URL for images; extracted UTF-8 text for pdf/text
+  mimeType: string
+  sizeBytes: number
+}
