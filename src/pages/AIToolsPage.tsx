@@ -3,18 +3,22 @@
  */
 import { Suspense, useState } from 'react';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   ScanLine, Mic, Lightbulb, GitBranch, BookOpen,
   Edit3, CheckCircle, Atom, Headphones, Languages, MessageSquare,
   Layers, HelpCircle, GraduationCap, RefreshCw, Dumbbell, GitMerge, CalendarDays,
+  AlertCircle, Download, FileText,
 } from 'lucide-react';
 import { useStore } from '../store';
+import { isAIConfigured } from '../utils/ai';
 
 type AITool =
   | 'ocr' | 'dictate' | 'analogy' | 'mindmap' | 'course'
   | 'rename' | 'factcheck' | 'physics' | 'aichat' | 'omi' | 'nihongo'
-  | 'flashcardgen' | 'quizgen' | 'tutor' | 'reexplain' | 'practice' | 'prerequisites' | 'schedule';
+  | 'flashcardgen' | 'quizgen' | 'tutor' | 'reexplain' | 'practice' | 'prerequisites' | 'schedule'
+  | 'ankiimport'
+  | 'quizletimport';
 
 interface ToolDef {
   id: AITool;
@@ -41,6 +45,8 @@ const TOOLS: ToolDef[] = [
   { id: 'practice',     icon: Dumbbell,      label: 'Practice' },
   { id: 'prerequisites',icon: GitMerge,      label: 'Prerequisites' },
   { id: 'schedule',     icon: CalendarDays,  label: 'Schedule' },
+  { id: 'ankiimport',    icon: Download,  label: 'Anki Import' },
+  { id: 'quizletimport', icon: FileText,  label: 'Quizlet Import' },
 ];
 
 const OcrTool            = lazyWithRetry(() => import('../components/aitools/OcrTool'));
@@ -61,6 +67,8 @@ const ReExplainTool      = lazyWithRetry(() => import('../components/aitools/ReE
 const PracticeGenTool    = lazyWithRetry(() => import('../components/aitools/PracticeGenTool'));
 const PrerequisiteTool   = lazyWithRetry(() => import('../components/aitools/PrerequisiteTool'));
 const StudyScheduleTool  = lazyWithRetry(() => import('../components/aitools/StudyScheduleTool'));
+const AnkiImportTool       = lazyWithRetry(() => import('../components/aitools/AnkiImportTool'));
+const QuizletImportTool    = lazyWithRetry(() => import('../components/aitools/QuizletImportTool'));
 
 function ToolFallback() {
   return (
@@ -73,6 +81,7 @@ function ToolFallback() {
 export default function AIToolsPage() {
   const { loaded } = useStore();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const toolParam = searchParams.get('tool');
   const [activeTool, setActiveTool] = useState<AITool>(
     toolParam && TOOLS.some(t => t.id === toolParam) ? toolParam as AITool : 'ocr'
@@ -86,10 +95,36 @@ export default function AIToolsPage() {
     );
   }
 
+  const aiReady = isAIConfigured();
+
   return (
     <div className="animate-in">
       <h1 className="page-title">AI Tools</h1>
       <p className="page-subtitle">AI-powered study utilities</p>
+
+      {!aiReady && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 14px', borderRadius: 10, marginBottom: 16,
+          background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.35)',
+          color: 'var(--text-secondary)', fontSize: 13,
+        }}>
+          <AlertCircle size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+          <span>
+            AI provider not configured — tools that require AI will not work.{' '}
+            <button
+              onClick={() => navigate('/settings', { state: { section: 'ai' } })}
+              style={{
+                background: 'none', border: 'none', padding: 0,
+                color: 'var(--accent)', fontWeight: 600, cursor: 'pointer',
+                textDecoration: 'underline', fontSize: 'inherit', fontFamily: 'inherit',
+              }}
+            >
+              Configure AI →
+            </button>
+          </span>
+        </div>
+      )}
 
       {/* Sub-tab chips — horizontal scrollable */}
       <div style={{
@@ -143,6 +178,8 @@ export default function AIToolsPage() {
           {activeTool === 'practice'      && <PracticeGenTool />}
           {activeTool === 'prerequisites' && <PrerequisiteTool />}
           {activeTool === 'schedule'      && <StudyScheduleTool />}
+          {activeTool === 'ankiimport'      && <AnkiImportTool />}
+          {activeTool === 'quizletimport'   && <QuizletImportTool />}
         </div>
       </Suspense>
     </div>

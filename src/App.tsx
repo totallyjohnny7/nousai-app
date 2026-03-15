@@ -1,6 +1,6 @@
 import { Routes, Route, NavLink, useLocation, useParams, Navigate, useNavigate } from 'react-router-dom'
 import { Suspense, Component, useEffect, useMemo, useRef, useState, type ReactNode, type ErrorInfo } from 'react'
-import { Home, Trophy, BookOpen, Clock, Calendar, Settings, Upload, Brain, Sparkles, Library, Mic, RefreshCw, AlertTriangle, Search, PanelLeftClose, PanelLeftOpen, Keyboard, X } from 'lucide-react'
+import { Home, Trophy, BookOpen, Clock, Calendar, Settings, Upload, Brain, Sparkles, Library, Mic, RefreshCw, AlertTriangle, Search, PanelLeftClose, PanelLeftOpen, Keyboard, X, MoreHorizontal, Menu } from 'lucide-react'
 import { lazyWithRetry, markAppLoaded, isChunkLoadError, clearCachesAndReload } from './utils/lazyWithRetry'
 import { useStore } from './store'
 import { resetDailyIfNeeded, getLevel, getLevelProgress, getTitle } from './utils/gamification'
@@ -14,6 +14,7 @@ import SyncStatusIndicator from './components/SyncStatusIndicator'
 import {
   registerSaveCallback, subscribeToTranscribe, getTranscribeState,
 } from './utils/transcribeStore'
+import { getDueCount } from './utils/getDueCount'
 import './App.css'
 
 /* ── Error Boundary to prevent blank page crashes ──── */
@@ -100,7 +101,7 @@ const CoursePage = lazyWithRetry(() => import('./pages/CoursePage'))
 
 
 /* ── Navigation ───── */
-// Mobile bottom nav (7 items max for thumb reach)
+// Mobile bottom nav — main 7 + "More" drawer for Timer/Calendar/Tools/Settings
 const NAV = [
   { to: '/', icon: Home, label: 'HOME' },
   { to: '/quiz', icon: Trophy, label: 'QUIZ' },
@@ -108,6 +109,11 @@ const NAV = [
   { to: '/flashcards', icon: Brain, label: 'CARDS' },
   { to: '/library', icon: Library, label: 'LIBRARY' },
   { to: '/ai', icon: Sparkles, label: 'AI' },
+]
+const MORE_NAV = [
+  { to: '/timer', icon: Clock, label: 'TIMER' },
+  { to: '/calendar', icon: Calendar, label: 'CALENDAR' },
+  { to: '/tools', icon: Mic, label: 'TOOLS' },
   { to: '/settings', icon: Settings, label: 'SETTINGS' },
 ]
 
@@ -266,13 +272,15 @@ function FloatingTranscribeIndicator() {
 }
 
 export default function App() {
-  const { loaded, data, setData, srData, updatePluginData, syncStatus, lastSyncAt, remoteUpdateAvailable, loadRemoteData, dismissRemoteBanner, betaMode, backupNow } = useStore()
+  const { loaded, data, setData, srData, updatePluginData, syncStatus, lastSyncAt, remoteUpdateAvailable, loadRemoteData, dismissRemoteBanner, betaMode, backupNow, courses } = useStore()
   const location = useLocation()
   const initRef = useRef(false)
   const [omniSearchOpen, setOmniSearchOpen] = useState(false)
   const [shortcutOverlayOpen, setShortcutOverlayOpen] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   const [storageWarning, setStorageWarning] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem('nousai-sidebar-collapsed') === 'true' } catch { return false }
   })
@@ -429,15 +437,14 @@ export default function App() {
     }
   }, [data])
 
-  // Due cards count for nav badges
-  const dueCount = useMemo(() => {
-    if (!srData?.cards) return 0
-    const now = Date.now()
-    return srData.cards.filter((c: any) => {
-      const t = new Date(c.nextReview).getTime()
-      return !isNaN(t) && t <= now
-    }).length
-  }, [srData])
+  // Due cards count for nav badges — FSRS-aware, matches Dashboard and Flashcards page
+  const dueCount = useMemo(
+    () => getDueCount(courses, data?.settings?.courseCardCaps as Record<string, number> | undefined),
+    [courses, data?.settings?.courseCardCaps]
+  )
+
+  // Close the More drawer and mobile sidebar when the user navigates
+  useEffect(() => { setMoreOpen(false); setSidebarOpen(false) }, [location.pathname])
 
   if (!loaded) {
     return (
@@ -453,8 +460,28 @@ export default function App() {
   return (
     <div className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}${focusMode ? ' focus-mode' : ''}`}>
       <a href="#main-content" className="skip-link">Skip to content</a>
-      {/* Desktop sidebar */}
-      <nav className="desktop-sidebar">
+
+      {/* Mobile hamburger button — only visible on mobile */}
+      <button
+        className="hamburger-btn"
+        onClick={() => setSidebarOpen(o => !o)}
+        aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'}
+        aria-expanded={sidebarOpen}
+      >
+        <Menu size={20} />
+      </button>
+
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Desktop sidebar (also used as mobile slide-in sidebar) */}
+      <nav className={`desktop-sidebar${sidebarOpen ? ' mobile-sidebar-open' : ''}`}>
         <div className="sidebar-logo">
           <NousLogo size={28} />
           <span className="sidebar-logo-text">NOUSAI</span>
@@ -601,7 +628,46 @@ export default function App() {
             <span className="nav-label">{n.label}</span>
           </NavLink>
         ))}
+        <button
+          className={`nav-item${moreOpen ? ' active' : ''}`}
+          onClick={() => setMoreOpen(o => !o)}
+          aria-label="More navigation options"
+          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          <MoreHorizontal />
+          <span className="nav-label">MORE</span>
+        </button>
       </nav>
+
+      {/* More drawer — Timer, Calendar, Tools, Settings */}
+      {moreOpen && (
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 199 }}
+            onClick={() => setMoreOpen(false)}
+          />
+          <nav style={{
+            position: 'fixed', bottom: 'var(--nav-height, 60px)', left: 0, right: 0,
+            background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)',
+            display: 'flex', justifyContent: 'space-around', padding: '10px 0 8px',
+            zIndex: 200,
+          }}>
+            {MORE_NAV.map(n => (
+              <NavLink
+                key={n.to}
+                to={n.to}
+                className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+                onMouseEnter={() => preloadRoute(n.to)}
+                onClick={() => setMoreOpen(false)}
+                aria-label={n.label}
+              >
+                <n.icon />
+                <span className="nav-label">{n.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+        </>
+      )}
     </div>
   )
 }

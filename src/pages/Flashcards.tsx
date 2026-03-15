@@ -1396,6 +1396,34 @@ export default function Flashcards() {
             </button>
           </div>
 
+          {/* Daily cap reached banner */}
+          {(() => {
+            const totalReviewed = Object.values(dailyProgress.counts).reduce((s, n) => s + n, 0)
+            const capReached = dueCount === 0 && totalReviewed > 0
+            const totalCapNumber = courses.filter(c => c.flashcards?.length).reduce((s, c) => s + getCap(c.id), 0)
+            if (!capReached) return null
+            return (
+              <div style={{
+                background: 'rgba(74, 222, 128, 0.1)',
+                border: '1px solid rgba(74, 222, 128, 0.3)',
+                borderRadius: '12px',
+                padding: '16px 20px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <span style={{ fontSize: '1.5rem' }}>🎉</span>
+                <div>
+                  <div style={{ fontWeight: 600, color: '#4ade80' }}>Great work! Daily goal complete.</div>
+                  <div style={{ fontSize: '0.85rem', color: '#a0a0a0', marginTop: '2px' }}>
+                    Come back tomorrow for {totalCapNumber} more cards. Your progress is saved.
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Today's review summary */}
           {(() => {
             const totalReviewed = Object.values(dailyProgress.counts).reduce((s, n) => s + n, 0)
@@ -1954,9 +1982,11 @@ function FlashcardReview({ cards, courseId = '_fc', title, onBack, onCardReviewe
     }
   }, [flipped, index]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Close video panel when navigating to a card with no back media
+  // Update or close video panel when navigating to a new card
   useEffect(() => {
-    if (!card?.media || !(card.media.side === 'back' || card.media.side === 'both')) {
+    if (card?.media && (card.media.side === 'back' || card.media.side === 'both')) {
+      if (showVideoPanel) setVideoPanelMedia(card.media) // update immediately if panel is open
+    } else {
       setShowVideoPanel(false)
     }
   }, [index]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -2049,7 +2079,15 @@ function FlashcardReview({ cards, courseId = '_fc', title, onBack, onCardReviewe
         handlers={swipeHandlers}
         style={{ borderRadius: 12, overflow: 'hidden' }}
       >
-        <div ref={cardContainerRef} className="flashcard-container" onClick={() => { setFlipped(f => !f); if (!flipped) setShowConfidence(true); }}>
+        <div
+          ref={cardContainerRef}
+          className="flashcard-container"
+          role="button"
+          tabIndex={0}
+          aria-label={flipped ? `Card back: ${card.back.substring(0, 100)}. Press Space to flip back.` : `Card front: ${card.front}. Press Space to flip.`}
+          onClick={() => { setFlipped(f => !f); if (!flipped) setShowConfidence(true); }}
+          onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setFlipped(f => !f); if (!flipped) setShowConfidence(true); } }}
+        >
           <div className={`flashcard${flipped ? ' flipped' : ''}`} style={card.media ? { minHeight: 480 } : undefined}>
             <div className="flashcard-face flashcard-front">
               <div className="flashcard-label">Front</div>

@@ -12,6 +12,8 @@ import { getLevel, getTitle, getLevelProgress, getAllBadgeDefs, buyStreakFreeze,
 import { getWeakTopics, subjectProficiency } from '../utils/proficiency'
 import type { QuizAttempt, Course, CourseTopic, ProficiencyEntry, StudyGoal, WeeklyQuest } from '../types'
 import { getSpotifyAuthUrl, exchangeSpotifyCode, getCurrentlyPlaying, getSpotifyClientId, isSpotifyConnected, disconnectSpotify, type SpotifyTrack } from '../utils/spotify'
+import { getDueCount } from '../utils/getDueCount'
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 type DashTab = 'overview' | 'courses' | 'analytics' | 'plan'
 
@@ -170,32 +172,11 @@ function OverviewTab() {
   const allBadgeDefs = getAllBadgeDefs()
   const earnedIds = new Set(gamification.badges.map(b => b.id))
 
-  // Due cards count — matches Flashcards page FSRS logic with daily caps
-  const dueCount = useMemo(() => {
-    try {
-      const allFSRS: Record<string, { state?: string; nextReview?: string }> =
-        JSON.parse(localStorage.getItem('nousai-fc-fsrs') || '{}')
-      const dailyRaw = JSON.parse(localStorage.getItem('nousai-daily-card-progress') || '{}')
-      const todayStr = new Date().toISOString().split('T')[0]
-      const dailyCounts: Record<string, number> = dailyRaw.date === todayStr ? (dailyRaw.counts || {}) : {}
-      const courseCaps: Record<string, number> = (data?.settings?.courseCardCaps as Record<string, number>) ?? {}
-      const DEFAULT_CAP = 50
-      let total = 0
-      for (const c of courses) {
-        const cap = courseCaps[c.id] ?? DEFAULT_CAP
-        const remaining = Math.max(0, cap - (dailyCounts[c.id] || 0))
-        let due = 0
-        for (const card of (c.flashcards || [])) {
-          const key = `${c.id}::${card.front.slice(0, 50)}`
-          const fc = allFSRS[key]
-          const isDue = !fc || fc.state === 'new' || new Date(fc.nextReview || 0).getTime() <= Date.now()
-          if (isDue) due++
-        }
-        total += Math.min(due, remaining)
-      }
-      return total
-    } catch { return 0 }
-  }, [courses, data?.settings?.courseCardCaps])
+  // Due cards count — shared utility keeps badge and stat in sync
+  const dueCount = useMemo(
+    () => getDueCount(courses, data?.settings?.courseCardCaps as Record<string, number> | undefined),
+    [courses, data?.settings?.courseCardCaps]
+  )
 
   // Weak topics for smart study recommendation
   const weakTopics = useMemo(() => {
@@ -248,8 +229,8 @@ function OverviewTab() {
     const weekStart = new Date(now);
     weekStart.setDate(weekStart.getDate() - 7);
     const weekQuizzes = quizHistory.filter(q => new Date(q.date) >= weekStart);
-    const totalXp = weekQuizzes.reduce((s, q) => s + q.correct * 5 + (q.score === 100 ? 20 : 0), 0);
-    const avgScore = weekQuizzes.length > 0 ? Math.round(weekQuizzes.reduce((s, q) => s + q.score, 0) / weekQuizzes.length) : 0;
+    const totalXp = weekQuizzes.reduce((s, q) => s + (Number(q.correct) || 0) * 5 + (q.score === 100 ? 20 : 0), 0);
+    const avgScore = weekQuizzes.length > 0 ? Math.round(weekQuizzes.reduce((s, q) => s + (Number(q.score) || 0), 0) / weekQuizzes.length) : 0;
     return { quizzes: weekQuizzes.length, xp: totalXp, avgScore };
   }, [quizHistory]);
 
@@ -301,8 +282,8 @@ function OverviewTab() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
             <span className="text-xs" style={{ color: gamification.streak >= 7 ? '#f97316' : 'var(--text-muted)' }}>
-              <Flame size={12} style={{ verticalAlign: 'middle', color: '#f97316' }} /> {gamification.streak} day{gamification.streak !== 1 ? 's' : ''} streak
-              {(gamification.bestStreak || 0) > gamification.streak && (
+              <Flame size={12} style={{ verticalAlign: 'middle', color: '#f97316' }} /> {gamification.streak === 0 ? 'Start your streak today!' : `${gamification.streak} day${gamification.streak !== 1 ? 's' : ''} streak`}
+              {(gamification.bestStreak || 0) > gamification.streak && gamification.streak > 0 && (
                 <span style={{ marginLeft: 4, color: 'var(--text-dim)', fontSize: 10 }}>
                   (best: {gamification.bestStreak})
                 </span>
@@ -312,7 +293,15 @@ function OverviewTab() {
               <Star size={12} style={{ verticalAlign: 'middle', color: 'var(--yellow)' }} /> {gamification.xp} XP
             </span>
           </div>
-          <div className={`progress-bar xp-bar${xpSyncing ? ' syncing' : ''}`} style={{ marginTop: 8 }}>
+          <div
+            className={`progress-bar xp-bar${xpSyncing ? ' syncing' : ''}`}
+            style={{ marginTop: 8 }}
+            role="progressbar"
+            aria-valuenow={xpPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`XP progress: ${levelProg} of ${xpForNext} to next level`}
+          >
             <div className="progress-fill" style={{ width: `${xpPct}%`, background: 'linear-gradient(90deg, var(--accent), var(--accent-light))' }} />
           </div>
           <div className="text-xs text-muted" style={{ marginTop: 2 }}>{levelProg} / {xpForNext} XP to next level</div>
@@ -328,21 +317,21 @@ function OverviewTab() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
           <div>
             <div className="text-xs text-muted" style={{ marginBottom: 4 }}>XP</div>
-            <div className="progress-bar">
+            <div className="progress-bar" role="progressbar" aria-valuenow={goalXpPct} aria-valuemin={0} aria-valuemax={100} aria-label={`Daily XP goal: ${dailyGoal.todayXp} of ${dailyGoal.targetXp}`}>
               <div className="progress-fill" style={{ width: `${goalXpPct}%`, background: 'var(--accent)' }} />
             </div>
             <div className="text-xs text-muted" style={{ marginTop: 2 }}>{dailyGoal.todayXp}/{dailyGoal.targetXp}</div>
           </div>
           <div>
             <div className="text-xs text-muted" style={{ marginBottom: 4 }}>Questions</div>
-            <div className="progress-bar">
+            <div className="progress-bar" role="progressbar" aria-valuenow={goalQPct} aria-valuemin={0} aria-valuemax={100} aria-label={`Daily questions goal: ${dailyGoal.todayQuestions} of ${goalQTarget}`}>
               <div className="progress-fill" style={{ width: `${goalQPct}%`, background: 'var(--green)' }} />
             </div>
             <div className="text-xs text-muted" style={{ marginTop: 2 }}>{dailyGoal.todayQuestions}/{goalQTarget}</div>
           </div>
           <div>
             <div className="text-xs text-muted" style={{ marginBottom: 4 }}>Minutes</div>
-            <div className="progress-bar">
+            <div className="progress-bar" role="progressbar" aria-valuenow={goalMinPct} aria-valuemin={0} aria-valuemax={100} aria-label={`Daily minutes goal: ${dailyGoal.todayMinutes} of ${goalMinTarget} minutes`}>
               <div className="progress-fill" style={{ width: `${goalMinPct}%`, background: 'var(--blue)' }} />
             </div>
             <div className="text-xs text-muted" style={{ marginTop: 2 }}>{dailyGoal.todayMinutes}/{goalMinTarget}</div>
@@ -953,19 +942,28 @@ function CoursesTab() {
   const [showAddCourse, setShowAddCourse] = useState(false)
   const [newCourseName, setNewCourseName] = useState('')
 
+  function quizMatchesCourse(q: any, course: Course): boolean {
+    const norm = (s: string) => s.toLowerCase().replace(/[\s\-_]+/g, '')
+    const sub = (q.subject || '').toLowerCase()
+    const subN = norm(q.subject || '')
+    const qName = (q.name || '').toLowerCase()
+    const cId = course.id.toLowerCase()
+    const cName = course.name.toLowerCase()
+    const cShort = (course.shortName || '').toLowerCase()
+    const cShortN = norm(course.shortName || '')
+    const cNameN = norm(course.name)
+    return (
+      sub === cId || sub === cName || sub === cShort ||
+      subN === cShortN || subN === cNameN ||
+      qName.includes(cName) || qName.includes(cShort) ||
+      (cShort && sub.includes(cShort)) ||
+      (cShortN && subN.includes(cShortN)) ||
+      (subN && cNameN.includes(subN))
+    )
+  }
+
   function getCourseMastery(course: Course): number {
-    const courseQuizzes = quizHistory.filter(q => {
-      const sub = (q.subject || '').toLowerCase()
-      const qName = (q.name || '').toLowerCase()
-      const cId = course.id.toLowerCase()
-      const cName = course.name.toLowerCase()
-      const cShort = (course.shortName || '').toLowerCase()
-      return (
-        sub === cId || sub === cName || sub === cShort ||
-        qName.includes(cName) || qName.includes(cShort) ||
-        (cShort && sub.includes(cShort))
-      )
-    }).filter(q => q.score >= 0)
+    const courseQuizzes = quizHistory.filter(q => quizMatchesCourse(q, course) && q.score >= 0)
     if (courseQuizzes.length === 0) return 0
     const totalScore = courseQuizzes.reduce((sum, q) => sum + (q.score || 0), 0)
     return Math.max(0, Math.round(totalScore / courseQuizzes.length))
@@ -1071,9 +1069,12 @@ function CoursesTab() {
                       </div>
                     )}
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div
+                    style={{ textAlign: 'right', flexShrink: 0, cursor: 'help' }}
+                    title="Quiz score average across all attempts for this course. Topic proficiency (green checkmarks) uses a separate weighted formula: 85% threshold, min 3 attempts, 70% weight on recent attempts."
+                  >
                     <div style={{ fontSize: 20, fontWeight: 800, color: course.color || 'var(--accent)' }}>{mastery}%</div>
-                    <div className="text-xs text-muted">mastery</div>
+                    <div className="text-xs text-muted">mastery ⓘ</div>
                   </div>
                   {isExpanded ? <ChevronUp size={16} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />}
                 </div>
@@ -1269,6 +1270,14 @@ function AnalyticsTab() {
 
   return (
     <div>
+      {/* Empty state when no quiz data */}
+      {quizHistory.length === 0 && (
+        <div className="card mb-4 empty-state" style={{ textAlign: 'center', padding: '24px 16px' }}>
+          <p style={{ margin: 0, fontWeight: 600 }}>No quiz data yet</p>
+          <p className="text-muted text-sm" style={{ margin: '6px 0 0' }}>Take your first quiz to see analytics here</p>
+        </div>
+      )}
+
       {/* Streak calendar */}
       <div className="card mb-4">
         <div className="card-header">
@@ -1638,6 +1647,194 @@ function AnalyticsTab() {
                   <div className="text-xs text-muted" style={{ fontSize: 9, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{t.id.slice(-10)}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Recharts: Weekly Accuracy Line Chart ── */}
+      {(() => {
+        const chartTooltipStyle = { background: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e8e8e8' };
+        const now = new Date();
+        const weeklyAccuracy: { label: string; accuracy: number }[] = [];
+        for (let w = 7; w >= 0; w--) {
+          const weekStart = new Date(now);
+          weekStart.setDate(weekStart.getDate() - w * 7);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekEnd.getDate() + 7);
+          const label = `W${8 - w}`;
+          const weekQuizzes = quizHistory.filter(q => {
+            const qd = new Date(q.date);
+            return qd >= weekStart && qd < weekEnd;
+          });
+          const accuracy = weekQuizzes.length > 0
+            ? Math.round(weekQuizzes.reduce((acc, q) => acc + q.score, 0) / weekQuizzes.length)
+            : 0;
+          weeklyAccuracy.push({ label, accuracy });
+        }
+        const hasData = weeklyAccuracy.some(w => w.accuracy > 0);
+        return (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px' }}>
+              Quiz Accuracy (Last 8 Weeks)
+            </h3>
+            <div style={{ background: '#161616', borderRadius: '12px', padding: '16px' }}>
+              {hasData ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={weeklyAccuracy}>
+                    <XAxis dataKey="label" tick={{ fill: '#888', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fill: '#888', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [`${v ?? 0}%`, 'Accuracy']} />
+                    <Line type="monotone" dataKey="accuracy" stroke="#60a5fa" strokeWidth={2} dot={{ fill: '#60a5fa', r: 3 }} activeDot={{ r: 5 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: 13 }}>No data yet</div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Recharts: Daily Study Minutes Bar Chart ── */}
+      {(() => {
+        const chartTooltipStyle = { background: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e8e8e8' };
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const now = new Date();
+        interface DailyEntry { label: string; minutes: number; _key: string }
+        const dailyMinutes: DailyEntry[] = [];
+        for (let i = 13; i >= 0; i--) {
+          const d = new Date(now);
+          d.setDate(d.getDate() - i);
+          const _key = d.toISOString().split('T')[0];
+          const label = dayNames[d.getDay()];
+          dailyMinutes.push({ label, minutes: 0, _key });
+        }
+        // Try to sum minutes from coachData sessions
+        const rawSessions = (data?.pluginData?.coachData?.sessions ?? []) as Record<string, unknown>[];
+        if (rawSessions.length > 0) {
+          rawSessions.forEach(s => {
+            const sDate = typeof s.date === 'string' ? s.date.split('T')[0] : '';
+            const mins = typeof s.minutes === 'number' ? s.minutes : typeof s.duration === 'number' ? s.duration : 0;
+            const entry = dailyMinutes.find(e => e._key === sDate);
+            if (entry) entry.minutes += mins;
+          });
+        }
+        const hasData = dailyMinutes.some(d => d.minutes > 0);
+        return (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px' }}>
+              Study Minutes (Last 14 Days)
+            </h3>
+            <div style={{ background: '#161616', borderRadius: '12px', padding: '16px' }}>
+              {hasData ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={dailyMinutes}>
+                    <XAxis dataKey="label" tick={{ fill: '#888', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: '#888', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [`${v ?? 0} min`, 'Study Time']} />
+                    <Bar dataKey="minutes" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: 13 }}>No data yet</div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Recharts: Card Maturity Pie Chart ── */}
+      {(() => {
+        const chartTooltipStyle = { background: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e8e8e8' };
+        const cards = srData?.cards ?? [];
+        const maturityColors: Record<string, string> = {
+          new: '#60a5fa',
+          learning: '#fbbf24',
+          review: '#4ade80',
+          mature: '#a78bfa',
+          relearning: '#fbbf24',
+        };
+        const maturityCounts: Record<string, number> = { new: 0, learning: 0, review: 0, mature: 0 };
+        cards.forEach(c => {
+          const s = (c.state || 'new').toLowerCase();
+          if (s === 'new') maturityCounts.new++;
+          else if (s === 'learning' || s === 'relearning') maturityCounts.learning++;
+          else if (s === 'review') maturityCounts.review++;
+          else maturityCounts.mature++;
+        });
+        const pieData = [
+          { name: 'New', value: maturityCounts.new, color: maturityColors.new },
+          { name: 'Learning', value: maturityCounts.learning, color: maturityColors.learning },
+          { name: 'Review', value: maturityCounts.review, color: maturityColors.review },
+          { name: 'Mature', value: maturityCounts.mature, color: maturityColors.mature },
+        ].filter(d => d.value > 0);
+        return (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px' }}>
+              Card Maturity Distribution
+            </h3>
+            <div style={{ background: '#161616', borderRadius: '12px', padding: '16px' }}>
+              {pieData.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} innerRadius={35}>
+                        {pieData.map((entry, index) => (
+                          <Cell key={index} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={chartTooltipStyle} formatter={(v, name) => [`${v ?? 0} cards`, String(name ?? '')]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', justifyContent: 'center', marginTop: 8 }}>
+                    {pieData.map(d => (
+                      <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#bbb' }}>
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
+                        <span>{d.name}: {d.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: 13 }}>No data yet</div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Recharts: Per-Subject Accuracy Bar Chart ── */}
+      {(() => {
+        const chartTooltipStyle = { background: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e8e8e8' };
+        const subjectMap = new Map<string, number[]>();
+        quizHistory.forEach(q => {
+          const subj = (q.subject || 'General').slice(0, 12);
+          if (!subjectMap.has(subj)) subjectMap.set(subj, []);
+          subjectMap.get(subj)!.push(q.score);
+        });
+        const subjectAccuracy = Array.from(subjectMap.entries()).map(([subject, scores]) => ({
+          subject,
+          accuracy: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+        })).sort((a, b) => b.accuracy - a.accuracy);
+        return (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px' }}>
+              Accuracy by Subject
+            </h3>
+            <div style={{ background: '#161616', borderRadius: '12px', padding: '16px' }}>
+              {subjectAccuracy.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={subjectAccuracy} layout="vertical">
+                    <XAxis type="number" domain={[0, 100]} tick={{ fill: '#888', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="subject" width={90} tick={{ fill: '#bbb', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [`${v ?? 0}%`, 'Accuracy']} />
+                    <Bar dataKey="accuracy" fill="#4ade80" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: 13 }}>No data yet</div>
+              )}
             </div>
           </div>
         );

@@ -144,6 +144,26 @@ function buildIndex(data: NousAIData | null): SearchResult[] {
     })
   }
 
+  // Quiz bank questions
+  const quizBank = pd.quizBank as { quizzes?: { id?: string; name?: string; subject?: string; questions?: { question?: string; correctAnswer?: string }[] }[] } | undefined
+  const bankQuizzes = quizBank?.quizzes ?? []
+  for (const bq of bankQuizzes) {
+    const subject = bq.name ?? bq.subject ?? ''
+    for (let qi = 0; qi < (bq.questions ?? []).length; qi++) {
+      const q = (bq.questions ?? [])[qi]
+      if (!q?.question) continue
+      results.push({
+        id: `bankq-${bq.id ?? subject}-${qi}`,
+        type: 'quiz',
+        title: q.question,
+        preview: subject,
+        route: '/quiz',
+        typeLabel: 'QUIZ Q',
+        score: 0,
+      })
+    }
+  }
+
   // SR Cards
   for (const card of pd.srData?.cards ?? []) {
     results.push({
