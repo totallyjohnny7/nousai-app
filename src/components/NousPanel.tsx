@@ -118,8 +118,15 @@ export default function NousPanel() {
     try { localStorage.setItem('nous_panel_floating', String(isFloating)) } catch { /* ignore */ }
   }, [isFloating])
 
+  const posSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
-    try { localStorage.setItem('nous_panel_pos', JSON.stringify(pos)) } catch { /* ignore */ }
+    if (posSaveTimer.current) clearTimeout(posSaveTimer.current)
+    posSaveTimer.current = setTimeout(() => {
+      try { localStorage.setItem('nous_panel_pos', JSON.stringify(pos)) } catch { /* ignore */ }
+    }, 200)
+    return () => {
+      if (posSaveTimer.current) clearTimeout(posSaveTimer.current)
+    }
   }, [pos])
 
   // Auto-scroll to latest message
@@ -234,7 +241,12 @@ export default function NousPanel() {
     if (!dragRef.current) return
     const dx = e.clientX - dragRef.current.startX
     const dy = e.clientY - dragRef.current.startY
-    setPos({ x: dragRef.current.originX + dx, y: dragRef.current.originY + dy })
+    const newX = dragRef.current.originX + dx
+    const newY = dragRef.current.originY + dy
+    // Clamp so at least 80px of the panel remains visible on each axis
+    const clampedX = Math.max(-300, Math.min(newX, window.innerWidth - 80))
+    const clampedY = Math.max(0, Math.min(newY, window.innerHeight - 80))
+    setPos({ x: clampedX, y: clampedY })
   }, [])
 
   const handleDragEnd = useCallback(() => {
