@@ -4,47 +4,48 @@ import { useStore } from '../../store';
 import type { Note } from '../../types';
 import { copyText, inputStyle } from './shared';
 import { ToolErrorBoundary } from '../ToolErrorBoundary';
+import { runMistralOcr } from '../../utils/mistralOcrService';
 
 function OCRTool() {
   const { data, updatePluginData } = useStore();
   const [extractedText, setExtractedText] = useState('');
   const [processing, setProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [statusMsg, setStatusMsg] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const handleFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setExtractedText(`Invalid file type: "${file.type || file.name}". Please upload a PNG, JPG, or WEBP image.`);
+    const isImage = file.type.startsWith('image/')
+    const isPdf = file.type === 'application/pdf'
+    if (!isImage && !isPdf) {
+      setExtractedText(`Invalid file type: "${file.type || file.name}". Please upload a PNG, JPG, WEBP image or PDF.`);
       return;
     }
     setProcessing(true);
     setExtractedText('');
-    setProgress(0);
+    setStatusMsg('');
     setSaved(false);
 
-    // Show image preview
-    const reader = new FileReader();
-    reader.onload = (e) => setImageSrc(e.target?.result as string);
-    reader.readAsDataURL(file);
+    // Show image preview for images only
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = (e) => setImageSrc(e.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setImageSrc(null);
+    }
 
     try {
-      const { createWorker } = await import('tesseract.js');
-      const worker = await createWorker('eng', 1, {
-        logger: (m: { progress: number }) => {
-          if (typeof m.progress === 'number') setProgress(Math.round(m.progress * 100));
-        },
-      });
-      const { data: ocrData } = await worker.recognize(file);
-      setExtractedText(ocrData.text);
-      await worker.terminate();
-    } catch (err: any) {
-      setExtractedText(`OCR Error: ${err.message || 'Failed to process image'}. You can paste text manually below.`);
+      const text = await runMistralOcr(file, (stage, msg) => setStatusMsg(msg))
+      setExtractedText(text || 'No text extracted — the file may be blank or unsupported.')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setExtractedText(`OCR Error: ${msg}. You can paste text manually below.`);
     }
     setProcessing(false);
+    setStatusMsg('');
   }, []);
 
   function handlePaste(e: React.ClipboardEvent) {
@@ -111,16 +112,16 @@ function OCRTool() {
         >
           <ScanLine size={32} style={{ color: 'var(--text-muted)', marginBottom: 8 }} />
           <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-            Drop image here, click to upload, or paste (Ctrl+V)
+            Drop image or PDF here, click to upload, or paste (Ctrl+V)
           </p>
           <p className="text-xs text-muted" style={{ marginTop: 4 }}>
-            Supports PNG, JPG, WEBP
+            Supports PNG, JPG, WEBP, PDF — powered by Mistral OCR
           </p>
         </div>
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
           style={{ display: 'none' }}
         />
@@ -142,13 +143,14 @@ function OCRTool() {
 
         {processing && (
           <div className="text-center" style={{ padding: 20 }}>
-            <div style={{ color: 'var(--accent)', fontSize: 14, marginBottom: 8 }}>Processing image... {progress}%</div>
+            <div style={{ color: 'var(--accent)', fontSize: 14, marginBottom: 8 }}>
+              {statusMsg || 'Processing…'}
+            </div>
             <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
-              <div style={{ width: `${progress}%`, height: '100%', background: 'var(--accent)', transition: 'width 0.3s' }} />
+              <div style={{ width: '100%', height: '100%', background: 'var(--accent)', opacity: 0.4, animation: 'pulse 1.5s ease-in-out infinite' }} />
             </div>
           </div>
         )}
-        <canvas ref={canvasRef} style={{ display: 'none' }} />
       </div>
 
       {/* Manual text paste area */}
