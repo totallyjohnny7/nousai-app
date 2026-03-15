@@ -99,6 +99,11 @@ export default defineConfig({
     }
   },
 
+  // Force all packages to share a single React instance (prevents "invalid hook call" with recharts etc.)
+  resolve: {
+    dedupe: ['react', 'react-dom', 'react-router-dom'],
+  },
+
   // Pre-bundle heavy deps for faster dev startup (exclude dynamic imports like firebase/tesseract)
   optimizeDeps: {
     include: [
@@ -111,6 +116,8 @@ export default defineConfig({
       '@tiptap/starter-kit',
       // Excalidraw CJS dep needs pre-bundling for dev server ESM compatibility
       'es6-promise-pool',
+      // New deps — pre-bundle to avoid duplicate React instances
+      'recharts',
     ],
   },
 
