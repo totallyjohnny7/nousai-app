@@ -1,0 +1,103 @@
+/* SwipeableCard — swipe gesture visual layer
+   Prefixed .swipe-* to avoid collision with .flashcard-* in App.css */
+
+.swipe-wrapper {
+  position: relative;
+  touch-action: pan-y;        /* allow vertical scroll; JS handles horizontal */
+  user-select: none;
+  transform-origin: var(--swipe-pivot);
+  will-change: transform;
+  cursor: grab;
+}
+
+.swipe-wrapper:active {
+  cursor: grabbing;
+}
+
+/* Overlays: always in DOM, opacity driven by inline style from JS */
+.swipe-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  display: flex;
+  align-items: flex-start;
+  padding: 20px 24px;
+}
+
+.swipe-overlay-right {
+  background: rgba(var(--overlay-color-right), 1);
+  justify-content: flex-start;
+}
+
+.swipe-overlay-left {
+  background: rgba(var(--overlay-color-left), 1);
+  justify-content: flex-end;
+}
+
+/* Overlay label: styled badge */
+.swipe-label {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  border-radius: 8px;
+  padding: 6px 14px;
+  line-height: 1;
+  transition: opacity 0.1s ease;
+}
+
+.swipe-label-right {
+  transform: rotate(-12deg);
+}
+
+.swipe-label-left {
+  transform: rotate(12deg);
+}
+
+/* Spring-back: cancel animation — CSS class overrides inline transform */
+.swipe-cancelling {
+  transition:
+    transform var(--anim-snapback-duration) cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow var(--anim-snapback-duration) ease;
+  transform: translateX(0px) rotate(0deg) !important;
+}
+
+/* Fly-off: commit animation — direction class applied alongside */
+.swipe-committing {
+  pointer-events: none;
+  transition:
+    transform var(--anim-flyoff-duration) cubic-bezier(0.55, 0, 1, 0.45),
+    opacity var(--anim-flyoff-duration) ease-out;
+  opacity: 0 !important;
+}
+
+.swipe-committing.swipe-right {
+  transform: translateX(160vw) rotate(28deg) !important;
+}
+
+.swipe-committing.swipe-left {
+  transform: translateX(-160vw) rotate(-28deg) !important;
+}
+
+/* Fast mode: shorter fly-off */
+.swipe-committing.swipe-fast {
+  transition-duration: var(--anim-flyoff-fast) !important;
+}
+
+/* Reduced motion: disable all animation, keep overlays */
+@media (prefers-reduced-motion: reduce) {
+  .swipe-wrapper,
+  .swipe-cancelling,
+  .swipe-committing {
+    transition: none !important;
+    animation: none !important;
+  }
+  .swipe-committing {
+    transform: none !important;
+    opacity: 0 !important;
+  }
+}

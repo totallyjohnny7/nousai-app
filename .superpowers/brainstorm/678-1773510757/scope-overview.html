@@ -1,0 +1,72 @@
+<h2>Settings Optimization — Scope Overview</h2>
+<p class="subtitle">The audit has 60+ settings across 10 categories. Before we build anything, let's nail the scope.</p>
+
+<div class="section">
+  <p class="label">WHAT I FOUND IN YOUR CODEBASE</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+    <div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:14px;">
+      <div style="color:#22c55e;font-weight:700;font-size:15px;margin-bottom:8px;">✅ Already Built — Just Need Values Changed</div>
+      <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.8;color:var(--text-secondary);">
+        <li>AI temperature (0.7 → 0.3)</li>
+        <li>Max tokens (2048 → varies by task)</li>
+        <li>Custom system prompt (empty → pre-med context)</li>
+        <li>Quiz question count (10 → 20)</li>
+        <li>Pomodoro work (25 → 20 min)</li>
+        <li>Pomodoro break (5 → 10 min)</li>
+        <li>Daily XP goal (100 → keep)</li>
+        <li>High contrast / reduced motion toggles</li>
+        <li>Sound effects (on → on)</li>
+        <li>Daily minutes goal (30 → 45)</li>
+      </ul>
+      <div style="margin-top:10px;font-size:12px;color:#22c55e;font-weight:600;">~10 changes · Low effort · Immediate impact</div>
+    </div>
+    <div style="background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:14px;">
+      <div style="color:#F5A623;font-weight:700;font-size:15px;margin-bottom:8px;">🔨 Missing — Need New Code</div>
+      <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.8;color:var(--text-secondary);">
+        <li>Daily flashcard cap (e.g. 50/day)</li>
+        <li>New cards per day limit</li>
+        <li>Card review order (due date → difficulty)</li>
+        <li>Answer timer per card (10 sec)</li>
+        <li>Bury sibling cards setting</li>
+        <li>Leech card detection + suspend</li>
+        <li>Japanese TTS toggle</li>
+        <li>Quiz per-question timer (exam sim)</li>
+        <li>Calendar week start (Mon)</li>
+        <li>Storage warning threshold (8MB)</li>
+        <li>Dashboard widget reorder</li>
+        <li>Notification schedules (8AM/8PM)</li>
+        <li>E-ink / Boox optimization mode</li>
+        <li>Card color coding per course</li>
+        <li>+ more…</li>
+      </ul>
+      <div style="margin-top:10px;font-size:12px;color:#F5A623;font-weight:600;">~45 changes · Medium–High effort · 1–3 weeks dev</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">WHICH APPROACH DO YOU WANT?</p>
+  <div class="options">
+    <div class="option" data-choice="a" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Quick Wins First</h3>
+        <p>Apply all <strong>existing settings</strong> to optimal values right now (10 changes, no new features). Takes ~30 min. Immediate improvement to AI accuracy, quiz defaults, Pomodoro timing, and daily goals.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="b" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>CRITICAL Items Only</h3>
+        <p>Build the <strong>5 highest-impact missing features</strong>: daily card cap, answer timer, storage warning, notification schedule, and leech detection. 1–2 days dev. Solves the 637-card backlog problem immediately.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="c" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>Full Audit — All 60+ Settings</h3>
+        <p>Implement <strong>everything</strong> in the audit. New settings panel, all missing features, full gamification tuning. Phased over 3 weeks. The complete optimized NousAI experience for pre-med/ADHD.</p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,57 @@
+<h2>How should the Nous AI panel detach?</h2>
+<p class="subtitle">When you "pop out" the panel, where should it go?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Floating bubble — drag anywhere</h3>
+      <p>Panel floats as a resizable window you can drag to any corner or position on screen. Stays on top while you work. Like a picture-in-picture window.</p>
+      <div class="mockup" style="margin-top:10px; font-size:12px">
+        <div class="mockup-header">App layout</div>
+        <div class="mockup-body" style="display:flex; gap:8px; height:120px; position:relative">
+          <div class="mock-sidebar" style="flex:0 0 80px; font-size:11px">Nav</div>
+          <div class="mock-content" style="flex:1; font-size:11px">Page content</div>
+          <div style="position:absolute; bottom:10px; right:10px; background:#F5A623; color:#000; border-radius:8px; padding:6px 10px; font-size:11px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,0.4)">✦ Nous AI<br><span style="font-size:10px; font-weight:400">drag me anywhere</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Detach to side panel — resizable split</h3>
+      <p>Panel stays docked to the right but becomes resizable — you can drag the left edge wider or narrower. No floating, just more control over the split.</p>
+      <div class="mockup" style="margin-top:10px; font-size:12px">
+        <div class="mockup-header">App layout</div>
+        <div class="mockup-body" style="display:flex; gap:0; height:120px">
+          <div class="mock-sidebar" style="flex:0 0 60px; font-size:11px">Nav</div>
+          <div class="mock-content" style="flex:1; font-size:11px; border-right: 3px dashed #F5A623">Page content</div>
+          <div style="flex:0 0 140px; background:#1a1a1a; border:1px solid #333; padding:8px; font-size:11px; color:#F5A623">✦ Nous AI<br><span style="color:#888">resizable →</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Both — dock by default, detach button to float</h3>
+      <p>Default stays as a right-side panel. A "detach" button pops it out into a draggable floating window. Best of both worlds.</p>
+      <div class="mockup" style="margin-top:10px; font-size:12px">
+        <div class="mockup-header">App layout — two modes</div>
+        <div class="mockup-body" style="display:flex; gap:8px; height:120px">
+          <div style="flex:1; display:flex; gap:4px; border-right:1px dashed #444; padding-right:8px">
+            <div class="mock-content" style="flex:1; font-size:10px">Content</div>
+            <div style="flex:0 0 80px; background:#1a1a1a; border:1px solid #F5A623; padding:4px; font-size:10px; color:#F5A623">Nous<br>docked</div>
+          </div>
+          <div style="flex:1; position:relative">
+            <div class="mock-content" style="font-size:10px; height:100%">Content (full width)</div>
+            <div style="position:absolute; top:8px; right:8px; background:#F5A623; color:#000; border-radius:6px; padding:4px 8px; font-size:10px; font-weight:600">Nous floating</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

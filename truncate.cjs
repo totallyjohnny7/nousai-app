@@ -1,0 +1,10 @@
+const fs = require('fs');
+const file = 'C:\\Users\\johnn\\Desktop\\NousAI-App\\src\\data\\cultivationRealms.ts';
+const c = fs.readFileSync(file, 'utf8');
+const lines = c.split('\n');
+console.log('Total lines:', lines.length);
+const kept = lines.slice(0, 224).join('\n') + '\n';
+fs.writeFileSync(file, kept, 'utf8');
+const verify = fs.readFileSync(file, 'utf8').split('\n');
+console.log('After truncation:', verify.length);
+console.log('Last 3 lines:', verify.slice(-3));
