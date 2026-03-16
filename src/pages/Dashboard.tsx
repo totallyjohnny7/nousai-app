@@ -14,6 +14,19 @@ import type { QuizAttempt, Course, CourseTopic, ProficiencyEntry, StudyGoal, Wee
 import { getSpotifyAuthUrl, exchangeSpotifyCode, getCurrentlyPlaying, getSpotifyClientId, isSpotifyConnected, disconnectSpotify, type SpotifyTrack } from '../utils/spotify'
 import { getDueCount } from '../utils/getDueCount'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import CourseCards from '../components/dashboard/CourseCards'
+import GlobalCalendarWidget from '../components/dashboard/GlobalCalendarWidget'
+import StudyPriorityWidget from '../components/dashboard/StudyPriorityWidget'
+import RecentGapsWidget from '../components/dashboard/RecentGapsWidget'
+import PomodoroWidget from '../components/dashboard/PomodoroWidget'
+import DecayRadar from '../components/dashboard/DecayRadar'
+import ExamCountdown from '../components/dashboard/ExamCountdown'
+import WeakSpotRadar from '../components/dashboard/WeakSpotRadar'
+import StickyNotes from '../components/dashboard/StickyNotes'
+import UpcomingAssignmentsWidget from '../components/dashboard/UpcomingAssignmentsWidget'
+import { generateFSRSAwarePlan } from '../utils/studyPlan'
+import type { StudyPlanInput } from '../utils/studyPlan'
+import { TooltipPopup, useTip } from '../components/Tooltip'
 
 type DashTab = 'overview' | 'courses' | 'analytics' | 'plan'
 
@@ -517,6 +530,36 @@ function OverviewTab() {
           </button>
         </div>
       </div>
+
+      {/* Course cards — live grade + deadline per course */}
+      <CourseCards />
+
+      {/* Canvas upcoming assignments — cross-course sorted list */}
+      <UpcomingAssignmentsWidget />
+
+      {/* 7-day global calendar widget */}
+      <GlobalCalendarWidget />
+
+      {/* Study Priority Widget — top 3 courses ranked by urgency */}
+      <StudyPriorityWidget />
+
+      {/* Recent Gaps — top weak concepts from latest exam reviews */}
+      <RecentGapsWidget />
+
+      {/* Pomodoro — compact timer status + XP */}
+      <PomodoroWidget />
+
+      {/* Deck Health — FSRS decay bars per course */}
+      <DecayRadar />
+
+      {/* Exam Countdown — cards/day required before each exam */}
+      <ExamCountdown />
+
+      {/* Weak Spot Radar — lowest-retention subtopics */}
+      <WeakSpotRadar />
+
+      {/* Sticky Notes */}
+      <StickyNotes />
 
       {/* Quick launch grid */}
       <div style={{ marginBottom: 20 }}>
@@ -1133,6 +1176,7 @@ function CoursesTab() {
    ================================================================ */
 function AnalyticsTab() {
   const { gamification, quizHistory, proficiency, srData, data } = useStore()
+  const { tip: atip, show: ashow, move: amove, hide: ahide } = useTip()
 
   // Study streak calendar (last 12 weeks)
   const streakData = useMemo(() => {
@@ -1270,6 +1314,7 @@ function AnalyticsTab() {
 
   return (
     <div>
+      {atip && <TooltipPopup tip={atip} />}
       {/* Empty state when no quiz data */}
       {quizHistory.length === 0 && (
         <div className="card mb-4 empty-state" style={{ textAlign: 'center', padding: '24px 16px' }}>
@@ -1282,20 +1327,35 @@ function AnalyticsTab() {
       {/* Streak calendar */}
       <div className="card mb-4">
         <div className="card-header">
-          <span className="card-title"><Calendar size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Study Streak (12 Weeks)</span>
+          <span
+            className="card-title"
+            style={{ cursor: 'default' }}
+            onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: '#6366f1', marginBottom: 4 }}>Study Streak (12 Weeks)</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Each cell is one day. Darker = more quizzes completed that day. Hover a cell for the exact date and count.</div></div>)}
+            onMouseMove={amove}
+            onMouseLeave={ahide}
+          >
+            <Calendar size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Study Streak (12 Weeks)
+          </span>
           <span className="badge badge-accent"><Flame size={12} /> {gamification.streak}d</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 3 }}>
           {streakData.map((d, i) => {
             const intensity = d.count === 0 ? 0 : Math.min(1, d.count / 3)
             return (
-              <div key={i} title={`${d.date}: ${d.count} activities`} style={{
-                width: '100%', aspectRatio: '1', borderRadius: 2,
-                background: d.count === 0
-                  ? 'var(--bg-primary)'
-                  : `rgba(99, 102, 241, ${0.2 + intensity * 0.8})`,
-                border: '1px solid var(--border)'
-              }} />
+              <div
+                key={i}
+                onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: '#6366f1', marginBottom: 4 }}>{new Date(d.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.count === 0 ? 'No activity' : `${d.count} quiz${d.count === 1 ? '' : 'zes'} completed`}</div></div>)}
+                onMouseMove={amove}
+                onMouseLeave={ahide}
+                style={{
+                  width: '100%', aspectRatio: '1', borderRadius: 2,
+                  background: d.count === 0
+                    ? 'var(--bg-primary)'
+                    : `rgba(99, 102, 241, ${0.2 + intensity * 0.8})`,
+                  border: '1px solid var(--border)',
+                  cursor: d.count > 0 ? 'pointer' : 'default'
+                }}
+              />
             )
           })}
         </div>
@@ -1305,7 +1365,15 @@ function AnalyticsTab() {
       {heatmapData.length > 0 && (
         <div className="card mb-4">
           <div className="card-header">
-            <span className="card-title"><Calendar size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Activity Heatmap (52 Weeks)</span>
+            <span
+              className="card-title"
+              style={{ cursor: 'default' }}
+              onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: '#f5a623', marginBottom: 4 }}>Activity Heatmap (52 Weeks)</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>A full year of activity. Each cell = one day. Darker amber = more quizzes. Hover any cell for the date and count.</div></div>)}
+              onMouseMove={amove}
+              onMouseLeave={ahide}
+            >
+              <Calendar size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Activity Heatmap (52 Weeks)
+            </span>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <div style={{ display: 'flex', gap: 3, minWidth: 'max-content' }}>
@@ -1317,7 +1385,9 @@ function AnalyticsTab() {
                     return (
                       <div
                         key={cell.date}
-                        title={`${cell.date}: ${cell.count} activit${cell.count === 1 ? 'y' : 'ies'}`}
+                        onMouseEnter={isFuture ? undefined : e => ashow(e, <div><div style={{ fontWeight: 700, color: '#f5a623', marginBottom: 4 }}>{new Date(cell.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{cell.count === 0 ? 'No activity' : `${cell.count} quiz${cell.count === 1 ? '' : 'zes'} completed`}</div></div>)}
+                        onMouseMove={isFuture ? undefined : amove}
+                        onMouseLeave={isFuture ? undefined : ahide}
                         style={{
                           width: 11, height: 11, borderRadius: 2,
                           background: isFuture ? 'transparent' : cell.count === 0
@@ -1350,11 +1420,25 @@ function AnalyticsTab() {
       {/* XP over time */}
       <div className="card mb-4">
         <div className="card-header">
-          <span className="card-title"><TrendingUp size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />XP by Week</span>
+          <span
+            className="card-title"
+            style={{ cursor: 'default' }}
+            onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--accent)', marginBottom: 4 }}>XP by Week</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>XP earned per calendar week from quiz completions. Each correct answer earns 5 XP; a perfect score adds a 20 XP bonus. Hover bars for the exact weekly total.</div></div>)}
+            onMouseMove={amove}
+            onMouseLeave={ahide}
+          >
+            <TrendingUp size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />XP by Week
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 120 }}>
           {weeklyXp.map(w => (
-            <div key={w.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <div
+              key={w.label}
+              onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--accent)', marginBottom: 4 }}>{w.label}</div><div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600 }}>{w.xp} XP</div></div>)}
+              onMouseMove={amove}
+              onMouseLeave={ahide}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'default' }}
+            >
               <div className="text-xs text-muted">{w.xp}</div>
               <div style={{
                 width: '100%', borderRadius: '4px 4px 0 0',
@@ -1370,21 +1454,39 @@ function AnalyticsTab() {
       {/* Quiz score distribution */}
       <div className="card mb-4">
         <div className="card-header">
-          <span className="card-title"><BarChart3 size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Score Distribution</span>
+          <span
+            className="card-title"
+            style={{ cursor: 'default' }}
+            onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--yellow)', marginBottom: 4 }}>Score Distribution</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>All quiz scores bucketed by range. 0–49 = needs work, 50–69 = developing, 70–89 = proficient, 90–100 = mastery. Hover a bar for the count and percentage.</div></div>)}
+            onMouseMove={amove}
+            onMouseLeave={ahide}
+          >
+            <BarChart3 size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Score Distribution
+          </span>
           <span className="text-xs text-muted">{quizHistory.length} quizzes</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 100 }}>
-          {scoreDist.map(b => (
-            <div key={b.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <div className="text-xs text-muted">{b.count}</div>
-              <div style={{
-                width: '100%', borderRadius: '4px 4px 0 0',
-                height: `${Math.max(4, (b.count / maxScoreCount) * 70)}px`,
-                background: b.color, transition: 'height 0.3s'
-              }} />
-              <div className="text-xs text-muted">{b.label}</div>
-            </div>
-          ))}
+          {scoreDist.map(b => {
+            const pct = quizHistory.length > 0 ? Math.round((b.count / quizHistory.length) * 100) : 0
+            const label = b.label === '0-49' ? 'Needs work' : b.label === '50-69' ? 'Developing' : b.label === '70-89' ? 'Proficient' : 'Mastery'
+            return (
+              <div
+                key={b.label}
+                onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: b.color, marginBottom: 4 }}>{b.label} — {label}</div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{b.count} quiz{b.count !== 1 ? 'zes' : ''}</div><div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{pct}% of total</div></div>)}
+                onMouseMove={amove}
+                onMouseLeave={ahide}
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'default' }}
+              >
+                <div className="text-xs text-muted">{b.count}</div>
+                <div style={{
+                  width: '100%', borderRadius: '4px 4px 0 0',
+                  height: `${Math.max(4, (b.count / maxScoreCount) * 70)}px`,
+                  background: b.color, transition: 'height 0.3s'
+                }} />
+                <div className="text-xs text-muted">{b.label}</div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -1400,7 +1502,15 @@ function AnalyticsTab() {
         return (
           <div className="card mb-4">
             <div className="card-header">
-              <span className="card-title"><TrendingUp size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Accuracy Trend (Last 20 Quizzes)</span>
+              <span
+                className="card-title"
+                style={{ cursor: 'default' }}
+                onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: '#f5a623', marginBottom: 4 }}>Accuracy Trend (Last 20 Quizzes)</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Your quiz scores in chronological order. The dashed line marks the 70% passing target. Hover any dot for the quiz name and score.</div></div>)}
+                onMouseMove={amove}
+                onMouseLeave={ahide}
+              >
+                <TrendingUp size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Accuracy Trend (Last 20 Quizzes)
+              </span>
             </div>
             <div style={{ padding: '8px 12px 12px', overflowX: 'auto' }}>
               <svg width="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ minWidth: 200, height: 80 }}>
@@ -1410,9 +1520,11 @@ function AnalyticsTab() {
                 {recent.map((q, i) => {
                   const x = pad + (i / (recent.length - 1)) * (w - pad * 2)
                   const y = h - pad - (q.score / 100) * (h - pad * 2)
-                  return <circle key={i} cx={x} cy={y} r="3" fill="var(--color-accent, #F5A623)" opacity={0.9}>
-                    <title>{q.name}: {q.score}%</title>
-                  </circle>
+                  return <circle key={i} cx={x} cy={y} r="5" fill="var(--color-accent, #F5A623)" opacity={0.9} style={{ cursor: 'pointer' }}
+                    onMouseEnter={e => ashow(e as unknown as React.MouseEvent, <div><div style={{ fontWeight: 700, color: '#f5a623', marginBottom: 4 }}>{q.name?.slice(0, 30) || `Quiz #${i + 1}`}</div><div style={{ fontSize: 13, fontWeight: 600, color: q.score >= 70 ? 'var(--green)' : 'var(--red)' }}>{q.score}%</div><div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{new Date(q.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div></div>)}
+                    onMouseMove={e => amove(e as unknown as React.MouseEvent)}
+                    onMouseLeave={ahide}
+                  />
                 })}
               </svg>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
@@ -1429,30 +1541,62 @@ function AnalyticsTab() {
       {subjProf.length > 0 && (
         <div className="card mb-4">
           <div className="card-header">
-            <span className="card-title"><GraduationCap size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Proficiency by Subject</span>
+            <span
+              className="card-title"
+              style={{ cursor: 'default' }}
+              onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--green)', marginBottom: 4 }}>Proficiency by Subject</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Average correct-answer rate per subject across all quizzes. Green ≥85% (proficient), yellow ≥60% (developing), red &lt;60% (needs work). Hover a row for details.</div></div>)}
+              onMouseMove={amove}
+              onMouseLeave={ahide}
+            >
+              <GraduationCap size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Proficiency by Subject
+            </span>
           </div>
-          {subjProf.map(s => (
-            <div key={s.subject} style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{s.subject}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: s.score >= 85 ? 'var(--green)' : s.score >= 60 ? 'var(--yellow)' : 'var(--red)' }}>{s.score}%</span>
+          {subjProf.map(s => {
+            const status = s.score >= 85 ? 'Proficient' : s.score >= 60 ? 'Developing' : 'Needs work'
+            const color = s.score >= 85 ? 'var(--green)' : s.score >= 60 ? 'var(--yellow)' : 'var(--red)'
+            return (
+              <div
+                key={s.subject}
+                onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color, marginBottom: 4 }}>{s.subject}</div><div style={{ fontSize: 13, fontWeight: 600, color }}>{s.score}% — {status}</div><div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Average proficiency score across all topics in this subject.</div></div>)}
+                onMouseMove={amove}
+                onMouseLeave={ahide}
+                style={{ marginBottom: 10, cursor: 'default' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{s.subject}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color }}>{s.score}%</span>
+                </div>
+                <div className="progress-bar" style={{ height: 8 }}>
+                  <div className="progress-fill" style={{ width: `${s.score}%`, background: color }} />
+                </div>
               </div>
-              <div className="progress-bar" style={{ height: 8 }}>
-                <div className="progress-fill" style={{ width: `${s.score}%`, background: s.score >= 85 ? 'var(--green)' : s.score >= 60 ? 'var(--yellow)' : 'var(--red)' }} />
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
       {/* Daily activity */}
       <div className="card mb-4">
         <div className="card-header">
-          <span className="card-title"><Clock size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Daily Activity (Last 7 Days)</span>
+          <span
+            className="card-title"
+            style={{ cursor: 'default' }}
+            onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--blue)', marginBottom: 4 }}>Daily Activity (Last 7 Days)</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Number of quizzes completed each day this week. Hover a bar for the exact count.</div></div>)}
+            onMouseMove={amove}
+            onMouseLeave={ahide}
+          >
+            <Clock size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Daily Activity (Last 7 Days)
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 80 }}>
           {dailyActivity.map(d => (
-            <div key={d.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <div
+              key={d.label}
+              onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--blue)', marginBottom: 4 }}>{d.label}</div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{d.quizzes} quiz{d.quizzes !== 1 ? 'zes' : ''}</div></div>)}
+              onMouseMove={amove}
+              onMouseLeave={ahide}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'default' }}
+            >
               <div className="text-xs text-muted">{d.quizzes}</div>
               <div style={{
                 width: '100%', borderRadius: '4px 4px 0 0',
@@ -1469,22 +1613,40 @@ function AnalyticsTab() {
       {weakTopics.length > 0 && (
         <div className="card mb-4">
           <div className="card-header">
-            <span className="card-title"><AlertTriangle size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Weak Topics</span>
+            <span
+              className="card-title"
+              style={{ cursor: 'default' }}
+              onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--red)', marginBottom: 4 }}>Weak Topics</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Topics where you haven't reached proficiency, sorted by lowest score first. Focus here for the biggest improvement. Hover a row for details.</div></div>)}
+              onMouseMove={amove}
+              onMouseLeave={ahide}
+            >
+              <AlertTriangle size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Weak Topics
+            </span>
             <span className="badge badge-red">{weakTopics.length}</span>
           </div>
-          {weakTopics.map((w, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
-              borderBottom: i < weakTopics.length - 1 ? '1px solid var(--border)' : 'none'
-            }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: w.score < 50 ? 'var(--red)' : 'var(--yellow)', flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{w.topic}</div>
-                <div className="text-xs text-muted">{w.subject}</div>
+          {weakTopics.map((w, i) => {
+            const color = w.score < 50 ? 'var(--red)' : 'var(--yellow)'
+            return (
+              <div
+                key={i}
+                onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color, marginBottom: 4 }}>{w.topic}</div><div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{w.subject}</div><div style={{ fontSize: 13, fontWeight: 600, color }}>{Math.max(0, Math.round(w.score))}% proficiency</div><div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{w.score < 50 ? 'Critical — needs significant review' : 'Getting there — a few more correct answers will unlock proficiency'}</div></div>)}
+                onMouseMove={amove}
+                onMouseLeave={ahide}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
+                  borderBottom: i < weakTopics.length - 1 ? '1px solid var(--border)' : 'none',
+                  cursor: 'default'
+                }}
+              >
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{w.topic}</div>
+                  <div className="text-xs text-muted">{w.subject}</div>
+                </div>
+                <span style={{ fontSize: 14, fontWeight: 700, color }}>{Math.max(0, Math.round(w.score))}%</span>
               </div>
-              <span style={{ fontSize: 14, fontWeight: 700, color: w.score < 50 ? 'var(--red)' : 'var(--yellow)' }}>{Math.max(0, Math.round(w.score))}%</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -1510,11 +1672,25 @@ function AnalyticsTab() {
         return (
           <div className="card">
             <div className="card-header">
-              <span className="card-title"><BarChart3 size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Error Patterns</span>
+              <span
+                className="card-title"
+                style={{ cursor: 'default' }}
+                onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--red)', marginBottom: 4 }}>Error Patterns</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Question categories you miss most often, ranked by total error count across all quizzes. Reviewing these topics will have the biggest impact on your scores. Hover a row for details.</div></div>)}
+                onMouseMove={amove}
+                onMouseLeave={ahide}
+              >
+                <BarChart3 size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Error Patterns
+              </span>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Topics you miss most often:</div>
             {top.map((e, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: i < top.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div
+                key={i}
+                onMouseEnter={ev => ashow(ev, <div><div style={{ fontWeight: 700, color: 'var(--red)', marginBottom: 4 }}>#{i + 1} — {e.topic}</div><div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{e.subject}</div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--red)' }}>{e.count}× missed</div><div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Appears across multiple quizzes — prioritize reviewing this area.</div></div>)}
+                onMouseMove={amove}
+                onMouseLeave={ahide}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: i < top.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'default' }}
+              >
                 <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--red-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'var(--red)', flexShrink: 0 }}>{i + 1}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, fontWeight: 600 }}>{e.topic}</div>
@@ -1549,17 +1725,41 @@ function AnalyticsTab() {
         return (
           <div className="card mt-4">
             <div className="card-header">
-              <span className="card-title"><BarChart3 size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Retention Curve</span>
+              <span
+                className="card-title"
+                style={{ cursor: 'default' }}
+                onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: '#f5a623', marginBottom: 4 }}>Retention Curve</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Your flashcards distributed by FSRS stability interval. Cards further right have stronger long-term memory. Ideally most cards should be in the 7d+ buckets. Hover bars for details.</div></div>)}
+                onMouseMove={amove}
+                onMouseLeave={ahide}
+              >
+                <BarChart3 size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Retention Curve
+              </span>
               <span className="text-xs text-muted">{cards.length} SR cards</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 80, marginBottom: 4 }}>
-              {buckets.map(b => (
-                <div key={b.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <div className="text-xs text-muted">{b.count}</div>
-                  <div style={{ width: '100%', borderRadius: '4px 4px 0 0', height: `${Math.max(4, (b.count / maxCount) * 50)}px`, background: 'var(--color-accent, #F5A623)', transition: 'height 0.3s', opacity: 0.85 }} />
-                  <div className="text-xs text-muted">{b.label}</div>
-                </div>
-              ))}
+              {buckets.map(b => {
+                const meanings: Record<string, string> = {
+                  '<1d': 'Very new — just introduced or recently failed',
+                  '1-3d': 'Early learning — building initial memory',
+                  '3-7d': 'Developing — growing stability',
+                  '7-14d': 'Established — reliable short-term memory',
+                  '14-30d': 'Strong — solid medium-term retention',
+                  '30+d': 'Mature — deep long-term memory',
+                }
+                return (
+                  <div
+                    key={b.label}
+                    onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: '#f5a623', marginBottom: 4 }}>{b.label} interval</div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{b.count} card{b.count !== 1 ? 's' : ''}</div><div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{meanings[b.label]}</div></div>)}
+                    onMouseMove={amove}
+                    onMouseLeave={ahide}
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'default' }}
+                  >
+                    <div className="text-xs text-muted">{b.count}</div>
+                    <div style={{ width: '100%', borderRadius: '4px 4px 0 0', height: `${Math.max(4, (b.count / maxCount) * 50)}px`, background: 'var(--color-accent, #F5A623)', transition: 'height 0.3s', opacity: 0.85 }} />
+                    <div className="text-xs text-muted">{b.label}</div>
+                  </div>
+                )
+              })}
             </div>
             <div className="text-xs text-muted">Card stability distribution (FSRS)</div>
           </div>
@@ -1574,7 +1774,13 @@ function AnalyticsTab() {
         return (
           <div className="card mt-4 mb-4">
             <div className="card-header">
-              <span className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span
+                className="card-title"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'default' }}
+                onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--accent)', marginBottom: 4 }}>Score History by Subject</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Your last 10 quiz scores per subject shown as a mini bar chart. The arrow shows the trend from first to last quiz. Hover a subject row for average and trend details.</div></div>)}
+                onMouseMove={amove}
+                onMouseLeave={ahide}
+              >
                 <TrendingUp size={14} style={{ color: 'var(--accent)' }} /> Score History by Subject
               </span>
             </div>
@@ -1587,13 +1793,20 @@ function AnalyticsTab() {
                 if (scores.length < 2) return null;
                 const avg = Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length);
                 const trend = scores[scores.length - 1] - scores[0];
+                const trendColor = trend >= 0 ? 'var(--green, #22c55e)' : 'var(--red, #ef4444)'
                 return (
-                  <div key={subject} style={{ marginBottom: 14 }}>
+                  <div
+                    key={subject}
+                    onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--accent)', marginBottom: 4 }}>{subject}</div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>avg {avg}%</div><div style={{ fontSize: 11, color: trendColor, marginTop: 2 }}>{trend >= 0 ? '↑' : '↓'}{Math.abs(trend)}% trend (first → last quiz)</div><div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{scores.length} quizzes in last 10</div></div>)}
+                    onMouseMove={amove}
+                    onMouseLeave={ahide}
+                    style={{ marginBottom: 14, cursor: 'default' }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <span style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>{subject}</span>
                       <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span>avg {avg}%</span>
-                        <span style={{ color: trend >= 0 ? 'var(--green, #22c55e)' : 'var(--red, #ef4444)', fontWeight: 700 }}>
+                        <span style={{ color: trendColor, fontWeight: 700 }}>
                           {trend >= 0 ? '↑' : '↓'}{Math.abs(trend)}%
                         </span>
                       </span>
@@ -1603,11 +1816,14 @@ function AnalyticsTab() {
                       {scores.map((s: number, i: number) => (
                         <div
                           key={i}
-                          title={`${s}%`}
+                          onMouseEnter={e => { e.stopPropagation(); ashow(e, <div><div style={{ fontWeight: 700, color: s >= 80 ? 'var(--green, #22c55e)' : s >= 60 ? 'var(--accent)' : 'var(--red)', marginBottom: 4 }}>Quiz #{i + 1}</div><div style={{ fontSize: 13, fontWeight: 600 }}>{s}%</div></div>) }}
+                          onMouseMove={amove}
+                          onMouseLeave={ahide}
                           style={{
                             flex: 1, height: `${Math.max(s, 4)}%`, minHeight: 2,
                             background: s >= 80 ? 'var(--green, #22c55e)' : s >= 60 ? 'var(--accent, #6366f1)' : 'var(--red, #ef4444)',
                             borderRadius: '2px 2px 0 0', opacity: i === scores.length - 1 ? 1 : 0.6,
+                            cursor: 'default',
                           }}
                         />
                       ))}
@@ -1638,11 +1854,25 @@ function AnalyticsTab() {
         return (
           <div className="card mt-4">
             <div className="card-header">
-              <span className="card-title"><Clock size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Time Per Topic</span>
+              <span
+                className="card-title"
+                style={{ cursor: 'default' }}
+                onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--blue)', marginBottom: 4 }}>Time Per Topic</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Total study session minutes logged per topic (top 6). Tracked from active Learn mode sessions. Hover a bar for the topic name and exact time.</div></div>)}
+                onMouseMove={amove}
+                onMouseLeave={ahide}
+              >
+                <Clock size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Time Per Topic
+              </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 80, marginBottom: 4 }}>
               {top.map(t => (
-                <div key={t.id} title={`${t.id}: ${t.min}min`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div
+                  key={t.id}
+                  onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: 'var(--blue)', marginBottom: 4 }}>{t.id}</div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{t.min} min studied</div></div>)}
+                  onMouseMove={amove}
+                  onMouseLeave={ahide}
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'default' }}
+                >
                   <div className="text-xs text-muted">{t.min}m</div>
                   <div style={{ width: '100%', borderRadius: '4px 4px 0 0', height: `${Math.max(4, (t.min / maxMin) * 50)}px`, background: 'var(--blue)', transition: 'height 0.3s' }} />
                   <div className="text-xs text-muted" style={{ fontSize: 9, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{t.id.slice(-10)}</div>
@@ -1676,7 +1906,12 @@ function AnalyticsTab() {
         const hasData = weeklyAccuracy.some(w => w.accuracy > 0);
         return (
           <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px' }}>
+            <h3
+              style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px', cursor: 'default', display: 'inline-block' }}
+              onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: '#60a5fa', marginBottom: 4 }}>Quiz Accuracy (Last 8 Weeks)</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Average quiz score per week over the last 8 weeks. Hover data points on the chart for exact weekly averages.</div></div>)}
+              onMouseMove={amove}
+              onMouseLeave={ahide}
+            >
               Quiz Accuracy (Last 8 Weeks)
             </h3>
             <div style={{ background: '#161616', borderRadius: '12px', padding: '16px' }}>
@@ -1724,7 +1959,12 @@ function AnalyticsTab() {
         const hasData = dailyMinutes.some(d => d.minutes > 0);
         return (
           <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px' }}>
+            <h3
+              style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px', cursor: 'default', display: 'inline-block' }}
+              onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: '#fbbf24', marginBottom: 4 }}>Study Minutes (Last 14 Days)</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Total study session minutes logged per day from coach/timer sessions. Hover bars for exact daily totals.</div></div>)}
+              onMouseMove={amove}
+              onMouseLeave={ahide}
+            >
               Study Minutes (Last 14 Days)
             </h3>
             <div style={{ background: '#161616', borderRadius: '12px', padding: '16px' }}>
@@ -1772,7 +2012,12 @@ function AnalyticsTab() {
         ].filter(d => d.value > 0);
         return (
           <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px' }}>
+            <h3
+              style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px', cursor: 'default', display: 'inline-block' }}
+              onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: '#a78bfa', marginBottom: 4 }}>Card Maturity Distribution</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Your flashcards by FSRS learning state. New = never studied, Learning = short intervals, Review = graduated, Mature = interval ≥21 days. More mature cards = stronger long-term memory.</div></div>)}
+              onMouseMove={amove}
+              onMouseLeave={ahide}
+            >
               Card Maturity Distribution
             </h3>
             <div style={{ background: '#161616', borderRadius: '12px', padding: '16px' }}>
@@ -1820,7 +2065,12 @@ function AnalyticsTab() {
         })).sort((a, b) => b.accuracy - a.accuracy);
         return (
           <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px' }}>
+            <h3
+              style={{ fontSize: '0.95rem', fontWeight: 600, color: '#e8e8e8', marginBottom: '12px', cursor: 'default', display: 'inline-block' }}
+              onMouseEnter={e => ashow(e, <div><div style={{ fontWeight: 700, color: '#4ade80', marginBottom: 4 }}>Accuracy by Subject</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Average quiz score per subject across all quizzes taken. Hover bars for exact percentages.</div></div>)}
+              onMouseMove={amove}
+              onMouseLeave={ahide}
+            >
               Accuracy by Subject
             </h3>
             <div style={{ background: '#161616', borderRadius: '12px', padding: '16px' }}>
@@ -1857,7 +2107,7 @@ interface StudyBlock {
 }
 
 function PlanTab() {
-  const { courses, proficiency } = useStore()
+  const { courses, proficiency, srData, data } = useStore()
 
   const [blocks, setBlocks] = useState<StudyBlock[]>(() => {
     const saved = localStorage.getItem('nousai-study-plan')
@@ -1868,8 +2118,83 @@ function PlanTab() {
   const [addCourse, setAddCourse] = useState('')
   const [addTopic, setAddTopic] = useState('')
   const [addDuration, setAddDuration] = useState(30)
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+  async function generateAIPlan() {
+    if (courses.length === 0) return
+    setAiGenerating(true)
+    setAiError(null)
+    try {
+      const { getCourseSpace } = await import('../utils/courseSpaceInit')
+      const { getDeckHealthByCourse } = await import('../utils/fsrsStorage')
+      const courseSpaces = data?.pluginData?.courseSpaces ?? undefined
+
+      const inputs: StudyPlanInput[] = courses.map(course => {
+        const space = getCourseSpace(courseSpaces, course.id)
+        // Find nearest exam date for this course
+        const examEvents = space.calendarEvents.filter(e => e.type === 'exam').sort((a, b) => a.date.localeCompare(b.date))
+        const nextExam = examEvents.find(e => {
+          const [y, m, d] = e.date.split('-').map(Number)
+          return new Date(y, m - 1, d).getTime() >= Date.now()
+        })
+        // Collect weak topics from srData
+        const courseCards = (srData?.cards ?? []).filter(c => c.subject === course.id)
+        const weakTopics: string[] = []
+        const seen = new Set<string>()
+        for (const card of courseCards) {
+          if (!card.S || card.S <= 0 || seen.has(card.subtopic)) continue
+          const daysSince = (Date.now() - new Date(card.lastReview).getTime()) / 86400000
+          const R = Math.exp(-daysSince / card.S)
+          if (R < 0.75 && !seen.has(card.subtopic)) {
+            weakTopics.push(card.subtopic)
+            seen.add(card.subtopic)
+          }
+        }
+        const weakCardCount = courseCards.filter(c => {
+          if (!c.S || c.S <= 0) return false
+          const daysSince = (Date.now() - new Date(c.lastReview).getTime()) / 86400000
+          return Math.exp(-daysSince / c.S) < 0.75
+        }).length
+        void getDeckHealthByCourse // imported for side-effect check only
+        return {
+          courseId: course.id,
+          courseName: course.name,
+          examDate: nextExam?.date ?? null,
+          weakCardCount,
+          weakTopics,
+          calendarEvents: space.calendarEvents,
+        }
+      })
+
+      const result = await generateFSRSAwarePlan(inputs, 3)
+
+      // Convert AI date-based blocks → day-name blocks (for existing weekly grid)
+      const newBlocks: StudyBlock[] = result.days.flatMap(day => {
+        const [y, m, d] = day.date.split('-').map(Number)
+        const dayName = new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short' })
+        return day.blocks.map(b => ({
+          id: `ai-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          day: dayName,
+          course: b.courseName,
+          topic: b.topic,
+          duration: b.durationMin,
+          completed: false,
+        }))
+      })
+
+      saveBlocks([...blocks, ...newBlocks])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg === 'OFFLINE') setAiError('You\'re offline — AI plan generation requires an internet connection.')
+      else if (msg === 'TIMEOUT') setAiError('Request timed out. Check your connection and try again.')
+      else setAiError('AI plan generation failed. Check your AI API key in Settings.')
+    } finally {
+      setAiGenerating(false)
+    }
+  }
 
   function saveBlocks(newBlocks: StudyBlock[]) {
     setBlocks(newBlocks)
@@ -1986,12 +2311,36 @@ function PlanTab() {
         </div>
       )}
 
+      {/* AI error banner */}
+      {aiError && (
+        <div style={{
+          padding: '10px 14px', marginBottom: 12, borderRadius: 'var(--radius-sm)',
+          background: 'rgba(239,68,68,0.1)', border: '1px solid var(--red)',
+          color: 'var(--red)', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <span>{aiError}</span>
+          <button onClick={() => setAiError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', padding: 0 }} aria-label="Dismiss error">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Weekly schedule grid */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <h3 className="section-title" style={{ margin: 0 }}><CalendarDays size={18} /> Weekly Schedule</h3>
-        <button className="btn btn-sm btn-primary" onClick={() => setShowAdd(!showAdd)}>
-          <Plus size={14} /> Add Block
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn btn-sm btn-secondary"
+            onClick={generateAIPlan}
+            disabled={aiGenerating || courses.length === 0}
+            aria-label="Generate AI study plan"
+          >
+            {aiGenerating ? <><Sparkles size={14} /> Generating…</> : <><Sparkles size={14} /> AI Plan</>}
+          </button>
+          <button className="btn btn-sm btn-primary" onClick={() => setShowAdd(!showAdd)}>
+            <Plus size={14} /> Add Block
+          </button>
+        </div>
       </div>
 
       {/* Add block form */}
