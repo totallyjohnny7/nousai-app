@@ -311,6 +311,16 @@ export interface PluginData {
   userProfile?: { avatarEmoji?: string; customDisplayName?: string; bio?: string; };
   loginHistory?: { timestamp: string; device: string; }[];
   notificationPrefs?: { reviewReminders: boolean; streakAlerts: boolean; pomodoroAlerts: boolean; reminderTime: string; };
+  // Course Space — keyed by course.id; use getCourseSpace() from courseSpaceInit.ts, never access directly
+  courseSpaces?: Record<string, CourseSpace>;
+  // Home dashboard sticky notes
+  dashboardNotes?: StickyNote[];
+  canvasLive?: {
+    courses: CanvasLiveCourse[];
+    assignments: CanvasLiveAssignment[];
+    announcements: CanvasAnnouncement[];
+    lastFullSync: string | null;
+  };
   [key: string]: unknown;
 }
 
@@ -335,6 +345,188 @@ export interface WeeklyQuest {
   completed: boolean;
 }
 
+// ─── Course Space ─────────────────────────────────────────────────────────────
+
+export interface GradeCategory {
+  id: string;
+  name: string;
+  weight: number; // 0-100; sum must = 100 (±0.01 float tolerance) before save
+}
+
+export interface GradeEntry {
+  id: string;
+  categoryId: string;
+  name: string;
+  score: number | null; // null = not yet graded; score > total allowed only if 'extra_credit' flagged
+  total: number;
+  date: string;
+  flags: ('curved' | 'dropped' | 'extra_credit')[];
+  note?: string;
+}
+
+export interface WhatIfEntry {
+  id: string;
+  name: string;
+  categoryId: string;
+  hypotheticalScore: number; // validated: ≤ total (same rule as GradeEntry)
+  total: number;
+}
+
+export interface SyllabusParseResult {
+  examDates: { title: string; date: string; topics: string[] }[];
+  assignmentDates: { title: string; date: string; type: string }[];
+  weeklyTopics: { week: number; topics: string[] }[];
+  gradingBreakdown: GradeCategory[];
+  rawText: string; // immutable after parse; capped at 50,000 chars (~10-15 text pages)
+  parseConfidence: 'high' | 'medium' | 'low';
+}
+
+export interface ExamQuestion {
+  id: string;
+  questionText: string;
+  userAnswer: string; // empty string = left unanswered (valid, not "required")
+  correctAnswer: string;
+  pointsEarned: number;
+  pointsPossible: number;
+  conceptTag: string;
+  note?: string;
+  status: 'correct' | 'incorrect' | 'partial'; // partial = 0.5 weight in gap priority calc
+  ocrConfidence: 'ai_read' | 'ai_uncertain' | 'manual';
+}
+
+export interface GapReport {
+  weakConcepts: { concept: string; wrongCount: number; pointsLost: number; priority: 'high' | 'medium' | 'low' }[];
+  summary: string | null; // null = not generated; '' = attempted but empty; render nothing on null/''
+  flashcardsGenerated: boolean;
+}
+
+export interface ExamReview {
+  id: string;
+  courseId: string;
+  title: string;
+  date: string;
+  totalScore: number;
+  totalPossible: number;
+  questions: ExamQuestion[];
+  gapReport: GapReport;
+  gapReportComplete: boolean; // true once gap generation step has run; Home widget reads only gapReportComplete:true
+  createdAt: string;
+  locked: boolean; // default: false; unlock to edit, re-saves recalculate gap report
+}
+
+export interface CourseCalendarEvent {
+  id: string;
+  courseId: string;
+  title: string;
+  date: string;
+  type: 'exam' | 'quiz' | 'assignment' | 'lab' | 'other';
+  topicIds: string[];
+  source: 'syllabus' | 'manual' | 'canvas';
+  // daysUntil is NOT stored — computed at render: Math.ceil((new Date(date).getTime() - Date.now()) / 86400000)
+}
+
+export interface CanvasModuleItem {
+  id: string;
+  title: string;
+  type: 'assignment' | 'quiz' | 'page' | 'discussion' | 'file' | 'other';
+  url?: string; // relative Canvas URL if available
+  dueAt?: string; // YYYY-MM-DD if assignment has due date
+}
+
+export interface CanvasModule {
+  id: string;
+  name: string;
+  position: number;
+  items: CanvasModuleItem[];
+}
+
+export interface CourseSpace {
+  courseId: string;
+  gradeCategories: GradeCategory[];
+  gradeEntries: GradeEntry[];
+  whatIfEntries: WhatIfEntry[];
+  syllabus: SyllabusParseResult | null;
+  examReviews: ExamReview[];
+  calendarEvents: CourseCalendarEvent[];
+  canvasModules?: CanvasModule[]; // synced from Canvas LMS via extension
+  updatedAt: string; // ISO timestamp; used for multi-device merge
+}
+
+export interface StickyNote {
+  id: string;
+  text: string;
+  color: 'yellow' | 'blue' | 'green'; // adding a color = 1-line type change, no migration needed
+  order: number; // insertion order; drag-to-reorder is deferred
+}
+
+// ─── Canvas Live Data (synced from Canvas API) ────────────────────────────────
+
+export interface CanvasLiveCourse {
+  canvasId: number;
+  name: string;
+  courseCode: string;
+  currentScore: number | null;
+  finalScore: number | null;
+  currentGrade: string | null;
+  lastSynced: string;
+}
+
+export interface CanvasLiveAssignment {
+  id: number;
+  courseId: number;
+  name: string;
+  dueAt: string | null;
+  pointsPossible: number;
+  submissionState: 'submitted' | 'unsubmitted' | 'graded' | 'pending_review' | null;
+  score: number | null;
+  grade: string | null;
+  htmlUrl: string;
+}
+
+export interface CanvasAnnouncement {
+  id: number;
+  courseId: number;
+  title: string;
+  message: string;
+  postedAt: string;
+  htmlUrl: string;
+}
+
+export interface AutoDarkSchedule {
+  enabled: boolean;
+  startTime: string;
+  endTime: string;
+}
+
+// ─── GPA Calculator ───────────────────────────────────────────────────────────
+
+export interface GpaCourse {
+  name: string;
+  currentScore: number;
+  creditHours: number;
+}
+
+export interface GpaResult {
+  semesterGpa: number;
+  unweightedGpa: number;
+  courses: Array<{
+    name: string;
+    score: number;
+    letterGrade: string;
+    gradePoints: number;
+    creditHours: number;
+  }>;
+}
+
+// ─── Assignment Reminders ─────────────────────────────────────────────────────
+
+export interface ReminderTarget {
+  name: string;
+  dueAt: string;
+  courseCode: string;
+  htmlUrl: string;
+}
+
 export interface NousAIData {
   settings: {
     aiProvider: string;
@@ -346,6 +538,9 @@ export interface NousAIData {
     canvasCourseMapping?: Record<string, number>;
     theme?: 'light' | 'dark' | 'system';
     cardShortcuts?: Record<string, string>;
+    autoDarkSchedule?: AutoDarkSchedule;
+    customFont?: string;
+    themePreset?: string;
     [key: string]: unknown;
   };
   pluginData: PluginData;
