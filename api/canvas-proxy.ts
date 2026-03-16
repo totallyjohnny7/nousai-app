@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Validate endpoint: only allow safe API path segments (no traversal)
   const safeEndpoint = endpoint.replace(/^\/+/, '').replace(/\.\./g, '');
-  if (safeEndpoint !== endpoint.replace(/^\/+/, '') || /[^a-zA-Z0-9/_\-?&=%.+]/.test(safeEndpoint)) {
+  if (safeEndpoint !== endpoint.replace(/^\/+/, '') || /[^a-zA-Z0-9/_\-?&=%.+\[\]]/.test(safeEndpoint)) {
     return res.status(400).json({ error: 'Invalid endpoint path' });
   }
 
