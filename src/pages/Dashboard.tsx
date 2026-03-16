@@ -24,6 +24,7 @@ import ExamCountdown from '../components/dashboard/ExamCountdown'
 import WeakSpotRadar from '../components/dashboard/WeakSpotRadar'
 import StickyNotes from '../components/dashboard/StickyNotes'
 import UpcomingAssignmentsWidget from '../components/dashboard/UpcomingAssignmentsWidget'
+import GpaWidget from '../components/dashboard/GpaWidget'
 import { generateFSRSAwarePlan } from '../utils/studyPlan'
 import type { StudyPlanInput } from '../utils/studyPlan'
 import { TooltipPopup, useTip } from '../components/Tooltip'
@@ -1315,6 +1316,9 @@ function AnalyticsTab() {
   return (
     <div>
       {atip && <TooltipPopup tip={atip} />}
+      {/* Canvas GPA Estimator */}
+      <GpaWidget />
+
       {/* Empty state when no quiz data */}
       {quizHistory.length === 0 && (
         <div className="card mb-4 empty-state" style={{ textAlign: 'center', padding: '24px 16px' }}>
