@@ -9,11 +9,14 @@
  * - Periodic background checks for due SR cards
  */
 
-import type { SRCard } from '../types'
+import type { SRCard, CanvasLiveAssignment, ReminderTarget } from '../types'
 
 /* ─── internal state ──────────────────────────────────────── */
 
 let reviewCheckInterval: ReturnType<typeof setInterval> | null = null
+let assignmentReminderInterval: ReturnType<typeof setInterval> | null = null
+// Track which assignment IDs we've already notified (persists for session)
+const notifiedAssignments = new Set<string>()
 
 /* ─── helpers ─────────────────────────────────────────────── */
 
@@ -145,6 +148,83 @@ export function stopReviewCheck(): void {
   if (reviewCheckInterval !== null) {
     clearInterval(reviewCheckInterval)
     reviewCheckInterval = null
+  }
+}
+
+/**
+ * Notify about a single assignment that is coming due soon.
+ */
+export function notifyAssignmentDue(target: ReminderTarget, hoursLeft: number): void {
+  if (!isGranted()) return
+  const key = `${target.name}-${hoursLeft}h`
+  if (notifiedAssignments.has(key)) return
+  notifiedAssignments.add(key)
+
+  const when = hoursLeft <= 1 ? 'in under 1 hour' : `in ~${Math.round(hoursLeft)} hours`
+  try {
+    new Notification(`Assignment due ${when}`, {
+      body: `${target.courseCode}: ${target.name}`,
+      icon: '/icons/nousai.png',
+      tag: `nousai-asgn-${key}`,
+      requireInteraction: false,
+    })
+  } catch {
+    // silently ignore
+  }
+}
+
+/**
+ * Check Canvas live assignments and fire reminders at 24h and 1h before due.
+ */
+function checkAssignmentsDue(assignments: CanvasLiveAssignment[], courseCodeMap: Map<number, string>): void {
+  const now = Date.now()
+  const H24 = 24 * 60 * 60 * 1000
+  const H1  =  1 * 60 * 60 * 1000
+
+  for (const a of assignments) {
+    if (!a.dueAt) continue
+    if (a.submissionState === 'submitted' || a.submissionState === 'graded') continue
+    const dueMs = new Date(a.dueAt).getTime()
+    const diffMs = dueMs - now
+    if (diffMs <= 0) continue // already past due
+
+    const target: ReminderTarget = {
+      name: a.name,
+      dueAt: a.dueAt,
+      courseCode: courseCodeMap.get(a.courseId) ?? '',
+      htmlUrl: a.htmlUrl,
+    }
+
+    if (diffMs <= H1) {
+      notifyAssignmentDue(target, diffMs / (60 * 60 * 1000))
+    } else if (diffMs <= H24 && diffMs > H1) {
+      notifyAssignmentDue(target, 24)
+    }
+  }
+}
+
+/**
+ * Start periodic assignment reminder checks (every 15 minutes).
+ * Pass updated data whenever Canvas live data changes.
+ */
+export function scheduleAssignmentReminders(
+  assignments: CanvasLiveAssignment[],
+  courseCodeMap: Map<number, string>,
+  intervalMs = 15 * 60 * 1000,
+): void {
+  if (assignmentReminderInterval !== null) {
+    clearInterval(assignmentReminderInterval)
+  }
+  checkAssignmentsDue(assignments, courseCodeMap)
+  assignmentReminderInterval = setInterval(() => {
+    checkAssignmentsDue(assignments, courseCodeMap)
+  }, intervalMs)
+}
+
+export function stopAssignmentReminders(): void {
+  if (assignmentReminderInterval !== null) {
+    clearInterval(assignmentReminderInterval)
+    assignmentReminderInterval = null
   }
 }
 

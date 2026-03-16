@@ -1,10 +1,11 @@
 import { Routes, Route, NavLink, useLocation, useParams, Navigate, useNavigate } from 'react-router-dom'
+import type { CourseSpace } from './types'
 import { Suspense, Component, useEffect, useMemo, useRef, useState, type ReactNode, type ErrorInfo } from 'react'
 import { Home, Trophy, BookOpen, Clock, Calendar, Settings, Upload, Brain, Sparkles, Library, Mic, RefreshCw, AlertTriangle, Search, PanelLeftClose, PanelLeftOpen, Keyboard, X, MoreHorizontal, Menu } from 'lucide-react'
 import { lazyWithRetry, markAppLoaded, isChunkLoadError, clearCachesAndReload } from './utils/lazyWithRetry'
 import { useStore } from './store'
 import { resetDailyIfNeeded, getLevel, getLevelProgress, getTitle } from './utils/gamification'
-import { scheduleReviewCheck } from './utils/notifications'
+import { scheduleReviewCheck, scheduleAssignmentReminders } from './utils/notifications'
 import Onboarding from './pages/Onboarding'
 import NousLogo from './components/Logo'
 import NousPanel from './components/NousPanel'
@@ -439,6 +440,16 @@ export default function App() {
     if (cards?.length) {
       scheduleReviewCheck(cards)
     }
+
+    // Schedule Canvas assignment reminders (24h + 1h before due)
+    const canvasLive = data.pluginData?.canvasLive
+    const prefs = data.settings?.notificationPrefs as { reviewReminders?: boolean } | undefined
+    if (canvasLive?.assignments?.length && prefs?.reviewReminders !== false) {
+      const courseCodeMap = new Map<number, string>(
+        (canvasLive.courses ?? []).map(c => [c.canvasId, c.courseCode])
+      )
+      scheduleAssignmentReminders(canvasLive.assignments, courseCodeMap)
+    }
   }, [data])
 
   // Due cards count for nav badges — FSRS-aware, matches Dashboard and Flashcards page
@@ -449,6 +460,61 @@ export default function App() {
 
   // Close the More drawer and mobile sidebar when the user navigates
   useEffect(() => { setMoreOpen(false); setSidebarOpen(false) }, [location.pathname])
+
+  // NousAI Canvas Extension — expose course list + handle import messages
+  useEffect(() => {
+    // Getter for extension content script to read current courses
+    (window as Window & { __nousaiGetCourses?: () => { id: string; name: string }[] }).__nousaiGetCourses = () =>
+      (data?.pluginData?.coachData?.courses ?? []).map(c => ({ id: c.id, name: c.name }))
+
+    const handleExtMessage = (e: MessageEvent) => {
+      if (e.source !== window || e.data?.type !== 'NOUSAI_CANVAS_IMPORT') return
+      const { courseSpaces } = e.data as { courseSpaces: Record<string, CourseSpace> }
+      if (!courseSpaces || typeof courseSpaces !== 'object') return
+      setData(prev => {
+        if (!prev) return prev
+        const existing = prev.pluginData?.courseSpaces ?? {}
+        const merged: Record<string, CourseSpace> = { ...existing }
+        for (const [id, incoming] of Object.entries(courseSpaces)) {
+          const cur = existing[id]
+          if (!cur) {
+            merged[id] = incoming
+          } else {
+            // Merge gradeEntries by id — prefer entries with later dates
+            const entryMap = new Map<string, CourseSpace['gradeEntries'][number]>()
+            for (const entry of [...cur.gradeEntries, ...incoming.gradeEntries]) {
+              const ex = entryMap.get(entry.id)
+              if (!ex || entry.date > ex.date) entryMap.set(entry.id, entry)
+            }
+            // Merge calendarEvents by id — same strategy
+            const eventMap = new Map<string, CourseSpace['calendarEvents'][number]>()
+            for (const ev of [...cur.calendarEvents, ...incoming.calendarEvents]) {
+              const ex = eventMap.get(ev.id)
+              if (!ex || ev.date > ex.date) eventMap.set(ev.id, ev)
+            }
+            merged[id] = {
+              ...cur,
+              gradeCategories: incoming.gradeCategories.length ? incoming.gradeCategories : cur.gradeCategories,
+              gradeEntries: Array.from(entryMap.values()),
+              calendarEvents: Array.from(eventMap.values()),
+              // Canvas modules: replace entirely when incoming has data (Canvas is authoritative)
+              canvasModules: (incoming.canvasModules && incoming.canvasModules.length > 0)
+                ? incoming.canvasModules
+                : cur.canvasModules,
+              updatedAt: new Date().toISOString(),
+            }
+          }
+        }
+        return { ...prev, pluginData: { ...prev.pluginData, courseSpaces: merged } }
+      })
+    }
+
+    window.addEventListener('message', handleExtMessage)
+    return () => {
+      delete (window as Window & { __nousaiGetCourses?: unknown }).__nousaiGetCourses
+      window.removeEventListener('message', handleExtMessage)
+    }
+  }, [data, setData])
 
   if (!loaded) {
     return (
