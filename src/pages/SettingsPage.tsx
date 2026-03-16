@@ -2482,6 +2482,41 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            {/* Auto Dark Mode Schedule */}
+            {(() => {
+              const sched = (data?.settings?.autoDarkSchedule as { enabled?: boolean; startTime?: string; endTime?: string }) ?? {}
+              const enabled = sched.enabled ?? false
+              const startTime = sched.startTime ?? '20:00'
+              const endTime = sched.endTime ?? '07:00'
+              const update = (patch: Record<string, unknown>) => setData(prev => ({
+                ...prev,
+                settings: { ...prev.settings, autoDarkSchedule: { enabled, startTime, endTime, ...patch } }
+              }))
+              return (
+                <div style={{ ...rowStyle, flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>🌙 Auto Dark Schedule</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Automatically switch to dark mode on a schedule.</div>
+                    </div>
+                    <button style={toggleStyle(enabled)} onClick={() => update({ enabled: !enabled })}>
+                      <div style={toggleKnobStyle(enabled)} />
+                    </button>
+                  </div>
+                  {enabled && (
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 12 }}>
+                      <label style={{ color: 'var(--text-secondary)' }}>Dark from</label>
+                      <input type="time" value={startTime} onChange={e => update({ startTime: e.target.value })}
+                        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text-primary)', padding: '2px 6px', fontSize: 12 }} />
+                      <label style={{ color: 'var(--text-secondary)' }}>to</label>
+                      <input type="time" value={endTime} onChange={e => update({ endTime: e.target.value })}
+                        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text-primary)', padding: '2px 6px', fontSize: 12 }} />
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
             {/* High Contrast */}
             <div style={{ ...rowStyle }}>
               <div>

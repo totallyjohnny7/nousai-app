@@ -413,6 +413,30 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler)
   }, [betaMode, navigate])
 
+  // Auto dark mode scheduling — check every minute
+  useEffect(() => {
+    const schedule = data?.settings?.autoDarkSchedule as { enabled?: boolean; startTime?: string; endTime?: string } | undefined
+    if (!schedule?.enabled || !schedule.startTime || !schedule.endTime) return
+
+    function applySchedule() {
+      const now = new Date()
+      const cur = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      const { startTime: s, endTime: e } = schedule!
+      // Overnight schedule: e.g. 22:00 → 06:00
+      const shouldBeDark = s! > e! ? (cur >= s! || cur < e!) : (cur >= s! && cur < e!)
+      setData(prev => {
+        const current = prev.settings?.theme
+        const want = shouldBeDark ? 'dark' : 'light'
+        if (current === want) return prev
+        return { ...prev, settings: { ...prev.settings, theme: want } }
+      })
+    }
+
+    applySchedule()
+    const id = setInterval(applySchedule, 60_000)
+    return () => clearInterval(id)
+  }, [data?.settings?.autoDarkSchedule, setData])
+
   // Storage usage warning at 80%
   useEffect(() => {
     if (!('storage' in navigator && 'estimate' in navigator.storage)) return
