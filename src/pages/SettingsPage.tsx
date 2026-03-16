@@ -21,6 +21,7 @@ import {
 } from '../utils/permissions'
 import { requestFCMPermission, getFCMToken, clearFCMToken, isFCMSupported } from '../utils/fcm'
 import { getSpotifyAuthUrl, isSpotifyConnected, disconnectSpotify } from '../utils/spotify'
+import { runFullCanvasSync } from '../utils/canvasSync'
 
 // ─── Section Collapse State ────────────────────────────────
 type SectionId = 'account' | 'ai' | 'extensions' | 'study' | 'display' | 'permissions' | 'data' | 'howto' | 'appinfo' | 'spotify'
@@ -518,6 +519,10 @@ export default function SettingsPage() {
   const [omiApiKey, setOmiApiKey] = useState(localStorage.getItem('nousai-omi-api-key') || '')
   const [omiKeyInput, setOmiKeyInput] = useState('')
   const [omiTesting, setOmiTesting] = useState(false)
+  const [canvasSyncing, setCanvasSyncing] = useState(false)
+  const [canvasSyncStatus, setCanvasSyncStatus] = useState<{
+    ok: boolean; message: string; lastSync?: string
+  } | null>(null)
 
   // Auto-backup state
   const [autoBackup, setAutoBackup] = useState(localStorage.getItem('nousai-auto-backup') === 'true')
@@ -890,6 +895,37 @@ export default function SettingsPage() {
     setAutoSync(next)
     localStorage.setItem('nousai-auto-sync', String(next))
     showToast(next ? 'Auto-sync enabled' : 'Auto-sync disabled')
+  }
+
+  // ─── Canvas Sync Handler ──────────────────────────────
+  async function handleCanvasSync() {
+    const canvasUrl = data?.settings?.canvasUrl
+    const canvasToken = data?.settings?.canvasToken
+    if (!canvasUrl || !canvasToken) {
+      setCanvasSyncStatus({ ok: false, message: 'Canvas URL and token required' })
+      return
+    }
+    setCanvasSyncing(true)
+    setCanvasSyncStatus(null)
+    try {
+      const result = await runFullCanvasSync(canvasUrl, canvasToken)
+      updatePluginData({
+        canvasLive: {
+          courses: result.courses,
+          assignments: result.assignments,
+          announcements: result.announcements,
+          lastFullSync: new Date().toISOString(),
+        },
+      })
+      const msg = result.errors.length > 0
+        ? `Synced with ${result.errors.length} error(s): ${result.errors[0]}`
+        : `Synced ${result.courses.length} courses, ${result.assignments.length} assignments`
+      setCanvasSyncStatus({ ok: result.errors.length === 0, message: msg, lastSync: new Date().toLocaleString() })
+    } catch (e) {
+      setCanvasSyncStatus({ ok: false, message: e instanceof Error ? e.message : 'Sync failed' })
+    } finally {
+      setCanvasSyncing(false)
+    }
   }
 
   // ─── Update Handlers ──────────────────────────────────
@@ -2874,7 +2910,7 @@ export default function SettingsPage() {
                 <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => { showToast('Extension sync triggered! Open Canvas in Chrome to push data.') }}>
                   <RefreshCw size={13} /> Sync from Extension
                 </button>
-                <a href="https://chrome.google.com/webstore" target="_blank" rel="noopener noreferrer"
+                <a href="https://chromewebstore.google.com/search/NousAI%20Canvas" target="_blank" rel="noopener noreferrer"
                   className="btn btn-sm" style={{ textDecoration: 'none', flex: 1, justifyContent: 'center', background: '#4285f4', color: '#fff', border: 'none' }}>
                   <ExternalLink size={13} /> Get Extension
                 </a>
@@ -2937,46 +2973,23 @@ export default function SettingsPage() {
                 {/* Sync buttons */}
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   <button
-                    onClick={async () => {
-                      const url = data?.settings?.canvasUrl;
-                      const token = data?.settings?.canvasToken;
-                      if (!url || !token) { showToast('Enter Canvas URL and API token first'); return; }
-                      showToast('Testing connection...');
-                      try {
-                        const { testCanvasConnection } = await import('../utils/canvasSync');
-                        const result = await testCanvasConnection(url, token);
-                        showToast(result.ok ? 'Connected to Canvas!' : `Connection failed: ${result.error}`);
-                      } catch (e: unknown) {
-                        showToast(`Error: ${e instanceof Error ? e.message : 'Unknown'}`);
-                      }
-                    }}
-                    className="btn btn-sm" style={{ fontSize: 11, gap: 4 }}>
-                    <Shield size={11} /> Test Connection
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const url = data?.settings?.canvasUrl;
-                      const token = data?.settings?.canvasToken;
-                      if (!url || !token) { showToast('Enter Canvas URL and API token first'); return; }
-                      showToast('Syncing courses from Canvas...');
-                      try {
-                        const { syncCanvasCourses } = await import('../utils/canvasSync');
-                        const courses = await syncCanvasCourses(url, token);
-                        showToast(`Found ${courses.length} active courses on Canvas`);
-                        if (setData) {
-                          setData(prev => ({ ...prev, settings: { ...prev.settings, lastCanvasSync: new Date().toISOString() } }));
-                        }
-                      } catch (e: unknown) {
-                        showToast(`Sync failed: ${e instanceof Error ? e.message : 'Unknown'}`);
-                      }
-                    }}
+                    onClick={handleCanvasSync}
+                    disabled={canvasSyncing}
                     className="btn btn-primary btn-sm" style={{ fontSize: 11, gap: 4 }}>
-                    <RefreshCw size={11} /> Sync Now
+                    <RefreshCw size={11} /> {canvasSyncing ? 'Syncing...' : 'Sync Canvas'}
                   </button>
                 </div>
-                {data?.settings?.lastCanvasSync && (
-                  <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
-                    Last synced: {new Date(data.settings.lastCanvasSync as string).toLocaleString()}
+                {canvasSyncStatus && (
+                  <div style={{
+                    marginTop: 8, padding: '8px 12px', borderRadius: 6, fontSize: 12,
+                    background: canvasSyncStatus.ok ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                    color: canvasSyncStatus.ok ? '#22c55e' : '#ef4444',
+                    border: `1px solid ${canvasSyncStatus.ok ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                  }}>
+                    {canvasSyncStatus.message}
+                    {canvasSyncStatus.lastSync && (
+                      <span style={{ opacity: 0.7 }}> · {canvasSyncStatus.lastSync}</span>
+                    )}
                   </div>
                 )}
               </div>
