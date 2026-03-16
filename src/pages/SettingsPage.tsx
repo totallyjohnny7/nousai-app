@@ -2482,6 +2482,48 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            {/* Theme Presets */}
+            {(() => {
+              const CANVAS_THEME_PRESETS = [
+                { id: 'default', label: 'Default', color: '#ffffff' },
+                { id: 'amber',   label: 'Amber',   color: '#F5A623' },
+                { id: 'forest',  label: 'Forest',  color: '#4ade80' },
+                { id: 'ocean',   label: 'Ocean',   color: '#38bdf8' },
+                { id: 'dusk',    label: 'Dusk',    color: '#a78bfa' },
+              ]
+              const active = (data?.settings?.themePreset as string) ?? 'default'
+              return (
+                <div style={{ ...rowStyle, flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>🎨 Color Preset</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Choose a color theme for the app.</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {CANVAS_THEME_PRESETS.map(p => (
+                      <button
+                        key={p.id}
+                        title={p.label}
+                        onClick={() => setData(prev => ({ ...prev, settings: { ...prev.settings, themePreset: p.id === 'default' ? '' : p.id } }))}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px',
+                          fontSize: 11, fontWeight: 600, borderRadius: 6, cursor: 'pointer',
+                          border: active === p.id || (p.id === 'default' && !active)
+                            ? `1px solid ${p.color}` : '1px solid var(--border)',
+                          background: active === p.id || (p.id === 'default' && !active)
+                            ? `${p.color}22` : 'var(--bg-secondary)',
+                          color: active === p.id || (p.id === 'default' && !active)
+                            ? p.color : 'var(--text-muted)',
+                        }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+
             {/* Auto Dark Mode Schedule */}
             {(() => {
               const sched = (data?.settings?.autoDarkSchedule as { enabled?: boolean; startTime?: string; endTime?: string }) ?? {}

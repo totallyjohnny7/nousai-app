@@ -364,6 +364,18 @@ export default function App() {
     if (density) document.documentElement.setAttribute('data-density', density)
   }, [])
 
+  // Apply theme preset whenever it changes
+  useEffect(() => {
+    const preset = data?.settings?.themePreset as string | undefined
+    const VALID = ['forest', 'ocean', 'dusk', 'amber']
+    const html = document.documentElement
+    // Remove all known preset data-theme values first
+    VALID.forEach(p => { if (html.getAttribute('data-theme') === p) html.removeAttribute('data-theme') })
+    if (preset && VALID.includes(preset)) {
+      html.setAttribute('data-theme', preset)
+    }
+  }, [data?.settings?.themePreset])
+
   // #42 Image lazy loading
   useEffect(() => {
     function addLazy(el: Element) {

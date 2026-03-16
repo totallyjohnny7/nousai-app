@@ -93,6 +93,83 @@ html.theme-light .desktop-sidebar {
   border-right: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+/* ── Theme Presets ────────────────────────────────────── */
+
+/* Forest — deep green with emerald accent */
+html[data-theme="forest"] {
+  --bg-primary: #0a0f0a;
+  --bg-secondary: #0f1a0f;
+  --bg-card: #131f13;
+  --bg-card-hover: #1a2a1a;
+  --bg-input: #0c150c;
+  --text-primary: #d4edda;
+  --text-secondary: #7aab85;
+  --text-muted: #5a8a65;
+  --text-dim: #4a7a55;
+  --accent: #4ade80;
+  --accent-dim: rgba(74, 222, 128, 0.12);
+  --accent-light: #86efac;
+  --accent-glow: rgba(74, 222, 128, 0.06);
+  --color-accent: #4ade80;
+  --border: rgba(74, 222, 128, 0.1);
+  --border-hover: rgba(74, 222, 128, 0.2);
+  --border-strong: rgba(74, 222, 128, 0.3);
+}
+
+/* Ocean — dark navy with cyan accent */
+html[data-theme="ocean"] {
+  --bg-primary: #050d1a;
+  --bg-secondary: #0a1628;
+  --bg-card: #0e1e35;
+  --bg-card-hover: #152a48;
+  --bg-input: #081220;
+  --text-primary: #cce7ff;
+  --text-secondary: #6aaed6;
+  --text-muted: #4d8fb5;
+  --text-dim: #3d7a9f;
+  --accent: #38bdf8;
+  --accent-dim: rgba(56, 189, 248, 0.12);
+  --accent-light: #7dd3fc;
+  --accent-glow: rgba(56, 189, 248, 0.06);
+  --color-accent: #38bdf8;
+  --border: rgba(56, 189, 248, 0.1);
+  --border-hover: rgba(56, 189, 248, 0.2);
+  --border-strong: rgba(56, 189, 248, 0.3);
+}
+
+/* Dusk — warm purple-indigo with violet accent */
+html[data-theme="dusk"] {
+  --bg-primary: #0d0a14;
+  --bg-secondary: #150f20;
+  --bg-card: #1c1430;
+  --bg-card-hover: #251b3d;
+  --bg-input: #100c1a;
+  --text-primary: #e2d9f3;
+  --text-secondary: #9b8ab4;
+  --text-muted: #7a6a99;
+  --text-dim: #6a5a88;
+  --accent: #a78bfa;
+  --accent-dim: rgba(167, 139, 250, 0.12);
+  --accent-light: #c4b5fd;
+  --accent-glow: rgba(167, 139, 250, 0.06);
+  --color-accent: #a78bfa;
+  --border: rgba(167, 139, 250, 0.1);
+  --border-hover: rgba(167, 139, 250, 0.2);
+  --border-strong: rgba(167, 139, 250, 0.3);
+}
+
+/* Amber — original Focused Scholar amber accent variant */
+html[data-theme="amber"] {
+  --color-accent: #F5A623;
+  --accent: #F5A623;
+  --accent-dim: rgba(245, 166, 35, 0.12);
+  --accent-light: #fbbf24;
+  --accent-glow: rgba(245, 166, 35, 0.06);
+  --border: rgba(245, 166, 35, 0.1);
+  --border-hover: rgba(245, 166, 35, 0.2);
+  --border-strong: rgba(245, 166, 35, 0.3);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 h1, h2, h3, .stat-value { font-family: var(--font-heading); }
@@ -597,7 +674,7 @@ html[data-reduced-motion] *, html[data-reduced-motion] *::before, html[data-redu
 
 @media (min-width: 481px) and (max-width: 768px) {
   .page-content { padding: 16px 14px calc(var(--nav-height) + var(--safe-bottom) + 14px) !important; max-width: 100% !important; }
-  .flashcard-container { max-width: 380px !important; }
+  .flashcard-container { max-width: 100% !important; }
   .timer-ring { width: 180px !important; height: 180px !important; }
   .rte-toolbar { gap: 1px !important; padding: 4px 6px !important; }
   .rte-toolbar button { min-width: 24px !important; height: 24px !important; padding: 3px 5px !important; }
@@ -1203,4 +1280,117 @@ div[data-video-embed] video {
   max-width: 200px;
   white-space: normal;
   box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+}
+
+/* ── NousPanel: Image row ──────────────────────────────── */
+.nous-img-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 6px 0 2px;
+  scrollbar-width: thin;
+}
+.nous-img-thumb {
+  flex-shrink: 0;
+  width: 72px;
+  height: 54px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s;
+}
+.nous-img-thumb:hover { border-color: var(--border-hover); }
+.nous-img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ── NousPanel: Fetch button + loading ─────────────────── */
+.nous-img-fetch-btn {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.nous-img-fetch-btn:hover { border-color: var(--border-hover); color: var(--text-secondary); }
+.nous-img-loading { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+/* ── NousPanel: Lightbox ───────────────────────────────── */
+.nous-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nous-lightbox-inner {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.nous-lightbox-inner img { max-width: 90vw; max-height: 80vh; border-radius: var(--radius); }
+.nous-lightbox-close {
+  position: absolute;
+  top: -36px;
+  right: 0;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.nous-lightbox-close:hover { opacity: 1; }
+.nous-lightbox-caption { color: var(--text-secondary); font-size: 12px; text-align: center; }
+.nous-lightbox-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: nous-spin 0.7s linear infinite;
+}
+@keyframes nous-spin { to { transform: rotate(360deg); } }
+
+/* ── NousPanel: Mermaid diagram block ──────────────────── */
+.nous-mermaid-block {
+  margin-top: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  overflow-x: auto;
+}
+.nous-mermaid-block svg { max-width: 100%; height: auto; }
+.nous-mermaid-block--zoomable {
+  cursor: zoom-in;
+  transition: border-color 0.15s;
+}
+.nous-mermaid-block--zoomable:hover { border-color: var(--accent); }
+
+/* ── Mermaid zoom modal ── */
+.nous-mermaid-zoom-inner {
+  max-width: 95vw;
+  max-height: 92vh;
+  overflow: auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.nous-mermaid-zoom-svg svg {
+  width: auto;
+  max-width: none;
+  height: auto;
+  display: block;
 }
