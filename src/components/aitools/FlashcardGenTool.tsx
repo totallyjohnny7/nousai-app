@@ -123,6 +123,86 @@ Format: [{"front":"Statement.","back":"TRUE — explanation."},...]`,
 
 Format: [{"front":"Explain X and why it matters.","back":"Deep explanation with analogy."},...]`,
   },
+  {
+    id: 'procedural',
+    label: 'Procedural Chain',
+    emoji: '🔗',
+    description: 'Clinical/skill procedures — 4-phase structure with critical steps on front',
+    exampleFront: `COUNTING & RECORDING RADIAL PULSE
+─────────────────────────────────
+SUPPLIES: Watch with second hand
+─────────────────────────────────
+⭐ CRITICAL: Index + middle finger on THUMB SIDE of wrist
+⭐ CRITICAL: Count full 1 minute (±4 BPM)
+⭐ CRITICAL: Report if <60 or >100 BPM
+─────────────────────────────────
+Q: Walk me through the full procedure.`,
+    exampleBack: `PHASE 1 — ENTRY
+1. Knock, wait
+2. ID self + resident
+3. Wash hands
+4. Explain, face-to-face
+5. Privacy
+
+PHASE 2 — SETUP
+6. Position arm palm-up, relaxed
+
+PHASE 3 — THE SKILL
+7. ⭐ Index + middle finger on THUMB SIDE of wrist
+   → Feel for rhythmic tap beneath fingers
+   → NEVER use your thumb (has its own pulse)
+8. ⭐ Count every beat for 1 FULL MINUTE
+   → Note: rhythm (regular or skipping?)
+   → Note: strength (strong or weak/thready?)
+
+PHASE 4 — WRAP-UP
+9. Call light within reach
+10. Wash hands
+11. Record: rate, date, time, method (radial)
+12. ⭐ Report to nurse if <60 or >100 BPM`,
+    buildPrompt: (title, content) =>
+      `Generate one "Procedural Chain Card" per clinical skill found in the note below. Each card MUST follow this exact structure with no variation.
+
+FRONT format (exact):
+[SKILL NAME IN CAPS]
+─────────────────────────────────
+SUPPLIES: [comma-separated list]
+─────────────────────────────────
+⭐ CRITICAL: [first critical/starred step]
+⭐ CRITICAL: [second critical step — include numbers, measurements, or examiner-watched items]
+⭐ CRITICAL: [third if applicable]
+─────────────────────────────────
+Q: Walk me through the full procedure.
+
+BACK format (exact 4-phase structure):
+PHASE 1 — ENTRY
+1. Knock, wait
+2. ID self + resident
+3. Wash hands
+4. Explain procedure (clearly, slowly, face-to-face)
+5. Privacy (curtain/screen/door)
+
+PHASE 2 — SETUP
+[skill-specific: lock wheels, adjust bed, gloves, gather supplies, etc.]
+
+PHASE 3 — THE SKILL
+[Most detailed phase — number every step, mark ⭐ on critical steps, add → sub-notes for technique details]
+
+PHASE 4 — WRAP-UP
+[Last steps: call light within reach, wash hands, report changes to nurse, document]
+
+RULES:
+- Phase 1 and Phase 4 are nearly identical across all skills — keep them consistent
+- Phase 3 is the most detailed and skill-specific
+- ⭐ marks on Phase 3 must match the ⭐ CRITICAL items listed on the front
+- Include specific numbers, measurements, or timing wherever they exist (e.g. "count 1 full minute", "≥105°F = do not serve")
+- One card per skill. Return ONLY a valid JSON array with "front" and "back" string fields.
+
+<note_title>${title}</note_title>
+<note_content>${content}</note_content>
+
+Format: [{"front":"SKILL NAME\\n─────...","back":"PHASE 1 — ENTRY\\n1. Knock..."},...]`,
+  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
