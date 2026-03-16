@@ -2289,24 +2289,33 @@ export default function SettingsPage() {
               <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
                 {[
                   { label: 'Default', val: 'inherit', css: 'inherit' },
+                  { label: 'Inter', val: 'inter', css: "'Inter', system-ui, sans-serif" },
+                  { label: 'Sora', val: 'sora', css: "'Sora', system-ui, sans-serif" },
+                  { label: 'Nunito', val: 'nunito', css: "'Nunito', system-ui, sans-serif", gfont: 'Nunito:wght@400;600;700' },
+                  { label: 'Lato', val: 'lato', css: "'Lato', system-ui, sans-serif", gfont: 'Lato:wght@400;700' },
                   { label: 'Serif', val: 'serif', css: 'Georgia, serif' },
                   { label: 'Mono', val: 'mono', css: 'ui-monospace, monospace' },
                   { label: 'OpenDyslexic', val: 'dyslexic', css: 'OpenDyslexic, sans-serif' },
-                ].map(({ label, val, css }) => {
+                ].map(({ label, val, css, gfont } : { label: string; val: string; css: string; gfont?: string }) => {
                   const cur = localStorage.getItem('nousai-pref-fontfamily') || 'inherit';
                   return (
                     <button key={val} className={`btn btn-sm ${cur === val ? 'btn-primary' : 'btn-secondary'}`}
                       style={{ fontFamily: css }}
                       onClick={() => {
                         localStorage.setItem('nousai-pref-fontfamily', val);
-                        if (val === 'dyslexic') {
-                          if (!document.getElementById('dyslexic-font-link')) {
-                            const link = document.createElement('link');
-                            link.id = 'dyslexic-font-link';
-                            link.rel = 'stylesheet';
-                            link.href = 'https://fonts.cdnfonts.com/css/opendyslexic';
-                            document.head.appendChild(link);
-                          }
+                        if (val === 'dyslexic' && !document.getElementById('dyslexic-font-link')) {
+                          const link = document.createElement('link');
+                          link.id = 'dyslexic-font-link';
+                          link.rel = 'stylesheet';
+                          link.href = 'https://fonts.cdnfonts.com/css/opendyslexic';
+                          document.head.appendChild(link);
+                        }
+                        if (gfont && !document.getElementById(`gfont-${val}`)) {
+                          const link = document.createElement('link');
+                          link.id = `gfont-${val}`;
+                          link.rel = 'stylesheet';
+                          link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(gfont)}&display=swap`;
+                          document.head.appendChild(link);
                         }
                         document.documentElement.style.setProperty('--font-family-body', css);
                         showToast(`Font: ${label}`);
