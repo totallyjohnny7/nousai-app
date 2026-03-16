@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import { BookOpen, ChevronLeft, ChevronRight, ChevronDown, RotateCcw, Shuffle, Layers, Play, Pause, Keyboard, Maximize, Minimize, Plus, X, Check, Pencil, Trash2, Download, Upload, Search, Settings2, FolderPlus, ClipboardCopy, Clock, BarChart3, Trophy, Target } from 'lucide-react'
+import { BookOpen, ChevronLeft, ChevronRight, ChevronDown, RotateCcw, Shuffle, Layers, Play, Pause, Keyboard, Maximize, Minimize, Plus, X, Check, Pencil, Trash2, Download, Upload, Search, Settings2, FolderPlus, ClipboardCopy, Clock, BarChart3, Trophy, Target, Copy } from 'lucide-react'
+import CardEditPanel from '../components/flashcards/CardEditPanel'
 import FlashcardAnalytics from '../components/FlashcardAnalytics'
 import { TooltipPopup, useTip } from '../components/Tooltip'
 import { useStore } from '../store'
@@ -367,6 +368,8 @@ function ManageFlashcards({ courses, data, setData }: {
   const [editBack, setEditBack] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [showMoveDropdown, setShowMoveDropdown] = useState(false)
+  // Panel edit state — opens CardEditPanel bottom sheet
+  const [panelCardKey, setPanelCardKey] = useState<string | null>(null) // "courseId:cardIndex"
 
   // Build a flat list of all cards with metadata
   const allCards = useMemo(() => {
@@ -549,6 +552,37 @@ function ManageFlashcards({ courses, data, setData }: {
     setShowMoveDropdown(false)
   }
 
+  // Save card via CardEditPanel (full edit: front, back, topic, media)
+  function handlePanelSave(updated: FlashcardItem) {
+    if (!panelCardKey || !data) return
+    const [courseId, idxStr] = panelCardKey.split(':')
+    const cardIndex = parseInt(idxStr, 10)
+    const currentCourses = data.pluginData?.coachData?.courses || []
+    const updatedCourses = currentCourses.map(c => {
+      if (c.id !== courseId) return c
+      const newCards = [...(c.flashcards || [])]
+      if (newCards[cardIndex]) newCards[cardIndex] = updated
+      return { ...c, flashcards: newCards }
+    })
+    updatePluginData({ coachData: { ...data.pluginData.coachData, courses: updatedCourses } })
+    setPanelCardKey(null)
+  }
+
+  // Duplicate a card — inserts a copy immediately after the original
+  function duplicateCard(courseId: string, cardIndex: number) {
+    if (!data) return
+    const currentCourses = data.pluginData?.coachData?.courses || []
+    const updatedCourses = currentCourses.map(c => {
+      if (c.id !== courseId) return c
+      const newCards = [...(c.flashcards || [])]
+      const original = newCards[cardIndex]
+      if (!original) return c
+      newCards.splice(cardIndex + 1, 0, { ...original })
+      return { ...c, flashcards: newCards }
+    })
+    updatePluginData({ coachData: { ...data.pluginData.coachData, courses: updatedCourses } })
+  }
+
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '8px 10px', border: '1px solid var(--border)',
     borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)',
@@ -724,10 +758,28 @@ function ManageFlashcards({ courses, data, setData }: {
                           <div style={{ fontSize: 13, color: 'var(--text-secondary)', wordBreak: 'break-word' }}>{card.back}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button className="btn-icon" onClick={() => startEdit(card)} title="Edit card" style={{ width: 28, height: 28 }}>
+                          <button
+                            className="btn-icon"
+                            onClick={() => setPanelCardKey(key)}
+                            title="Edit card (full editor)"
+                            style={{ width: 28, height: 28 }}
+                          >
                             <Pencil size={13} />
                           </button>
-                          <button className="btn-icon" onClick={() => deleteCard(card.courseId, card.cardIndex)} title="Delete card" style={{ width: 28, height: 28, color: 'var(--red, #ef4444)' }}>
+                          <button
+                            className="btn-icon"
+                            onClick={() => duplicateCard(card.courseId, card.cardIndex)}
+                            title="Duplicate card"
+                            style={{ width: 28, height: 28 }}
+                          >
+                            <Copy size={13} />
+                          </button>
+                          <button
+                            className="btn-icon"
+                            onClick={() => deleteCard(card.courseId, card.cardIndex)}
+                            title="Delete card"
+                            style={{ width: 28, height: 28, color: 'var(--red, #ef4444)' }}
+                          >
                             <Trash2 size={13} />
                           </button>
                         </div>
@@ -749,6 +801,20 @@ function ManageFlashcards({ courses, data, setData }: {
           })}
         </div>
       )}
+
+      {/* Full card editor panel (media, topic, paste images) */}
+      <CardEditPanel
+        isOpen={panelCardKey !== null}
+        card={(() => {
+          if (!panelCardKey) return null
+          const [courseId, idxStr] = panelCardKey.split(':')
+          const course = courses.find(c => c.id === courseId)
+          return course?.flashcards[parseInt(idxStr, 10)] ?? null
+        })()}
+        onSave={handlePanelSave}
+        onClose={() => setPanelCardKey(null)}
+        title="Edit Card"
+      />
     </div>
   )
 }
@@ -2058,6 +2124,7 @@ function FlashcardReview({ cards, courseId = '_fc', title, onBack, onCardReviewe
         <div
           ref={cardContainerRef}
           className="flashcard-container"
+          style={zenMode ? { maxWidth: 'min(960px, calc(100vw - 48px))' } : undefined}
           role="button"
           tabIndex={0}
           aria-label={flipped ? `Card back: ${card.back.substring(0, 100)}. Press Space to flip back.` : `Card front: ${card.front}. Press Space to flip.`}

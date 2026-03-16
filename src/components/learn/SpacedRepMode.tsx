@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Eye, Play, Repeat, Sparkles } from 'lucide-react';
+import { Eye, Play, Repeat, Sparkles, Pencil } from 'lucide-react';
 import { useStore } from '../../store';
 import { sanitizeHtml } from '../../utils/sanitize';
 import { getDueCards, reviewCard, convertFromLegacy, type FSRSCard, type Grade } from '../../utils/fsrs';
 import { cardStyle } from './learnHelpers';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import { SwipeableCard } from '../flashcards/SwipeableCard';
+import CardEditPanel from '../flashcards/CardEditPanel';
+import type { FlashcardItem } from '../../types';
 
 export default function SpacedRepMode() {
   const { data, setData, srData, courses, quizHistory, matchSets } = useStore();
@@ -15,6 +17,7 @@ export default function SpacedRepMode() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [reviewed, setReviewed] = useState(0);
   const [phase, setPhase] = useState<'overview' | 'review' | 'done'>('overview');
+  const [editingInReview, setEditingInReview] = useState(false);
 
   // Refs for persisting review progress
   const reviewedCardsRef = useRef<Map<string, FSRSCard>>(new Map());
@@ -193,6 +196,7 @@ export default function SpacedRepMode() {
     setCurrentIdx(0);
     setReviewed(0);
     setShowAnswer(false);
+    setEditingInReview(false);
     setPhase('review');
   }
 
@@ -217,6 +221,51 @@ export default function SpacedRepMode() {
     } else {
       setCurrentIdx(prev => prev + 1);
     }
+  }
+
+  // Save edits made to the current card during review
+  function handleReviewCardSave(updated: FlashcardItem) {
+    const card = dueCards[currentIdx];
+    if (!card) return;
+
+    // Reflect edit immediately in the live review session
+    setDueCards(prev => prev.map(c => c.key === card.key
+      ? { ...c, front: updated.front, back: updated.back, topic: updated.topic ?? c.topic }
+      : c
+    ));
+    setCards(prev => prev.map(c => c.key === card.key
+      ? { ...c, front: updated.front, back: updated.back }
+      : c
+    ));
+
+    // Persist to course flashcards in store.
+    // Key format for course cards: `${courseId}-${index}` — split on last dash.
+    const lastDash = card.key.lastIndexOf('-');
+    if (lastDash > 0) {
+      const courseId = card.key.slice(0, lastDash);
+      const idx = parseInt(card.key.slice(lastDash + 1), 10);
+      if (!isNaN(idx)) {
+        const d = dataRef.current;
+        if (d) {
+          const currentCourses = d.pluginData?.coachData?.courses || [];
+          const updatedCourses = currentCourses.map(c =>
+            c.id !== courseId ? c : {
+              ...c,
+              flashcards: c.flashcards.map((f, i) => i === idx ? updated : f),
+            }
+          );
+          setData(prev => ({
+            ...prev,
+            pluginData: {
+              ...prev.pluginData,
+              coachData: { ...prev.pluginData.coachData, courses: updatedCourses },
+            },
+          }));
+        }
+      }
+    }
+
+    setEditingInReview(false);
   }
 
   // Swipe-to-rate adapters for spaced rep mode.
@@ -306,9 +355,19 @@ export default function SpacedRepMode() {
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-muted">{currentIdx + 1}/{dueCards.length}</span>
-          <span className="badge" style={{ fontSize: 10, background: 'var(--accent-glow)', color: 'var(--accent-light)' }}>
-            {card.state}
-          </span>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              title="Edit this card"
+              onClick={() => setEditingInReview(true)}
+              style={{ padding: '2px 8px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              <Pencil size={11} /> Edit
+            </button>
+            <span className="badge" style={{ fontSize: 10, background: 'var(--accent-glow)', color: 'var(--accent-light)' }}>
+              {card.state}
+            </span>
+          </div>
         </div>
         <div className="progress-bar mb-3">
           <div className="progress-fill" style={{ width: `${((currentIdx + 1) / dueCards.length) * 100}%`, background: 'var(--accent)' }} />
@@ -357,6 +416,15 @@ export default function SpacedRepMode() {
             </div>
           </>
         )}
+
+        {/* Inline card editor — position:fixed so it overlays the whole screen */}
+        <CardEditPanel
+          isOpen={editingInReview}
+          card={editingInReview ? { front: card.front, back: card.back, topic: card.topic } : null}
+          onSave={handleReviewCardSave}
+          onClose={() => setEditingInReview(false)}
+          title="Edit Card (Live Review)"
+        />
       </div>
     );
   }
