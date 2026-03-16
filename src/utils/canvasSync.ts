@@ -2,6 +2,12 @@
  * Canvas LMS Sync — client-side functions that call /api/canvas-proxy
  */
 
+import type {
+  CanvasLiveCourse,
+  CanvasLiveAssignment,
+  CanvasAnnouncement,
+} from '../types';
+
 interface CanvasAssignment {
   id: number;
   name: string;
@@ -142,4 +148,141 @@ export function matchCanvasCourse(
     return localNorm.includes(code) || code.includes(localNorm);
   });
   return match || null;
+}
+
+export async function syncCanvasLiveCourses(
+  canvasUrl: string,
+  canvasToken: string
+): Promise<CanvasLiveCourse[]> {
+  const data = await canvasProxyFetch(
+    canvasUrl, canvasToken,
+    'courses?enrollment_state=active&per_page=50&include[]=total_scores&include[]=current_grading_period_scores'
+  ) as Array<{
+    id: number;
+    name: string;
+    course_code: string;
+    enrollments?: Array<{
+      computed_current_score: number | null;
+      computed_final_score: number | null;
+      computed_current_grade: string | null;
+    }>;
+  }>;
+
+  return data.map(c => {
+    const enrollment = c.enrollments?.[0];
+    return {
+      canvasId: c.id,
+      name: c.name,
+      courseCode: c.course_code,
+      currentScore: enrollment?.computed_current_score ?? null,
+      finalScore: enrollment?.computed_final_score ?? null,
+      currentGrade: enrollment?.computed_current_grade ?? null,
+      lastSynced: new Date().toISOString(),
+    };
+  });
+}
+
+export async function syncCanvasLiveAssignments(
+  canvasUrl: string,
+  canvasToken: string,
+  canvasCourseId: number
+): Promise<CanvasLiveAssignment[]> {
+  const data = await canvasProxyFetch(
+    canvasUrl, canvasToken,
+    `courses/${canvasCourseId}/assignments?per_page=50&order_by=due_at&include[]=submission`
+    // No bucket=future — we want overdue assignments too (shown in red)
+  ) as Array<{
+    id: number;
+    name: string;
+    due_at: string | null;
+    points_possible: number;
+    html_url: string;
+    submission?: {
+      workflow_state: string;
+      score: number | null;
+      grade: string | null;
+    };
+  }>;
+
+  return data.map(a => ({
+    id: a.id,
+    courseId: canvasCourseId,
+    name: a.name,
+    dueAt: a.due_at,
+    pointsPossible: a.points_possible,
+    submissionState: (a.submission?.workflow_state as CanvasLiveAssignment['submissionState']) ?? null,
+    score: a.submission?.score ?? null,
+    grade: a.submission?.grade ?? null,
+    htmlUrl: a.html_url,
+  }));
+}
+
+export async function syncCanvasAnnouncements(
+  canvasUrl: string,
+  canvasToken: string,
+  canvasCourseId: number
+): Promise<CanvasAnnouncement[]> {
+  const data = await canvasProxyFetch(
+    canvasUrl, canvasToken,
+    `courses/${canvasCourseId}/discussion_topics?only_announcements=true&per_page=5&order_by=recent_activity`
+  ) as Array<{
+    id: number;
+    title: string;
+    message: string;
+    posted_at: string;
+    html_url: string;
+  }>;
+
+  return data.map(a => ({
+    id: a.id,
+    courseId: canvasCourseId,
+    title: a.title,
+    message: a.message?.replace(/<[^>]*>/g, '').trim().slice(0, 300) ?? '',
+    postedAt: a.posted_at,
+    htmlUrl: a.html_url,
+  }));
+}
+
+export async function runFullCanvasSync(
+  canvasUrl: string,
+  canvasToken: string
+): Promise<{
+  courses: CanvasLiveCourse[];
+  assignments: CanvasLiveAssignment[];
+  announcements: CanvasAnnouncement[];
+  errors: string[];
+}> {
+  const errors: string[] = [];
+
+  let courses: CanvasLiveCourse[] = [];
+  try {
+    courses = await syncCanvasLiveCourses(canvasUrl, canvasToken);
+  } catch (e) {
+    errors.push(`Courses: ${e instanceof Error ? e.message : 'failed'}`);
+    return { courses: [], assignments: [], announcements: [], errors };
+  }
+
+  const allAssignments: CanvasLiveAssignment[] = [];
+  const allAnnouncements: CanvasAnnouncement[] = [];
+
+  const CONCURRENCY = 5;
+  for (let i = 0; i < courses.length; i += CONCURRENCY) {
+    const batch = courses.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.flatMap(c => [
+        syncCanvasLiveAssignments(canvasUrl, canvasToken, c.canvasId),
+        syncCanvasAnnouncements(canvasUrl, canvasToken, c.canvasId),
+      ])
+    );
+    results.forEach((r, idx) => {
+      if (r.status === 'fulfilled') {
+        if (idx % 2 === 0) allAssignments.push(...(r.value as CanvasLiveAssignment[]));
+        else allAnnouncements.push(...(r.value as CanvasAnnouncement[]));
+      } else {
+        errors.push(`Course ${batch[Math.floor(idx / 2)].courseCode}: ${r.reason}`);
+      }
+    });
+  }
+
+  return { courses, assignments: allAssignments, announcements: allAnnouncements, errors };
 }
