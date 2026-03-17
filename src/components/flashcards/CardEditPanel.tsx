@@ -1,7 +1,56 @@
 // CardEditPanel — bottom-sheet card editor (media, paste, file upload)
 // Used in: Flashcards.tsx (ManageFlashcards) + SpacedRepMode.tsx (inline review edit)
 import { useState, useEffect, useRef } from 'react'
-import { X, Image, Youtube, Save, Paperclip, Trash2 } from 'lucide-react'
+import { X, Image, Youtube, Save, Paperclip, Trash2, Link } from 'lucide-react'
+
+// ── Manual card templates ──────────────────────────────────────────────────────
+interface CardTemplate {
+  id: string
+  label: string
+  emoji: string
+  front: string
+  back: string
+}
+
+const CARD_TEMPLATES: CardTemplate[] = [
+  {
+    id: 'procedural',
+    label: 'Procedural Chain',
+    emoji: '🔗',
+    front: `SKILL NAME
+─────────────────────────────────
+SUPPLIES:
+─────────────────────────────────
+⭐ CRITICAL:
+⭐ CRITICAL:
+⭐ CRITICAL:
+─────────────────────────────────
+Q: Walk me through the full procedure.`,
+    back: `PHASE 1 — ENTRY
+1. Knock, wait
+2. ID self + resident
+3. Wash hands
+4. Explain procedure (clearly, slowly, face-to-face)
+5. Privacy (curtain/screen/door)
+
+PHASE 2 — SETUP
+6.
+7.
+
+PHASE 3 — THE SKILL
+8. ⭐
+   →
+9. ⭐
+   →
+10.
+
+PHASE 4 — WRAP-UP
+[N]. Call light within reach
+[N+1]. Wash hands
+[N+2]. Record:
+[N+3]. ⭐ Report to nurse if `,
+  },
+]
 import type { FlashcardItem } from '../../types'
 import type { FlashcardMedia } from '../../utils/mediaUtils'
 import { getYouTubeId } from '../../utils/mediaUtils'
@@ -158,7 +207,7 @@ export default function CardEditPanel({
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>{title}</span>
           <button
             onClick={onClose}
@@ -166,6 +215,33 @@ export default function CardEditPanel({
           >
             <X size={18} />
           </button>
+        </div>
+
+        {/* Template shortcuts */}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', alignSelf: 'center', fontWeight: 600 }}>
+            <Link size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />Template:
+          </span>
+          {CARD_TEMPLATES.map(tpl => (
+            <button
+              key={tpl.id}
+              className="btn btn-secondary btn-sm"
+              title={`Pre-fill with ${tpl.label} structure`}
+              onClick={() => {
+                // Only fill if fields are empty or user confirms overwrite
+                if (!front.trim() && !back.trim()) {
+                  setFront(tpl.front)
+                  setBack(tpl.back)
+                } else if (window.confirm(`Replace current content with the ${tpl.label} template?`)) {
+                  setFront(tpl.front)
+                  setBack(tpl.back)
+                }
+              }}
+              style={{ fontSize: 11, padding: '3px 10px', display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              {tpl.emoji} {tpl.label}
+            </button>
+          ))}
         </div>
 
         {/* Front */}
