@@ -59,7 +59,7 @@ Question: {questionText}
 ### Outputs
 - Updated `scripts/output/chapter19.json`, `chapter20.json`, `chapter21.json` with `questionImageBase64` and `questionImageMime` filled for all previously-blank questions
 - `scripts/output/figures-patch.json` — flat array of `{ id, questionImageBase64, questionImageMime }` for every question that received a figure (used by the Patch Figures import tab)
-- `scripts/output/figures-cache.json` — keyed by question ID, caches the SVG base64 string
+- `scripts/output/figures-cache.json` — keyed by **question ID** (`question.id`), caches the SVG base64 string. Unmatched IDs (not found in bank) are logged to stdout for auditability.
 
 ### Failsafes (mirrors `extract-physics.mjs`)
 | Failsafe | Behavior |
@@ -95,9 +95,24 @@ Add a `'patch'` option to the existing `bulkTab` state union: `'single' | 'json'
 figures-patch.json
   → parse [{id, questionImageBase64, questionImageMime}]
   → build Map<id, figureData>
-  → for each question in bank: if map.has(q.id) → q.questionImageBase64 = map.get(q.id).questionImageBase64
+  → preview step: show "X matched, Y unmatched (IDs not found — skipped silently)"
+  → user clicks "Apply Patch (X)" to confirm
+  → for each question in bank: if map.has(q.id) → merge image fields only
   → updatePluginData({ physicsQuiz: { ...existing, questions: updatedQuestions } })
 ```
+
+**Unmatched IDs:** If a patch entry ID doesn't match any question in the bank, it is silently skipped. The preview step shows the unmatched count so the user can investigate before applying.
+
+**Rollback:** The patch tab shows a preview (matched count, sample question titles) before any write. This acts as a dry-run gate. No auto-rollback after apply — but since only image fields are touched, the worst case is running the patch again or clearing the field in the question editor.
+
+### TypeScript note
+`bulkTab` state union must be extended: `'single' | 'json' | 'manual' | 'patch'`. Failure to update this union causes a TypeScript compile error.
+
+### SVG rendering
+SVGs are rendered via `data:image/svg+xml;base64,{b64}` in the existing `<img>` tag — this works in all modern browsers. The MIME string stored on the question is exactly `"image/svg+xml"`.
+
+### Storage size check
+179 SVGs × ~3500 chars avg ≈ 625 KB raw. SVG is highly repetitive XML — pako gzip compression (already used for Firestore sync) reduces this to ~80–120 KB. Total data with existing 1.85 MB → gzip ~0.4 MB + ~0.1 MB figures ≈ 0.5 MB compressed, well under the 1 MB Firestore document limit. Verify actual compressed size after generation before syncing to cloud.
 
 ---
 
