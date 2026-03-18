@@ -11,7 +11,7 @@ import {
   ArrowRight, RotateCcw, Play, Trophy,
   Sparkles, HelpCircle, GripVertical, Loader2,
   BarChart3, Plus, Eye, EyeOff, Library, Star, BookOpenCheck, Volume2, Camera,
-  Atom, Languages
+  Atom, Languages, Dna, GitBranch
 } from 'lucide-react';
 import { useStore } from '../store';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
@@ -46,6 +46,8 @@ import { getLevel } from '../utils/gamification';
 
 const JpQuizTab = lazyWithRetry(() => import('../components/jpquiz/JpQuizTab'));
 const PhysicsQuizTab = lazyWithRetry(() => import('../components/physquiz/PhysicsQuizTab'));
+const BiolExam2Tab      = lazyWithRetry(() => import('../components/biolquiz/BiolExam2Tab'))
+const EvolutionExam2Tab = lazyWithRetry(() => import('../components/evolutionquiz/EvolutionExam2Tab'))
 
 // ─── Types ─────────────────────────────────────────────
 
@@ -53,7 +55,8 @@ type ModeId =
   | 'rapid' | 'feynman' | 'exam' | 'socratic' | 'gap'
   | 'mnemonics' | 'interleave' | 'formula' | 'errors'
   | 'tldr' | 'connect' | 'match' | 'spaced' | 'tutors' | 'solver'
-  | 'japanese-practicum' | 'physics-practicum';
+  | 'japanese-practicum' | 'physics-practicum'
+  | 'biol-practicum' | 'evolution-practicum';
 
 interface ModeConfig {
   id: ModeId;
@@ -100,6 +103,8 @@ const MODES: ModeConfig[] = [
 const PRACTICUM_MODES: ModeConfig[] = [
   { id: 'japanese-practicum', name: 'Japanese Practicum', icon: Languages, desc: 'Typing & speaking quiz for Japanese courses', color: '#F5A623' },
   { id: 'physics-practicum', name: 'Physics Practicum', icon: Atom, desc: 'Problem sets, AI grading & analytics for Physics', color: '#F5A623' },
+  { id: 'biol-practicum',      name: 'BIOL 3020 Exam 2',  icon: Dna,       desc: 'Molecular Biology Exam 2 — Ch. 4, 5, 10', color: '#22c55e' },
+  { id: 'evolution-practicum', name: 'Evolution Exam 2',   icon: GitBranch, desc: 'Evolution Exam 2 — 7-heading framework',  color: '#a78bfa' },
 ];
 
 // ─── Helpers ───────────────────────────────────────────
@@ -537,6 +542,35 @@ function ModePanel({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
             </Suspense>
           </ToolErrorBoundary>
         );
+      })()}
+      {mode === 'biol-practicum' && (() => {
+        const course = courses.find(c =>
+          c.shortName?.toUpperCase().includes('BIOL') ||
+          c.name.toLowerCase().includes('molecular') ||
+          c.name.toLowerCase().includes('cell')
+        ) ?? courses[0] ?? { id: 'biol-global', name: 'BIOL 3020', shortName: 'BIOL3020', color: '#22c55e', topics: [], flashcards: [] }
+        return (
+          <ToolErrorBoundary toolName="BIOL Exam 2">
+            <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading…</div>}>
+              <BiolExam2Tab course={course} />
+            </Suspense>
+          </ToolErrorBoundary>
+        )
+      })()}
+
+      {mode === 'evolution-practicum' && (() => {
+        const course = courses.find(c =>
+          c.shortName?.toUpperCase().includes('EVOL') ||
+          c.shortName?.includes('4230') ||
+          c.name.toLowerCase().includes('evolution')
+        ) ?? courses[0] ?? { id: 'evol-global', name: 'Evolution', shortName: 'EVOL4230', color: '#a78bfa', topics: [], flashcards: [] }
+        return (
+          <ToolErrorBoundary toolName="Evolution Exam 2">
+            <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading…</div>}>
+              <EvolutionExam2Tab course={course} />
+            </Suspense>
+          </ToolErrorBoundary>
+        )
       })()}
     </div>
   );
