@@ -77,6 +77,19 @@ export default function StudyPage() {
   const [showSidecar, setShowSidecar] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // ── Session cleanup on unmount — prevent stale quiz data on re-entry ──
+  useEffect(() => {
+    return () => {
+      setSession(null);
+      setView('menu');
+      setUserAnswer('');
+      setAnswers([]);
+      setShowFeedback(false);
+      setIsCorrect(false);
+      setShowSidecar(false);
+    };
+  }, []);
+
   // ── Page context publisher ──
   useEffect(() => {
     const courseName = courses.find(c => c.id === selectedCourse)?.name ?? selectedCourse

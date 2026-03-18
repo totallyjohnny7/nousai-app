@@ -52,6 +52,7 @@ export interface FSRSCard {
 
 /** Retrievability: probability of recall after t days with stability S */
 export function retrievability(t: number, S: number): number {
+  if (!S || S <= 0) return 0; // Guard: new card or corrupt stability
   return Math.pow(1 + FACTOR * t / S, DECAY);
 }
 

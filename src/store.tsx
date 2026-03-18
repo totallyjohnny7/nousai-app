@@ -640,6 +640,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
 export const useStore = () => useContext(Ctx);
 
+/* ── IDB timeout wrapper ─────────────────────────────────── */
+function withTimeout<T>(promise: Promise<T>, ms = 5000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`IDB operation timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
 /* ── IndexedDB helpers ──────────────────────────────────── */
 const DB_NAME = 'nousai-companion';
 const STORE_NAME = 'appdata';
@@ -655,7 +665,7 @@ function openDB(): Promise<IDBDatabase> {
 
 async function saveToIDB(data: NousAIData) {
   try {
-    const db = await openDB();
+    const db = await withTimeout(openDB());
     const tx = db.transaction(STORE_NAME, 'readwrite');
     tx.objectStore(STORE_NAME).put(data, 'main');
   } catch (e) {
@@ -755,13 +765,13 @@ export { saveBackupHandle, loadBackupHandle, clearBackupHandle, writeBackupFile 
 
 async function loadFromIDB(): Promise<NousAIData | null> {
   try {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
+    const db = await withTimeout(openDB());
+    return await withTimeout(new Promise<NousAIData | null>((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const req = tx.objectStore(STORE_NAME).get('main');
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
-    });
+    }));
   } catch (e) {
     console.error('[IDB] Failed to load:', e);
     return null;

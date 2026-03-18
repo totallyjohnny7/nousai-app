@@ -676,8 +676,11 @@ export default function SettingsPage() {
         stopRemoteWatch()
       }
     }).then(unsub => { unsubscribe = unsub })
-    return () => { if (unsubscribe) unsubscribe() }
-  }, [])
+    return () => {
+      if (unsubscribe) unsubscribe()
+      stopRemoteWatch() // Unsubscribe Firestore onSnapshot listener on unmount
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Apply display prefs on mount
   useEffect(() => {
