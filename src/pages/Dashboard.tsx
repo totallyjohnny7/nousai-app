@@ -184,7 +184,7 @@ function OverviewTab() {
   const xpPct = Math.min(100, Math.round((levelProg / xpForNext) * 100))
 
   const allBadgeDefs = getAllBadgeDefs()
-  const earnedIds = new Set(gamification.badges.map(b => b.id))
+  const earnedIds = new Set((gamification.badges ?? []).map(b => b.id))
 
   // Due cards count — shared utility keeps badge and stat in sync
   const dueCount = useMemo(
@@ -216,7 +216,7 @@ function OverviewTab() {
   }, [quizHistory])
 
   // Daily goal
-  const dailyGoal = gamification.dailyGoal
+  const dailyGoal = gamification.dailyGoal ?? { todayXp: 0, todayMinutes: 0, todayQuestions: 0, targetXp: 100 }
   const goalMinTarget = parseInt(localStorage.getItem('nousai-pref-daily-minutes') || '45')
   const goalQTarget = parseInt(localStorage.getItem('nousai-pref-daily-questions') || '20')
   const goalXpPct = Math.min(100, Math.round((dailyGoal.todayXp / dailyGoal.targetXp) * 100))
@@ -282,6 +282,25 @@ function OverviewTab() {
 
       {/* Animated monochrome banner */}
       <MonochromeBanner />
+
+      {/* New-user welcome CTA — shown when no courses have been added yet */}
+      {courses.length === 0 && (
+        <div className="card mb-4" style={{ border: '1px solid rgba(245,166,35,0.35)', background: 'linear-gradient(135deg, rgba(245,166,35,0.08), rgba(245,166,35,0.03))', textAlign: 'center', padding: '24px 16px' }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>👋</div>
+          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>Welcome to NousAI!</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, maxWidth: 320, margin: '0 auto 16px' }}>
+            Start by adding a course — then create flashcards, take quizzes, and let AI power your study sessions.
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button className="btn btn-primary" onClick={() => navigate('/library?tab=courses')}>
+              <GraduationCap size={14} /> Add Your First Course
+            </button>
+            <button className="btn" onClick={() => navigate('/ai?tool=flashcardgen')}>
+              <Sparkles size={14} /> Generate Flashcards with AI
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Welcome header with streak + XP */}
       <div className="card mb-4" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
