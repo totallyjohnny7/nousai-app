@@ -421,7 +421,7 @@ Respond with ONLY a JSON object: {"score": <0-100>, "feedback": "<1-2 sentence f
 
       {/* ── Navigation ── */}
       <div style={{ display: 'flex', gap: 10 }}>
-        {!alreadyAnswered && (
+        {!alreadyAnswered && currentQ.questionType === 'mcq' && (
           <button
             onClick={handleSkip}
             style={{

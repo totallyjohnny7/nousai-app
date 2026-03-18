@@ -7,7 +7,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react'
 import type { Course } from '../../types'
 import type {
   EvolCourseData, EvolQuestion, EvolSession, EvolSessionMode,
-  EvolAnswer, EvolSessionSummary, EvolTopic, EvolHeading,
+  EvolSessionSummary, EvolTopic, EvolHeading,
 } from './types'
 import {
   createEmptyEvolData, generateEvolId, migrateEvolCourseData, todayDateStr,
@@ -153,6 +153,18 @@ export default function EvolutionExam2Tab({ course }: Props) {
       tb.avgScore = Math.round(tb.avgScore / tb.count)
     }
 
+    const headingBreakdown: Record<string, { count: number; avgScore: number }> = {}
+    for (const answer of graded) {
+      const q = latestData.current.questions.find(q => q.id === answer.questionId)
+      if (!q) continue
+      const hk = q.heading
+      if (!headingBreakdown[hk]) headingBreakdown[hk] = { count: 0, avgScore: 0 }
+      headingBreakdown[hk].count++
+      headingBreakdown[hk].avgScore = Math.round(
+        (headingBreakdown[hk].avgScore * (headingBreakdown[hk].count - 1) + answer.score) / headingBreakdown[hk].count
+      )
+    }
+
     return {
       id: completed.id,
       date: todayDateStr(),
@@ -160,6 +172,7 @@ export default function EvolutionExam2Tab({ course }: Props) {
       questionCount: answers.length,
       averageScore,
       topicBreakdown,
+      headingBreakdown,
     }
   }
 
@@ -257,9 +270,6 @@ export default function EvolutionExam2Tab({ course }: Props) {
       Loading {label}…
     </div>
   )
-
-  // Suppress unused variable warning for EvolAnswer type
-  void (null as unknown as EvolAnswer)
 
   return (
     <div style={{ padding: '0 4px' }}>

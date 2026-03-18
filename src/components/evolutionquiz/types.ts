@@ -81,6 +81,7 @@ export interface EvolSessionSummary {
   questionCount: number
   averageScore: number
   topicBreakdown: Record<string, { count: number; avgScore: number }>
+  headingBreakdown: Record<string, { count: number; avgScore: number }>
 }
 
 export interface EvolCourseData {
