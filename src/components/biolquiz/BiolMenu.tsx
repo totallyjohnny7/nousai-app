@@ -3,7 +3,7 @@
  * Shows mode cards, topic picker, exam filter, streak, and action buttons.
  */
 import React, { useState } from 'react'
-import { Play, Clock, AlertTriangle, Target, Repeat, BarChart3, Plus, Map } from 'lucide-react'
+import { Play, Clock, AlertTriangle, Target, Repeat, BarChart3, Plus, Map, Sparkles } from 'lucide-react'
 import type { BiolCourseData, BiolSessionMode, BiolTopic } from './types'
 import { TOPIC_LABELS, todayDateStr } from './types'
 
@@ -157,6 +157,41 @@ export default function BiolMenu({ data, onStart, onManage, onStats, onMindMap }
       >
         <Map size={20} />
         Open Visual Mind Map Lab
+      </button>
+
+      {/* ── Generate Questions button ── */}
+      <button
+        onClick={onManage}
+        style={{
+          width: '100%',
+          marginBottom: 16,
+          padding: '14px 16px',
+          background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0d1a0d 100%)',
+          border: '1px solid #22c55e',
+          borderRadius: 14,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          color: '#86efac',
+          fontSize: 15,
+          fontWeight: 700,
+          letterSpacing: 0.3,
+          transition: 'border-color 0.15s, box-shadow 0.15s',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.boxShadow = '0 0 20px rgba(34,197,94,0.3)'
+          e.currentTarget.style.borderColor = '#4ade80'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.boxShadow = ''
+          e.currentTarget.style.borderColor = '#22c55e'
+        }}
+      >
+        <Sparkles size={20} />
+        AI Generate Questions
       </button>
 
       {/* ── Mode cards ── */}

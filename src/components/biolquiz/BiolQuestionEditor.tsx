@@ -30,7 +30,7 @@ function emptyQuestion(): Partial<BiolQuestion> {
       { label: 'C', text: '' },
       { label: 'D', text: '' },
     ],
-    correctAnswer: '',
+    expectedAnswer: '',
     explanation: '',
     examTag: 'exam2',
     difficulty: 3,
@@ -73,7 +73,7 @@ export default function BiolQuestionEditor({ questions, onChange, onBack }: Prop
       const s = search.toLowerCase()
       qs = qs.filter(q =>
         q.questionText.toLowerCase().includes(s) ||
-        q.correctAnswer.toLowerCase().includes(s)
+        q.expectedAnswer.toLowerCase().includes(s)
       )
     }
     return qs
@@ -95,7 +95,7 @@ export default function BiolQuestionEditor({ questions, onChange, onBack }: Prop
   }
 
   const saveEdit = useCallback(() => {
-    if (!draft.questionText?.trim() || !draft.correctAnswer?.trim()) return
+    if (!draft.questionText?.trim() || !draft.expectedAnswer?.trim()) return
     if (editingId === 'new') {
       const newQ: BiolQuestion = {
         id: generateBiolId(),
@@ -104,7 +104,7 @@ export default function BiolQuestionEditor({ questions, onChange, onBack }: Prop
         questionType: draft.questionType ?? 'mcq',
         questionText: draft.questionText ?? '',
         options: draft.questionType === 'mcq' ? draft.options : undefined,
-        correctAnswer: draft.correctAnswer ?? '',
+        expectedAnswer: draft.expectedAnswer ?? '',
         explanation: draft.explanation ?? '',
         examTag: draft.examTag,
         examRef: draft.examRef,
@@ -134,7 +134,7 @@ Each question must have:
 - heading: one of ${ALL_HEADINGS.join(', ')}
 - questionText: string
 - options: array of {label, text} ONLY for mcq type (labels A-D)
-- correctAnswer: string (for mcq: the letter like "A"; for free-response: full answer)
+- expectedAnswer: string (for mcq: the letter like "A"; for free-response: full answer)
 - explanation: string
 - difficulty: 1-5
 - examTag: "exam2"
@@ -153,7 +153,7 @@ Return ONLY valid JSON array, no markdown.`
         questionType: q.questionType ?? 'mcq',
         questionText: q.questionText ?? '',
         options: q.questionType === 'mcq' ? q.options : undefined,
-        correctAnswer: q.correctAnswer ?? '',
+        expectedAnswer: q.expectedAnswer ?? '',
         explanation: q.explanation ?? '',
         examTag: 'exam2',
         difficulty: q.difficulty ?? 3,
@@ -263,13 +263,13 @@ Return ONLY valid JSON array, no markdown.`
                 <div key={opt.label} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
                   <span style={{
                     width: 28, height: 28, borderRadius: 6, flexShrink: 0,
-                    background: draft.correctAnswer === opt.label ? 'var(--accent-color, #F5A623)' : 'var(--bg-secondary)',
+                    background: draft.expectedAnswer === opt.label ? 'var(--accent-color, #F5A623)' : 'var(--bg-secondary)',
                     border: '1px solid var(--border-color)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                    color: draft.correctAnswer === opt.label ? '#fff' : 'var(--text-muted)',
+                    color: draft.expectedAnswer === opt.label ? '#fff' : 'var(--text-muted)',
                   }}
-                  onClick={() => patchDraft({ correctAnswer: opt.label })}
+                  onClick={() => patchDraft({ expectedAnswer: opt.label })}
                   title="Click to mark as correct"
                   >
                     {opt.label}
@@ -292,8 +292,8 @@ Return ONLY valid JSON array, no markdown.`
             <div>
               <label style={labelStyle}>Correct Answer / Model Answer</label>
               <textarea
-                value={draft.correctAnswer ?? ''}
-                onChange={e => patchDraft({ correctAnswer: e.target.value })}
+                value={draft.expectedAnswer ?? ''}
+                onChange={e => patchDraft({ expectedAnswer: e.target.value })}
                 rows={3}
                 style={{ ...inputStyle, resize: 'vertical' }}
               />

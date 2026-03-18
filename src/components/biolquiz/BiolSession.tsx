@@ -106,7 +106,7 @@ export default function BiolSession({ session, questions, onFinish, onQuit }: Pr
   const handleMcqSelect = useCallback(async (label: string) => {
     if (!currentQ || !currentId) return
     const elapsed = Date.now() - questionStartMs
-    const correct = label === currentQ.correctAnswer
+    const correct = label === currentQ.expectedAnswer
     const score = correct ? 100 : 0
     const answer: BiolAnswer = {
       questionId: currentId,
@@ -115,7 +115,7 @@ export default function BiolSession({ session, questions, onFinish, onQuit }: Pr
       score,
       feedback: correct
         ? 'Correct!'
-        : `Incorrect. The correct answer is ${currentQ.correctAnswer}: ${currentQ.options?.find(o => o.label === currentQ.correctAnswer)?.text ?? ''}. ${currentQ.explanation}`,
+        : `Incorrect. The correct answer is ${currentQ.expectedAnswer}: ${currentQ.options?.find(o => o.label === currentQ.expectedAnswer)?.text ?? ''}. ${currentQ.explanation}`,
       gradingStatus: 'graded',
       timeMs: elapsed,
     }
@@ -138,7 +138,7 @@ export default function BiolSession({ session, questions, onFinish, onQuit }: Pr
         const prompt = `You are a biology exam grader. Grade this student answer for the following question.
 
 Question: ${currentQ.questionText}
-Expected Answer: ${currentQ.correctAnswer}
+Expected Answer: ${currentQ.expectedAnswer}
 Student Answer: ${userInput}
 
 Respond with ONLY a JSON object: {"score": <0-100>, "feedback": "<1-2 sentence feedback>"}`
@@ -293,7 +293,7 @@ Respond with ONLY a JSON object: {"score": <0-100>, "feedback": "<1-2 sentence f
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {currentQ.options.map(opt => {
               const isSelected = currentAnswer?.userAnswer === opt.label
-              const isCorrect  = alreadyAnswered && opt.label === currentQ.correctAnswer
+              const isCorrect  = alreadyAnswered && opt.label === currentQ.expectedAnswer
               const isWrong    = alreadyAnswered && isSelected && !isCorrect
 
               let bg = 'var(--bg-primary)'
