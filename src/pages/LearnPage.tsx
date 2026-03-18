@@ -46,8 +46,8 @@ import { getLevel } from '../utils/gamification';
 
 const JpQuizTab = lazyWithRetry(() => import('../components/jpquiz/JpQuizTab'));
 const PhysicsQuizTab = lazyWithRetry(() => import('../components/physquiz/PhysicsQuizTab'));
-const BiolExam2Tab      = lazyWithRetry(() => import('../components/biolquiz/BiolExam2Tab'))
-const EvolutionExam2Tab = lazyWithRetry(() => import('../components/evolutionquiz/EvolutionExam2Tab'))
+const BiolExam2Tab = lazyWithRetry(() => import('../components/biolquiz/BiolExam2Tab'));
+const EvolutionExam2Tab = lazyWithRetry(() => import('../components/evolutionquiz/EvolutionExam2Tab'));
 
 // ─── Types ─────────────────────────────────────────────
 
@@ -548,29 +548,38 @@ function ModePanel({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
           c.shortName?.toUpperCase().includes('BIOL') ||
           c.name.toLowerCase().includes('molecular') ||
           c.name.toLowerCase().includes('cell')
-        ) ?? courses[0] ?? { id: 'biol-global', name: 'BIOL 3020', shortName: 'BIOL3020', color: '#22c55e', topics: [], flashcards: [] }
+        ) ?? courses[0] ?? { id: 'biol-global', name: 'BIOL 3020', shortName: 'BIOL3020', color: '#22c55e', topics: [], flashcards: [] };
+        if (!course) return (
+          <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '16px 0' }}>
+            No courses found. Create a BIOL course first.
+          </div>
+        );
         return (
           <ToolErrorBoundary toolName="BIOL Exam 2">
-            <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading…</div>}>
+            <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading...</div>}>
               <BiolExam2Tab course={course} />
             </Suspense>
           </ToolErrorBoundary>
-        )
+        );
       })()}
-
       {mode === 'evolution-practicum' && (() => {
         const course = courses.find(c =>
           c.shortName?.toUpperCase().includes('EVOL') ||
           c.shortName?.includes('4230') ||
           c.name.toLowerCase().includes('evolution')
-        ) ?? courses[0] ?? { id: 'evol-global', name: 'Evolution', shortName: 'EVOL4230', color: '#a78bfa', topics: [], flashcards: [] }
+        ) ?? courses[0] ?? { id: 'evol-global', name: 'Evolution', shortName: 'EVOL4230', color: '#a78bfa', topics: [], flashcards: [] };
+        if (!course) return (
+          <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '16px 0' }}>
+            No courses found. Create an Evolution course first.
+          </div>
+        );
         return (
           <ToolErrorBoundary toolName="Evolution Exam 2">
-            <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading…</div>}>
+            <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading...</div>}>
               <EvolutionExam2Tab course={course} />
             </Suspense>
           </ToolErrorBoundary>
-        )
+        );
       })()}
     </div>
   );
