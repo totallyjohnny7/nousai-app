@@ -10,6 +10,7 @@
 
 import { DataRepository } from './dataRepository';
 import type { FSRSCard } from './fsrs';
+import type { CourseCalendarEvent, SRData } from '../types';
 
 export const FC_FSRS_KEY = 'nousai-fc-fsrs';
 export const DAILY_PROGRESS_KEY = 'nousai-daily-card-progress';
@@ -92,4 +93,35 @@ export function saveDailyProgress(p: DailyProgress): void {
   _dailyCache = p;
   DataRepository.set(DAILY_PROGRESS_KEY, p).catch(() => {});
   localStorage.removeItem(DAILY_PROGRESS_KEY);
+}
+
+/**
+ * Returns average retention (0–100) for all cards belonging to a course.
+ * Uses the most recent R value from card history, or 100 for new cards.
+ * Returns 100 if the course has no cards.
+ */
+export function getDeckHealthByCourse(srData: SRData | null, courseId: string): number {
+  const cards = srData?.cards?.filter(c => c.subject === courseId) ?? [];
+  if (cards.length === 0) return 100;
+  const retentions = cards.map(card => {
+    const last = card.history?.[card.history.length - 1];
+    return last?.R != null ? Math.round(last.R * 100) : 100;
+  });
+  return Math.round(retentions.reduce((a, b) => a + b, 0) / retentions.length);
+}
+
+/**
+ * Returns the number of days until the next exam found in calendarEvents,
+ * or null if no future exam event is present.
+ */
+export function getNextExamDays(events: CourseCalendarEvent[]): number | null {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const examEvents = events.filter(e => /exam|midterm|final/i.test(e.title ?? ''));
+  const future = examEvents
+    .map(e => new Date(e.date))
+    .filter(d => d >= today)
+    .sort((a, b) => a.getTime() - b.getTime());
+  if (future.length === 0) return null;
+  return Math.ceil((future[0].getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }

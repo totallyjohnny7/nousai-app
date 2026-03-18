@@ -229,6 +229,9 @@ interface StoreCtx {
   // Page context for Nous AI Panel
   activePageContext: PageContext | null
   setPageContext: (ctx: PageContext | null) => void
+  // Tool visibility (Learn page customization)
+  hiddenToolIds: string[]
+  setHiddenToolIds: (ids: string[]) => void
 }
 
 const Ctx = createContext<StoreCtx>({} as StoreCtx);
@@ -251,6 +254,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
   const [remoteUpdateAvailable, setRemoteUpdateAvailable] = useState(false);
   const [activePageContext, setPageContext] = useState<PageContext | null>(null);
+  const [hiddenToolIds, setHiddenToolIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('nousai-hidden-tools') ?? '[]') } catch { return [] }
+  });
   const snapshotUnsubRef = useRef<(() => void) | null>(null);
 
   // Keep ref in sync so functional updaters always read latest
@@ -625,11 +631,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     syncStatus, lastSyncAt, remoteUpdateAvailable,
     startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
     activePageContext, setPageContext,
+    hiddenToolIds,
+    setHiddenToolIds: (ids: string[]) => {
+      setHiddenToolIds(ids);
+      localStorage.setItem('nousai-hidden-tools', JSON.stringify(ids));
+    },
   }), [data, loaded, matchSets, events, quizHistory, courses, gamification, proficiency, srData, timerState, einkMode, betaMode, // eslint-disable-line react-hooks/exhaustive-deps
     setData, updatePluginData, copyToClipboard, exportToFile, backupNow,
     syncStatus, lastSyncAt, remoteUpdateAvailable,
     startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
-    activePageContext]);
+    activePageContext, hiddenToolIds]);
 
   return (
     <Ctx.Provider value={ctxValue}>

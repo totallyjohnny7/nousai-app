@@ -520,3 +520,43 @@ async function readSSEStream(
 
   return full
 }
+
+// ── Utility helpers ───────────────────────────────────────────────────────
+
+/**
+ * Wraps an AI call with error handling. Returns the text on success,
+ * or throws with a user-readable message on failure.
+ */
+export async function aiCallWithGuards(fn: () => Promise<string>, _timeoutMs?: number): Promise<string> {
+  try {
+    return await fn()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    throw new Error(`AI call failed: ${msg}`)
+  }
+}
+
+/**
+ * Tries to parse a JSON object from an AI response string.
+ * Strips markdown fences, extracts the first JSON block found.
+ * Returns the parsed data and a parseError string if parsing failed.
+ */
+export function safeParseAIJSON<T>(
+  text: string,
+  fallback: T,
+): { data: T; parseError: string | null } {
+  // Strip markdown fences
+  let clean = text.trim()
+  const fenceMatch = clean.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenceMatch) clean = fenceMatch[1].trim()
+
+  // Extract first {...} or [...] block
+  const objMatch = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
+  if (objMatch) clean = objMatch[1]
+
+  try {
+    return { data: JSON.parse(clean) as T, parseError: null }
+  } catch (e) {
+    return { data: fallback, parseError: String(e) }
+  }
+}

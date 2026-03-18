@@ -16,11 +16,11 @@ import { flushQueue } from '../../utils/physicsGradingQueue'
 import { useStore } from '../../store'
 import PhysicsMenu from './PhysicsMenu'
 
-// ─── Lazy-loaded views (not yet created — render fallback) ──────────────────
-// const PhysicsQuestionEditor = React.lazy(() => import('./PhysicsQuestionEditor'))
-// const PhysicsSessionView    = React.lazy(() => import('./PhysicsSessionView'))
-// const PhysicsResults        = React.lazy(() => import('./PhysicsResults'))
-// const PhysicsStats          = React.lazy(() => import('./PhysicsStats'))
+// ─── Lazy-loaded views ────────────────────────────────────────────────────────
+const PhysicsQuestionEditor = React.lazy(() => import('./PhysicsQuestionEditor'))
+const PhysicsSessionView    = React.lazy(() => import('./PhysicsSession'))
+const PhysicsResultsView    = React.lazy(() => import('./PhysicsResults'))
+const PhysicsStatsView      = React.lazy(() => import('./PhysicsStats'))
 
 type View = 'menu' | 'editor' | 'session' | 'results' | 'stats'
 
@@ -55,6 +55,7 @@ export default function PhysicsQuizTab({ course }: Props) {
   const [data, setData]       = useState<PhysicsCourseData>(() => loadData(course.id))
   const [session, setSession] = useState<PhysicsSession | null>(null)
   const [calcState, setCalcStateRaw] = useState<Record<string, unknown>>(loadCalcState)
+  const [calcActivePanel, setCalcActivePanel] = useState<'calc' | 'units' | 'dimcheck' | null>(null)
 
   const saveTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestData  = useRef<PhysicsCourseData>(data)
@@ -324,65 +325,47 @@ export default function PhysicsQuizTab({ course }: Props) {
 
       {view === 'editor' && (
         <React.Suspense fallback={<div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading editor…</div>}>
-          {/* PhysicsQuestionEditor not yet created */}
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
-            Question editor coming soon.
-            <br />
-            <button
-              onClick={() => setView('menu')}
-              style={{ marginTop: 16, padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              ← Back
-            </button>
-          </div>
+          <PhysicsQuestionEditor
+            questions={data.questions}
+            onChange={updateQuestions}
+            onBack={() => setView('menu')}
+            onImport={() => setView('menu')}
+          />
         </React.Suspense>
       )}
 
       {view === 'session' && session && (
         <React.Suspense fallback={<div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading session…</div>}>
-          {/* PhysicsSessionView not yet created */}
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
-            Session view coming soon.
-            <br />
-            <button
-              onClick={backToMenu}
-              style={{ marginTop: 16, padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              ← Back to Menu
-            </button>
-          </div>
+          <PhysicsSessionView
+            session={session}
+            questions={data.questions}
+            course={course}
+            onFinish={finishSession}
+            onQuit={backToMenu}
+            calcActivePanel={calcActivePanel}
+            onCalcPanelChange={setCalcActivePanel}
+          />
         </React.Suspense>
       )}
 
       {view === 'results' && session && (
         <React.Suspense fallback={<div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading results…</div>}>
-          {/* PhysicsResults not yet created */}
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
-            Results view coming soon.
-            <br />
-            <button
-              onClick={backToMenu}
-              style={{ marginTop: 16, padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              ← New Quiz
-            </button>
-          </div>
+          <PhysicsResultsView
+            session={session}
+            questions={data.questions}
+            course={course}
+            onNewSession={backToMenu}
+            onReviewMistakes={backToMenu}
+          />
         </React.Suspense>
       )}
 
       {view === 'stats' && (
         <React.Suspense fallback={<div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading analytics…</div>}>
-          {/* PhysicsStats not yet created */}
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
-            Analytics coming soon.
-            <br />
-            <button
-              onClick={() => setView('menu')}
-              style={{ marginTop: 16, padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              ← Back
-            </button>
-          </div>
+          <PhysicsStatsView
+            courseData={data}
+            onBack={() => setView('menu')}
+          />
         </React.Suspense>
       )}
     </div>

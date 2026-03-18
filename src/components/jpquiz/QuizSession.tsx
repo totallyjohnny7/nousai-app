@@ -380,10 +380,11 @@ function JpSessionAnnotation({
   questionId: string; questionText: string; subject: string; quizId: string;
   showSidecar: boolean; setShowSidecar: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { questionMap, sessions } = useSessionStore(s => ({ questionMap: s.questionMap, sessions: s.sessions }))
+  const questionMap = useSessionStore(s => s.questionMap)
+  const sessions = useSessionStore(s => s.sessions)
   const _sid = questionMap[questionId]
   const hasAnnotation = _sid
-    ? (sessions[_sid]?.hasCanvas || !!sessions[_sid]?.textContent || (sessions[_sid]?.chatLog.length ?? 0) > 0)
+    ? (sessions[_sid]?.hasCanvas || !!sessions[_sid]?.textContent || (sessions[_sid]?.chatLog?.length ?? 0) > 0)
     : false
 
   // Keyboard shortcut: N to toggle sidecar

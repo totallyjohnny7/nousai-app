@@ -1160,8 +1160,11 @@ export default function PhysicsSessionComponent({
                 </div>
               )}
 
-              {/* Free response */}
-              {currentQ.questionType === 'free-response' && !isStepMode && (
+              {/* Free response — also used as fallback for multi-part with no parts, or MCQ with no choices */}
+              {(currentQ.questionType === 'free-response' ||
+                (currentQ.questionType === 'multi-part' && (!currentQ.parts || currentQ.parts.length === 0)) ||
+                (currentQ.questionType === 'mcq' && (!currentQ.choices || currentQ.choices.length === 0))
+               ) && !isStepMode && (
                 <textarea
                   value={freeAnswer}
                   onChange={e => setFreeAnswer(e.target.value)}
@@ -1310,10 +1313,13 @@ export default function PhysicsSessionComponent({
                 onClick={handleSubmit}
                 disabled={
                   !confidence ||
-                  (currentQ.questionType === 'mcq' && mcqChoice === null) ||
+                  (currentQ.questionType === 'mcq' && (currentQ.choices?.length ?? 0) > 0 && mcqChoice === null) ||
+                  (currentQ.questionType === 'mcq' && (!currentQ.choices || currentQ.choices.length === 0) && !freeAnswer.trim()) ||
                   (currentQ.questionType === 'free-response' && !isStepMode && !freeAnswer.trim()) ||
                   (currentQ.questionType === 'free-response' && isStepMode && !allStepsGraded) ||
-                  (currentQ.questionType === 'multi-part' && !currentQ.parts?.every(p => (partAnswers[p.label] ?? '').trim()))
+                  (currentQ.questionType === 'multi-part' && currentQ.parts != null && currentQ.parts.length > 0 &&
+                    !currentQ.parts.every(p => (partAnswers[p.label] ?? '').trim())) ||
+                  (currentQ.questionType === 'multi-part' && (!currentQ.parts || currentQ.parts.length === 0) && !freeAnswer.trim())
                 }
                 style={{
                   width: '100%', padding: '12px 20px',

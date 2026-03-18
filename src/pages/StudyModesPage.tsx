@@ -73,9 +73,9 @@ function buildCourseTopicList(courses: Course[], courseId: string): { id: string
 /* ================================================================
    MAIN PAGE
    ================================================================ */
-export default function StudyModesPage({ embedded = false }: { embedded?: boolean } = {}) {
+export default function StudyModesPage({ embedded = false, initialMode }: { embedded?: boolean; initialMode?: string } = {}) {
   const { loaded } = useStore()
-  const [mode, setMode] = useState<StudyMode>('recall')
+  const [mode, setMode] = useState<StudyMode>((initialMode as StudyMode) ?? 'recall')
 
   if (!loaded && !embedded) {
     return (

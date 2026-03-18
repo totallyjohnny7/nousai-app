@@ -185,13 +185,18 @@ export default function PhysicsQuestionEditor({ questions, onChange, onBack, onI
 
   // Bulk import modal
   const [showBulkModal, setShowBulkModal] = useState(false)
-  const [bulkTab, setBulkTab] = useState<'json' | 'manual' | 'single'>('json')
+  const [bulkTab, setBulkTab] = useState<'json' | 'manual' | 'single' | 'patch'>('json')
   const [bulkJson, setBulkJson] = useState('')
   const [bulkManualText, setBulkManualText] = useState('')
   const [bulkSingleText, setBulkSingleText] = useState('')
   const [bulkPreview, setBulkPreview] = useState<Partial<PhysicsQuestion>[]>([])
   const [bulkError, setBulkError] = useState('')
   const jsonFileRef = useRef<HTMLInputElement>(null)
+  const patchFileRef = useRef<HTMLInputElement>(null)
+  const [patchEntries, setPatchEntries] = useState<Array<{ id: string; questionImageBase64: string; questionImageMime: string }>>([])
+  const [patchPreview, setPatchPreview] = useState<{ matched: number; unmatched: number; samples: string[] } | null>(null)
+  const [patchApplied, setPatchApplied] = useState(false)
+  const [patchError, setPatchError] = useState('')
 
   // ── Filtered list ───────────────────────────────────────────────────────────
 
@@ -356,6 +361,57 @@ export default function PhysicsQuestionEditor({ questions, onChange, onBack, onI
 
   const toggleStarred = (id: string) => {
     onChange(questions.map(q => q.id === id ? { ...q, starred: !q.starred } : q))
+  }
+
+  // ── Patch Figures handler ─────────────────────────────────────────────────
+
+  function handlePatchFile(file: File) {
+    setPatchError('')
+    setPatchPreview(null)
+    setPatchApplied(false)
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const raw = JSON.parse(e.target?.result as string)
+        if (!Array.isArray(raw)) throw new Error('Expected a JSON array')
+        const entries = raw.filter(
+          (x): x is { id: string; questionImageBase64: string; questionImageMime: string } =>
+            typeof x?.id === 'string' &&
+            typeof x?.questionImageBase64 === 'string' &&
+            typeof x?.questionImageMime === 'string'
+        )
+        if (entries.length === 0) throw new Error('No valid patch entries found')
+        setPatchEntries(entries)
+
+        // Preview: count matched vs unmatched
+        const bankIds = new Set(questions.map(q => q.id))
+        const matched = entries.filter(e => bankIds.has(e.id))
+        const unmatched = entries.filter(e => !bankIds.has(e.id))
+        if (unmatched.length > 0) {
+          console.log(`[Patch] ${unmatched.length} unmatched IDs:`, unmatched.map(e => e.id))
+        }
+        const samples = matched.slice(0, 3).map(e => {
+          const q = questions.find(q => q.id === e.id)
+          return q ? q.questionText.slice(0, 60) + '…' : e.id
+        })
+        setPatchPreview({ matched: matched.length, unmatched: unmatched.length, samples })
+      } catch (err: unknown) {
+        setPatchError(err instanceof Error ? err.message : 'Failed to parse file')
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  function applyPatch() {
+    if (!patchPreview || patchPreview.matched === 0) return
+    const figureMap = new Map(patchEntries.map(e => [e.id, e]))
+    const updated = questions.map(q => {
+      const fig = figureMap.get(q.id)
+      if (!fig) return q
+      return { ...q, questionImageBase64: fig.questionImageBase64, questionImageMime: fig.questionImageMime }
+    })
+    onChange(updated)
+    setPatchApplied(true)
   }
 
   // ── Export ───────────────────────────────────────────────────────────────────
@@ -1338,7 +1394,7 @@ export default function PhysicsQuestionEditor({ questions, onChange, onBack, onI
 
             {/* Tab bar */}
             <div style={{ display: 'flex', gap: 0, background: 'var(--bg-primary)', borderRadius: 8, padding: 3, marginBottom: 16 }}>
-              {(['json', 'manual', 'single'] as const).map(tab => (
+              {(['json', 'manual', 'single', 'patch'] as const).map(tab => (
                 <button
                   key={tab}
                   type="button"
@@ -1353,7 +1409,7 @@ export default function PhysicsQuestionEditor({ questions, onChange, onBack, onI
                     textTransform: 'uppercase',
                   }}
                 >
-                  {tab === 'single' ? 'Single Paste' : tab.toUpperCase()}
+                  {tab === 'single' ? 'Single Paste' : tab === 'patch' ? 'Patch Figures' : tab.toUpperCase()}
                 </button>
               ))}
             </div>
@@ -1489,6 +1545,93 @@ export default function PhysicsQuestionEditor({ questions, onChange, onBack, onI
                 >
                   Parse into Fields
                 </button>
+              </div>
+            )}
+
+            {/* ── Patch Figures tab ── */}
+            {bulkTab === 'patch' && (
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 0, marginBottom: 10, lineHeight: 1.5 }}>
+                  Upload <code>figures-patch.json</code> generated by{' '}
+                  <code>node scripts/generate-figures.mjs</code>. Matches by question ID and
+                  updates only the figure — session history and scores are untouched.
+                </p>
+
+                <input
+                  ref={patchFileRef}
+                  type="file"
+                  accept=".json"
+                  hidden
+                  onChange={e => {
+                    const f = e.target.files?.[0]
+                    if (f) handlePatchFile(f)
+                    e.target.value = ''
+                  }}
+                />
+
+                {!patchApplied && (
+                  <button
+                    onClick={() => patchFileRef.current?.click()}
+                    style={{
+                      width: '100%', padding: '10px 16px', marginBottom: 12,
+                      background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                      borderRadius: 10, color: 'var(--text-primary)',
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}
+                  >
+                    📂 Choose figures-patch.json
+                  </button>
+                )}
+
+                {patchError && (
+                  <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 10 }}>{patchError}</div>
+                )}
+
+                {patchPreview && !patchApplied && (
+                  <div style={{
+                    padding: '12px 14px', background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-color)', borderRadius: 10, marginBottom: 12,
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+                      Preview
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 4 }}>
+                      ✅ <strong>{patchPreview.matched}</strong> questions matched
+                      {patchPreview.unmatched > 0 && (
+                        <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>
+                          ({patchPreview.unmatched} unmatched — see console)
+                        </span>
+                      )}
+                    </div>
+                    {patchPreview.samples.map((s, i) => (
+                      <div key={i} style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                        · {s}
+                      </div>
+                    ))}
+                    <button
+                      onClick={applyPatch}
+                      style={{
+                        marginTop: 12, width: '100%', padding: '10px 16px',
+                        background: 'var(--accent-color, #F5A623)', color: '#fff',
+                        border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      Apply Patch ({patchPreview.matched} figures)
+                    </button>
+                  </div>
+                )}
+
+                {patchApplied && (
+                  <div style={{
+                    padding: '14px 16px', background: '#22c55e11',
+                    border: '1px solid #22c55e44', borderRadius: 10,
+                    fontSize: 14, color: '#22c55e', fontWeight: 600, textAlign: 'center',
+                  }}>
+                    ✅ {patchPreview?.matched} figures applied — close this panel and start practicing!
+                  </div>
+                )}
               </div>
             )}
 

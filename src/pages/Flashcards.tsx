@@ -2134,7 +2134,7 @@ function FlashcardReview({ cards, courseId = '_fc', title, onBack, onCardReviewe
           <div className={`flashcard${flipped ? ' flipped' : ''}`} style={card.media ? { minHeight: 480 } : undefined}>
             <div className="flashcard-face flashcard-front">
               <div className="flashcard-label">Front</div>
-              <div className="flashcard-text">{card.front}</div>
+              <div className="flashcard-text" style={{ whiteSpace: 'pre-wrap' }}>{card.front}</div>
               {card.media && (card.media.side === 'front' || card.media.side === 'both') && (
                 <FlashcardMedia media={card.media} isActive={!flipped} />
               )}
@@ -2146,7 +2146,7 @@ function FlashcardReview({ cards, courseId = '_fc', title, onBack, onCardReviewe
                 ? <div className="flashcard-text" dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.back) }} />
                 : /\s*\|\s*[A-Z]/.test(card.back)
                   ? <div className="flashcard-text flashcard-text--structured" dangerouslySetInnerHTML={{ __html: sanitizeHtml(formatCardText(card.back)) }} />
-                  : <div className="flashcard-text" style={card.back.length > 200 ? { fontSize: 13, fontWeight: 500 } : undefined}>{card.back}</div>}
+                  : <div className="flashcard-text" style={{ whiteSpace: 'pre-wrap', ...(card.back.length > 200 ? { fontSize: 13, fontWeight: 500 } : {}) }}>{card.back}</div>}
               {card.media && (card.media.side === 'back' || card.media.side === 'both') && (
                 <FlashcardMedia media={card.media} isActive={flipped} />
               )}

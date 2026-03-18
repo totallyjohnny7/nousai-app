@@ -171,7 +171,7 @@ export default function InterleaveMode({ onBack }: { onBack: () => void }) {
           style={{ ...cardStyle, marginBottom: 12, minHeight: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: card.revealed ? 'default' : 'pointer' }}
           onClick={!card.revealed ? reveal : undefined}
         >
-          <p style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5, textAlign: 'center' }}>
+          <p style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5, textAlign: 'center', whiteSpace: 'pre-wrap' }}>
             {card.front}
           </p>
         </div>
@@ -179,7 +179,7 @@ export default function InterleaveMode({ onBack }: { onBack: () => void }) {
         {card.revealed ? (
           <>
             <div style={{ ...cardStyle, marginBottom: 12, background: 'rgba(96,165,250,0.05)' }}>
-              <p style={{ fontSize: 14, color: '#60a5fa', lineHeight: 1.6, textAlign: 'center' }}>{card.back}</p>
+              <p style={{ fontSize: 14, color: '#60a5fa', lineHeight: 1.6, textAlign: 'center', whiteSpace: 'pre-wrap' }}>{card.back}</p>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn" style={{ flex: 1, background: 'rgba(248,113,113,0.15)', color: '#f87171', border: '1px solid #f87171' }} onClick={() => markResult('missed')}>

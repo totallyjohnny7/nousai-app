@@ -1,7 +1,10 @@
 /**
- * jpVocabBank — Default pre-populated Japanese vocabulary & grammar bank
- * Covers all 13 parts of speech from Nakama 1 / JAPN 1110 Spring.
- * Users can add to, edit, or clear this via VocabBankTab.
+ * jpVocabBank — Official Nakama 1 vocabulary, Ch. 1–6 (JAPN 1110)
+ *
+ * Flashcard direction: word    = English (FRONT / term shown to user)
+ *                      meaning = Japanese hiragana/katakana (BACK / recalled answer)
+ *
+ * Source: Nakama 1: Introductory Japanese (Hatasa, Hatasa, Makino), 3rd ed.
  */
 import type { VocabBankItem, VocabCategory } from '../components/jpquiz/types'
 
@@ -13,346 +16,497 @@ function item(
 ): VocabBankItem {
   return { id: id(), word, meaning, category, source: 'nakama1', ...extras }
 }
+// item(ENGLISH_FRONT, JAPANESE_BACK, category)
 
-// ─── 1. NOUNS 名詞 ────────────────────────────────────────────────────────────
-const NOUNS: VocabBankItem[] = [
-  item('ほん',       'book',            'noun'),
-  item('くるま',     'car',             'noun'),
-  item('じかん',     'time',            'noun'),
-  item('きもち',     'feeling',         'noun'),
-  item('がっこう',   'school',          'noun', { reading: 'がっこう' }),
-  item('せんせい',   'teacher',         'noun'),
-  item('がくせい',   'student',         'noun'),
-  item('ともだち',   'friend',          'noun'),
-  item('かぞく',     'family',          'noun'),
-  item('いえ',       'house/home',      'noun'),
-  item('まち',       'town/city',       'noun'),
-  item('にほん',     'Japan',           'noun'),
-  item('にほんご',   'Japanese language','noun'),
-  item('えいご',     'English language','noun'),
-  item('おかね',     'money',           'noun'),
-  item('しごと',     'work/job',        'noun'),
-  item('たべもの',   'food',            'noun'),
-  item('のみもの',   'drink/beverage',  'noun'),
-  item('でんしゃ',   'train',           'noun'),
-  item('みせ',       'store/shop',      'noun'),
+// ─── CH. 1 VOCAB (pp. 29–30): Expressions & Address Titles ───────────────────
+const CH1_EXPRESSIONS: VocabBankItem[] = [
+  item('Good morning (formal)',                          'おはようございます',              'expression'),
+  item('Good morning (casual)',                          'おはよう',                        'expression'),
+  item('Good afternoon / Hello',                        'こんにちは',                      'expression'),
+  item('Good evening / Hello',                          'こんばんは',                      'expression'),
+  item('How do you do (first meeting)',                  'はじめまして',                    'expression'),
+  item('I am ~ / It is ~',                              '～です',                          'expression'),
+  item('Pleased to meet you',                           'どうぞよろしく',                  'expression'),
+  item('Same here / It is I who should say that',       'こちらこそ',                      'expression'),
+  item('Good-bye (to superior) / Excuse me',            'しつれいします',                  'expression'),
+  item('See you later (to friends)',                     'じゃあ、また',                    'expression'),
+  item('Good-bye (long absence)',                        'さようなら',                      'expression'),
+  item('Thank you (formal)',                             'ありがとうございます',             'expression'),
+  item('Thank you (casual)',                             'ありがとう',                      'expression'),
+  item("You're welcome",                                 'どういたしまして',                'expression'),
+  item("Excuse me / I'm sorry",                         'すみません',                      'expression'),
+  item('Please listen',                                  'きいてください',                  'expression'),
+  item('Please look',                                    'みてください',                    'expression'),
+  item('Please write',                                   'かいてください',                  'expression'),
+  item('Please read',                                    'よんでください',                  'expression'),
+  item('Please say it',                                  'いってください',                  'expression'),
+  item('Please say it again',                            'もういちどいってください',        'expression'),
+  item('Please speak louder',                            'おおきいこえでいってください',    'expression'),
+  item('(It/someone) is called ~',                       '～といいます／～っていいます',    'expression'),
+  item('Please give me ~',                               '～をください',                    'expression'),
+  item('Please show me ~',                               '～をみせてください',              'expression'),
+  item('What is this in Japanese?',                      'これはにほんごでなんといいますか', 'expression'),
+  item('What is this in English?',                       'これはえいごでなんといいますか',  'expression'),
+  item("I don't understand",                             'わかりません',                    'expression'),
+  item('Please speak slowly',                            'ゆっくりいってください',          'expression'),
+  item("It's ~, right? (confirming)",                   '～ですね？',                      'expression'),
 ]
 
-// ─── Verbal Nouns (する-nouns) ─────────────────────────────────────────────
-const VERBAL_NOUNS: VocabBankItem[] = [
-  item('べんきょう', 'studying → べんきょうする', 'verbal-noun',
-    { example: 'まいにちにほんごをべんきょうします。', exampleEn: 'I study Japanese every day.' }),
-  item('りょこう',   'travel → りょこうする',     'verbal-noun',
-    { example: 'なつにりょこうします。', exampleEn: 'I travel in the summer.' }),
-  item('かいもの',   'shopping → かいものする',   'verbal-noun'),
-  item('りょうり',   'cooking → りょうりする',    'verbal-noun'),
-  item('うんどう',   'exercise → うんどうする',   'verbal-noun'),
-  item('しゅくだい', 'homework → しゅくだいをする','verbal-noun'),
+const CH1_ADDRESS: VocabBankItem[] = [
+  item('Mr./Ms. (general polite title)',                    '～さん',   'expression'),
+  item('Teacher/Professor (title — never use for yourself)','せんせい', 'expression'),
+  item('Title for young boys',                             '～くん',   'expression'),
+  item('Title for small children',                         '～ちゃん', 'expression'),
 ]
 
-// ─── 2. PRONOUNS 代名詞 ───────────────────────────────────────────────────────
-const PRONOUNS: VocabBankItem[] = [
-  item('わたし',     'I / me',          'pronoun'),
-  item('あなた',     'you',             'pronoun'),
-  item('かれ',       'he / him',        'pronoun'),
-  item('かのじょ',   'she / her',       'pronoun'),
-  item('わたしたち', 'we / us',         'pronoun'),
-  item('かれら',     'they (masc.)',     'pronoun'),
+// ─── CH. 2 VOCAB (pp. 32–35) ─────────────────────────────────────────────────
+const CH2_NOUNS: VocabBankItem[] = [
+  item('Asian studies',           'アジアけんきゅう', 'noun'),
+  item('America',                 'アメリカ',         'noun'),
+  item('England',                 'イギリス',         'noun'),
+  item('freshman (1st year)',     'いちねんせい',     'noun'),
+  item('now',                     'いま',             'noun'),
+  item('English (language)',      'えいご',           'noun'),
+  item('Australia',               'オーストラリア',   'noun'),
+  item('student',                 'がくせい',         'noun'),
+  item('Canada',                  'カナダ',           'noun'),
+  item('South Korea',             'かんこく',         'noun'),
+  item('management',              'けいえいがく',     'noun'),
+  item('engineering',             'こうがく',         'noun'),
+  item('high school',             'こうこう',         'noun'),
+  item('p.m.',                    'ごご',             'noun'),
+  item('a.m.',                    'ごぜん',           'noun'),
+  item('this person / this way',  'こちら',           'noun'),
+  item('junior (3rd year)',       'さんねんせい',     'noun'),
+  item('Spain',                   'スペイン',         'noun'),
+  item('major (field of study)',  'せんこう',         'noun'),
+  item('college / university',    'だいがく',         'noun'),
+  item('grad student',            'だいがくいんせい', 'noun'),
+  item('college student',         'だいがくせい',     'noun'),
+  item('Taiwan',                  'たいわん',         'noun'),
+  item('China',                   'ちゅうごく',       'noun'),
+  item('name',                    'なまえ',           'noun'),
+  item('sophomore (2nd year)',    'にねんせい',       'noun'),
+  item('Japan',                   'にほん',           'noun'),
+  item('business',                'ビジネス',         'noun'),
+  item('France',                  'フランス',         'noun'),
+  item('literature',              'ぶんがく',         'noun'),
+  item('Mexico',                  'メキシコ',         'noun'),
+  item('senior (4th year)',       'よねんせい',       'noun'),
+  item('next year',               'らいねん',         'noun'),
+  item('international student',   'りゅうがくせい',   'noun'),
+  item('history',                 'れきし',           'noun'),
 ]
 
-// ─── 3. VERBS 動詞 ────────────────────────────────────────────────────────────
-const VERBS_U: VocabBankItem[] = [
-  item('かく',   'to write (u-verb)',   'verb-u',
-    { example: 'てがみをかきます。', exampleEn: 'I write a letter.' }),
-  item('のむ',   'to drink (u-verb)',   'verb-u',
-    { example: 'みずをのみます。', exampleEn: 'I drink water.' }),
-  item('はなす', 'to speak (u-verb)',   'verb-u',
-    { example: 'にほんごをはなします。', exampleEn: 'I speak Japanese.' }),
-  item('きく',   'to listen (u-verb)',  'verb-u',
-    { example: 'おんがくをききます。', exampleEn: 'I listen to music.' }),
-  item('よむ',   'to read (u-verb)',    'verb-u',
-    { example: 'ほんをよみます。', exampleEn: 'I read a book.' }),
-  item('かう',   'to buy (u-verb)',     'verb-u'),
-  item('いく',   'to go (u-verb)',      'verb-u',
-    { example: 'がっこうにいきます。', exampleEn: 'I go to school.' }),
-  item('くる',   'to come (irregular)', 'verb-irregular',
-    { example: 'うちにきます。', exampleEn: 'I come home.', notes: 'Irregular — memorize all forms.' }),
-  item('かえる', 'to return home (u-verb)', 'verb-u'),
-  item('まつ',   'to wait (u-verb)',    'verb-u'),
+const CH2_PRONOUNS: VocabBankItem[] = [
+  item('I (male, casual)',  'ぼく',   'pronoun'),
+  item('I',                 'わたし', 'pronoun'),
 ]
 
-const VERBS_RU: VocabBankItem[] = [
-  item('たべる', 'to eat (ru-verb)',    'verb-ru',
-    { example: 'あさごはんをたべます。', exampleEn: 'I eat breakfast.' }),
-  item('みる',   'to see/watch (ru-verb)', 'verb-ru',
-    { example: 'テレビをみます。', exampleEn: 'I watch TV.' }),
-  item('おきる', 'to wake up (ru-verb)','verb-ru',
-    { example: 'しちじにおきます。', exampleEn: 'I wake up at 7 o\'clock.' }),
-  item('ねる',   'to sleep (ru-verb)',  'verb-ru'),
-  item('みせる', 'to show (ru-verb)',   'verb-ru'),
-  item('おしえる','to teach (ru-verb)', 'verb-ru'),
+const CH2_COPULA: VocabBankItem[] = [
+  item('to be (copula)', 'です', 'grammar',
+    { notes: 'Neg: じゃありません / じゃないです  Past: でした  Past neg: じゃありませんでした' }),
 ]
 
-const VERBS_IRR: VocabBankItem[] = [
-  item('する',   'to do (irregular)',   'verb-irregular',
-    { notes: 'Irregular: します／しません／しました／しませんでした' }),
-  item('べんきょうする', 'to study',    'verb-irregular'),
+const CH2_TIME: VocabBankItem[] = [
+  item("1 o'clock",  'いちじ',       'counter'),
+  item("2 o'clock",  'にじ',         'counter'),
+  item("3 o'clock",  'さんじ',       'counter'),
+  item("4 o'clock",  'よじ',         'counter', { notes: '⚠️ Irregular: よじ (not しじ)' }),
+  item("5 o'clock",  'ごじ',         'counter'),
+  item("6 o'clock",  'ろくじ',       'counter'),
+  item("7 o'clock",  'しちじ',       'counter', { notes: '⚠️ Irregular: しちじ (not ななじ)' }),
+  item("8 o'clock",  'はちじ',       'counter'),
+  item("9 o'clock",  'くじ',         'counter', { notes: '⚠️ Irregular: くじ (not きゅうじ)' }),
+  item("10 o'clock", 'じゅうじ',     'counter'),
+  item("11 o'clock", 'じゅういちじ', 'counter'),
+  item("12 o'clock", 'じゅうにじ',   'counter'),
+  item('half past',  'はん',         'counter'),
 ]
 
-// ─── 4. i-ADJECTIVES い形容詞 ─────────────────────────────────────────────────
-const I_ADJ: VocabBankItem[] = [
-  item('たかい', 'expensive / tall (i-adj)', 'i-adj',
-    { example: 'このくるまはたかいです。', exampleEn: 'This car is expensive.',
-      notes: 'Neg: たかくありません  Past: たかかったです' }),
-  item('やすい', 'cheap / inexpensive (i-adj)', 'i-adj'),
-  item('おおきい','big / large (i-adj)',  'i-adj'),
-  item('ちいさい','small (i-adj)',         'i-adj'),
-  item('あたらしい','new (i-adj)',         'i-adj'),
-  item('ふるい', 'old (thing) (i-adj)',   'i-adj'),
-  item('いい',   'good (i-adj, IRREGULAR)','i-adj',
-    { notes: '⚠️ Irregular: Neg→よくありません  Past→よかったです  Adv→よく' }),
-  item('たのしい','fun / enjoyable (i-adj)', 'i-adj'),
-  item('むずかしい','difficult (i-adj)',   'i-adj'),
-  item('やさしい','easy / kind (i-adj)',  'i-adj'),
-  item('いそがしい','busy (i-adj)',        'i-adj'),
-  item('さむい', 'cold (weather) (i-adj)', 'i-adj'),
-  item('あつい', 'hot (weather) (i-adj)', 'i-adj'),
-]
-
-// ─── 5. na-ADJECTIVES な形容詞 ────────────────────────────────────────────────
-const NA_ADJ: VocabBankItem[] = [
-  item('しずか',  'quiet (na-adj)',      'na-adj',
-    { example: 'としょかんはしずかです。', exampleEn: 'The library is quiet.',
-      notes: 'Before noun: しずかなまち' }),
-  item('きれい',  'pretty / clean (na-adj)', 'na-adj',
-    { notes: '⚠️ Ends in い but is な-adjective!' }),
-  item('ゆうめい','famous (na-adj)',      'na-adj'),
-  item('りっぱ',  'splendid / fine (na-adj)', 'na-adj'),
-  item('すき',    'liked / favorite (na-adj)', 'na-adj',
-    { example: 'すしがすきです。', exampleEn: 'I like sushi.' }),
-  item('きらい',  'disliked (na-adj)',   'na-adj'),
-  item('げんき',  'healthy / energetic (na-adj)', 'na-adj'),
-  item('ひま',    'free time / not busy (na-adj)', 'na-adj'),
-  item('べんり',  'convenient (na-adj)', 'na-adj'),
-  item('たいせつ','important / precious (na-adj)', 'na-adj'),
-]
-
-// ─── 6. ADVERBS 副詞 ──────────────────────────────────────────────────────────
-const ADVERBS: VocabBankItem[] = [
-  item('とても',    'very',            'adverb'),
-  item('すこし',    'a little',        'adverb'),
-  item('ちょっと',  'a little (casual)','adverb'),
-  item('もっと',    'more',            'adverb'),
-  item('いつも',    'always',          'adverb'),
-  item('よく',      'often',           'adverb'),
-  item('たいてい',  'usually',         'adverb'),
-  item('ときどき',  'sometimes',       'adverb'),
-  item('あまり',    'not much (+ neg)', 'adverb',
-    { notes: '⚠️ Must pair with negative form: あまり〜ません' }),
-  item('ぜんぜん',  'not at all (+ neg)', 'adverb',
-    { notes: '⚠️ Must pair with negative: ぜんぜん〜ません' }),
-  item('もう',      'already',         'adverb'),
-  item('まだ',      'still / not yet', 'adverb'),
-  item('すぐ',      'right away',      'adverb'),
-  item('また',      'again',           'adverb'),
-  item('いっしょに','together',        'adverb'),
-  item('ひとりで',  'alone / by oneself','adverb'),
-]
-
-// ─── 7. PARTICLES 助詞 ────────────────────────────────────────────────────────
-const PARTICLES: VocabBankItem[] = [
-  item('は', 'topic marker ("as for X")', 'particle',
-    { example: 'わたしはがくせいです。', exampleEn: 'I am a student.' }),
-  item('が', 'subject marker (new info, question answers, existence)', 'particle',
-    { notes: 'Question words always take が not は in the answer.' }),
-  item('も', 'also / too (replaces は or が)', 'particle'),
-  item('を', 'direct object marker', 'particle',
-    { example: 'りんごをたべます。', exampleEn: 'I eat an apple.' }),
-  item('に', 'time / destination / location of existence / recipient', 'particle',
-    { example: 'ともだちにてがみをかきます。', exampleEn: 'I write a letter to my friend.' }),
-  item('へ', 'direction toward (interchangeable with に for destinations)', 'particle'),
-  item('で', 'where action happens / by what means', 'particle',
-    { example: 'としょかんでべんきょうします。', exampleEn: 'I study at the library.' }),
-  item('と', 'with (person) / and (nouns only)', 'particle'),
-  item('の', 'possessive / noun connector / pronoun substitute', 'particle',
-    { example: 'わたしのほん', exampleEn: 'my book' }),
-  item('や', 'and (listing, not exhaustive)', 'particle'),
-  item('から', 'from', 'particle'),
-  item('まで', 'until / to', 'particle'),
-  item('か', 'question marker (sentence-end)', 'particle'),
-  item('よ', 'assertion ("I\'m telling you!")', 'particle'),
-  item('ね', 'agreement-seeking ("right?")', 'particle'),
-  item('よね','assertion + agreement', 'particle'),
-  item('ぐらい/くらい', 'approximately / about', 'particle'),
-]
-
-// ─── 8. CONJUNCTIONS 接続詞 ──────────────────────────────────────────────────
-const CONJUNCTIONS: VocabBankItem[] = [
-  item('そして',   'and then',         'conjunction'),
-  item('でも',     'but / however',    'conjunction'),
-  item('だから',   'so / therefore',   'conjunction'),
-  item('それから', 'and after that',   'conjunction'),
-  item('または',   'or',               'conjunction'),
-]
-
-// ─── 9. INTERJECTIONS 感動詞 ─────────────────────────────────────────────────
-const INTERJECTIONS: VocabBankItem[] = [
-  item('はい',   'yes (formal)',       'interjection'),
-  item('いいえ', 'no (formal)',        'interjection'),
-  item('ええ',   'yes / yeah (casual)','interjection'),
-  item('あ',     'ah / oh',           'interjection'),
-  item('ねえ',   'hey',               'interjection'),
-  item('うん',   'uh-huh / yeah (casual)', 'interjection'),
-  item('えーと', 'um / well (hesitation)', 'interjection'),
-  item('あのう', 'um / excuse me',    'interjection'),
-]
-
-// ─── 11. DEMONSTRATIVES 指示詞 (Ko-So-A-Do) ──────────────────────────────────
-const DEMONSTRATIVES: VocabBankItem[] = [
-  item('これ', 'this (thing, near speaker)',        'demonstrative'),
-  item('それ', 'that (thing, near listener)',       'demonstrative'),
-  item('あれ', 'that (thing, far from both)',       'demonstrative'),
-  item('どれ', 'which (thing)?',                   'demonstrative'),
-  item('ここ', 'here',                              'demonstrative'),
-  item('そこ', 'there (near listener)',             'demonstrative'),
-  item('あそこ','over there',                       'demonstrative'),
-  item('どこ', 'where?',                            'demonstrative'),
-  item('こちら','this way / here (polite)',         'demonstrative'),
-  item('そちら','that way / there (polite)',        'demonstrative'),
-  item('あちら','over there (polite)',              'demonstrative'),
-  item('どちら','which way? (polite)',              'demonstrative'),
-  item('この', 'this ___ (modifies noun)',          'demonstrative'),
-  item('その', 'that ___ (modifies noun)',          'demonstrative'),
-  item('あの', 'that ___ over there (modifies noun)','demonstrative'),
-  item('どの', 'which ___? (modifies noun)',        'demonstrative'),
-  item('こう', 'like this (manner)',                'demonstrative'),
-  item('そう', 'like that (manner)',                'demonstrative'),
-  item('ああ', 'like that (far, manner)',           'demonstrative'),
-  item('どう', 'how? / in what way?',              'demonstrative'),
-]
-
-// ─── 12. QUESTION WORDS 疑問詞 ───────────────────────────────────────────────
-const QUESTION_WORDS: VocabBankItem[] = [
-  item('なに/なん', 'what?',           'question-word',
+const CH2_QUESTION_WORDS: VocabBankItem[] = [
+  item('where',          'どこ',       'question-word'),
+  item('where (polite)', 'どちら',     'question-word'),
+  item('what',           'なに／なん', 'question-word',
     { notes: 'なん before です/の/counter; なに elsewhere' }),
-  item('だれ',      'who?',            'question-word'),
-  item('どこ',      'where?',          'question-word'),
-  item('いつ',      'when?',           'question-word'),
-  item('どうして',  'why? (casual)',   'question-word'),
-  item('なぜ',      'why? (formal)',   'question-word'),
-  item('どう',      'how?',            'question-word'),
-  item('いくら',    'how much? (price)','question-word'),
-  item('いくつ',    'how many? (general)','question-word'),
-  item('なんさい',  'how old?',        'question-word'),
 ]
 
-// ─── 13. COUNTERS 助数詞 ─────────────────────────────────────────────────────
-const COUNTERS: VocabBankItem[] = [
-  item('〜じ',      '~o\'clock',       'counter',
-    { example: 'しちじにおきます。', exampleEn: 'I wake up at 7 o\'clock.' }),
-  item('〜ふん/ぷん','~minutes',        'counter'),
-  item('〜まい',    '~flat things (sheets, paper)', 'counter'),
-  item('〜ほん',    '~long thin things (pens, bottles)', 'counter'),
-  item('〜ひき',    '~small animals',  'counter'),
-  item('〜さつ',    '~bound books',    'counter'),
-  item('〜だい',    '~machines / vehicles', 'counter'),
-  item('〜にん',    '~people',         'counter'),
-  item('〜つ',      '~general objects (up to 10)', 'counter'),
-  item('〜えん',    '~yen',            'counter'),
+const CH2_PARTICLES: VocabBankItem[] = [
+  item('question marker (sentence-end)',                    'か', 'particle'),
+  item('noun modifier / possessive connector',              'の', 'particle',
+    { example: 'わたし の ほん', exampleEn: 'my book' }),
+  item('topic marker ("as for X")',                         'は', 'particle',
+    { example: 'わたし は がくせい です。', exampleEn: 'I am a student.' }),
+  item('similarity marker (also / too — replaces は or が)','も', 'particle'),
 ]
 
-// ─── GRAMMAR PATTERNS (for Sentence Builder) ─────────────────────────────────
-const GRAMMAR: VocabBankItem[] = [
-  item('Xは Y です',
-    'X is Y (affirmative copula)',
-    'grammar',
-    { example: 'わたしはがくせいです。', exampleEn: 'I am a student.' }),
-  item('Xは Y じゃありません',
-    'X is not Y (negative copula)',
-    'grammar',
-    { example: 'これはほんじゃありません。', exampleEn: 'This is not a book.' }),
-  item('Xは Y ですか',
-    'Is X Y? (yes/no question)',
-    'grammar',
-    { example: 'あなたはがくせいですか。', exampleEn: 'Are you a student?' }),
-  item('〜ます / 〜ません',
-    'polite present/future affirmative / negative',
-    'grammar',
-    { example: 'まいにちにほんごをべんきょうします。', exampleEn: 'I study Japanese every day.' }),
-  item('〜ました / 〜ませんでした',
-    'polite past affirmative / negative',
-    'grammar',
-    { example: 'きのうえいがをみました。', exampleEn: 'I watched a movie yesterday.' }),
-  item('〜てください',
-    'Please do ~ (polite request)',
-    'grammar',
-    { example: 'ゆっくりはなしてください。', exampleEn: 'Please speak slowly.' }),
-  item('〜ませんか',
-    'Won\'t you ~? (invitation)',
-    'grammar',
-    { example: 'いっしょにたべませんか。', exampleEn: 'Won\'t you eat together with me?' }),
-  item('Xに Yがあります / います',
-    'There is Y at X (あります=thing, います=living)',
-    'grammar',
-    { example: 'つくえのうえにほんがあります。', exampleEn: 'There is a book on the desk.' }),
-  item('Xから Yまで',
-    'from X to/until Y',
-    'grammar',
-    { example: 'くじからごじまではたらきます。', exampleEn: 'I work from 9 to 5.' }),
-  item('〜たいです',
-    'I want to ~ (desire)',
-    'grammar',
-    { example: 'すしをたべたいです。', exampleEn: 'I want to eat sushi.' }),
-  item('〜ながら',
-    'while doing ~ (simultaneous actions)',
-    'grammar',
-    { example: 'おんがくをききながらべんきょうします。', exampleEn: 'I study while listening to music.' }),
-  item('い-adj → く + ない',
-    'i-adjective negative conjugation',
-    'grammar',
-    { example: 'このくるまはたかくありません。', exampleEn: 'This car is not expensive.' }),
-  item('な-adj + じゃありません',
-    'na-adjective negative conjugation',
-    'grammar',
-    { example: 'このへやはしずかじゃありません。', exampleEn: 'This room is not quiet.' }),
+const CH2_SUFFIXES: VocabBankItem[] = [
+  item('~ language (suffix)',      '〜ご',  'other'),
+  item("~ o'clock (suffix)",       '〜じ',  'counter'),
+  item('~ nationality (suffix)',   '〜じん','other'),
+  item('~ year student (suffix)',  '〜せい','other'),
+  item('~ year (suffix)',          '〜ねん','other'),
+]
+
+// ─── CH. 3 VOCAB (pp. 84–87) ─────────────────────────────────────────────────
+const CH3_NOUNS: VocabBankItem[] = [
+  item('morning',              'あさ',          'noun'),
+  item('breakfast',            'あさごはん',    'noun'),
+  item('day after tomorrow',   'あさって',      'noun'),
+  item('tomorrow',             'あした',        'noun'),
+  item('home',                 'うち',          'noun'),
+  item('movie',                'えいが',        'noun'),
+  item('day before yesterday', 'おととい',      'noun'),
+  item('bath',                 'おふろ',        'noun'),
+  item('school',               'がっこう',      'noun'),
+  item('Tuesday',              'かようび',      'noun'),
+  item('yesterday',            'きのう',        'noun'),
+  item('today',                'きょう',        'noun'),
+  item('Friday',               'きんようび',    'noun'),
+  item('class',                'クラス',        'noun'),
+  item('Monday',               'げつようび',    'noun'),
+  item('coffee',               'コーヒー',      'noun'),
+  item('rice / meal',          'ごはん',        'noun'),
+  item('this week',            'こんしゅう',    'noun'),
+  item('tonight',              'こんばん',      'noun'),
+  item('shower',               'シャワー',      'noun'),
+  item('weekend',              'しゅうまつ',    'noun'),
+  item('class / course',       'じゅぎょう',    'noun'),
+  item('homework',             'しゅくだい',    'noun'),
+  item('Wednesday',            'すいようび',    'noun'),
+  item('life / living',        'せいかつ',      'noun'),
+  item('last week',            'せんしゅう',    'noun'),
+  item('next',                 'つぎ',          'noun'),
+  item('TV',                   'テレビ',        'noun'),
+  item('phone number',         'でんわばんごう','noun'),
+  item('library',              'としょかん',    'noun'),
+  item('Saturday',             'どようび',      'noun'),
+  item('Sunday',               'にちようび',    'noun'),
+  item('night / evening',      'ばん',          'noun'),
+  item('dinner',               'ばんごはん',    'noun'),
+  item('afternoon',            'ひる',          'noun'),
+  item('lunch',                'ひるごはん',    'noun'),
+  item('study (noun)',         'べんきょう',    'noun'),
+  item('book',                 'ほん',          'noun'),
+  item('every morning',        'まいあさ',      'noun'),
+  item('every week',           'まいしゅう',    'noun'),
+  item('every day',            'まいにち',      'noun'),
+  item('every night',          'まいばん',      'noun'),
+  item('Thursday',             'もくようび',    'noun'),
+]
+
+const CH3_VERBS_U: VocabBankItem[] = [
+  item('to exist (inanimate) / to have', 'あります',   'verb-u'),
+  item('to go',                          'いきます',   'verb-u'),
+  item('to go home',                     'かえります', 'verb-u'),
+  item('to drink',                       'のみます',   'verb-u'),
+  item('to enter / to take (a bath)',    'はいります', 'verb-u'),
+  item('to read',                        'よみます',   'verb-u'),
+]
+
+const CH3_VERBS_RU: VocabBankItem[] = [
+  item('to take (a shower)', 'あびます', 'verb-ru'),
+  item('to wake up',         'おきます', 'verb-ru'),
+  item('to eat',             'たべます', 'verb-ru'),
+  item('to go to bed',       'ねます',   'verb-ru'),
+  item('to see / watch',     'みます',   'verb-ru'),
+]
+
+const CH3_VERBS_IRR: VocabBankItem[] = [
+  item('to come',    'きます',           'verb-irregular'),
+  item('to do',      'します',           'verb-irregular'),
+  item('to study',   'べんきょうします', 'verb-irregular'),
+]
+
+const CH3_QUESTION: VocabBankItem[] = [
+  item('when', 'いつ', 'question-word'),
+]
+
+const CH3_NUMBERS: VocabBankItem[] = [
+  item('zero',  'ゼロ／れい', 'counter'),
+  item('one',   'いち',       'counter'),
+  item('two',   'に',         'counter'),
+  item('three', 'さん',       'counter'),
+  item('four',  'よん／し',   'counter'),
+  item('five',  'ご',         'counter'),
+  item('six',   'ろく',       'counter'),
+  item('seven', 'なな／しち', 'counter'),
+  item('eight', 'はち',       'counter'),
+  item('nine',  'きゅう／く', 'counter'),
+  item('ten',   'じゅう',     'counter'),
+]
+
+const CH3_COUNTER: VocabBankItem[] = [
+  item('~ minutes (counter)', '〜ふん', 'counter',
+    { notes: 'Sound change: 1,3,6,8,10 minutes use ぷん instead of ふん' }),
+]
+
+const CH3_ADVERBS: VocabBankItem[] = [
+  item('not very often (⚠️ + negative verb)', 'あまり',   'adverb',
+    { notes: '⚠️ Must pair with negative: あまり〜ません' }),
+  item('always',                               'いつも',   'adverb'),
+  item('not at all (⚠️ + negative verb)',     'ぜんぜん', 'adverb',
+    { notes: '⚠️ Must pair with negative: ぜんぜん〜ません' }),
+  item('usually',                              'たいてい', 'adverb'),
+  item('sometimes',                            'ときどき', 'adverb'),
+  item('often',                                'よく',     'adverb'),
+]
+
+const CH3_PARTICLES: VocabBankItem[] = [
+  item('location of action (at / in)',     'で', 'particle',
+    { example: 'としょかん で べんきょう します。', exampleEn: 'I study at the library.' }),
+  item('point in time / goal of movement', 'に', 'particle'),
+  item('direction (toward)',               'へ', 'particle'),
+  item('direct object marker',             'を', 'particle'),
+]
+
+const CH3_AFFIXES: VocabBankItem[] = [
+  item('this ~ (prefix for current period)', 'こん〜',  'other'),
+  item('every ~ (prefix)',                   'まい〜',  'other'),
+  item('about ~ (approximate time suffix)', '〜ごろ',  'other'),
+  item('day of the week (suffix)',           '〜ようび','other'),
+]
+
+// ─── CH. 4 VOCAB (pp. 124–126) ───────────────────────────────────────────────
+const CH4_NOUNS: VocabBankItem[] = [
+  item('apartment',               'アパート',      'noun'),
+  item('station',                 'えき',          'noun'),
+  item('pencil',                  'えんぴつ',      'noun'),
+  item('bag',                     'かばん',        'noun'),
+  item('café',                    'カフェ',        'noun'),
+  item('coffee shop (traditional)','きっさてん',   'noun'),
+  item('textbook',                'きょうかしょ',  'noun'),
+  item('bank',                    'ぎんこう',      'noun'),
+  item('eraser',                  'けしゴム',      'noun'),
+  item('park',                    'こうえん',      'noun'),
+  item('police box',              'こうばん',      'noun'),
+  item('this area / around here', 'このへん',      'noun'),
+  item('convenience store',       'コンビニ',      'noun'),
+  item('dictionary',              'じしょ',        'noun'),
+  item('supermarket',             'スーパー',      'noun'),
+  item('building',                'たてもの',      'noun'),
+  item('test',                    'テスト',        'noun'),
+  item('department store',        'デパート',      'noun'),
+  item('notebook',                'ノート',        'noun'),
+  item('building (multi-story)',  'ビル',          'noun'),
+  item('hospital',                'びょういん',    'noun'),
+  item('pen',                     'ペン',          'noun'),
+  item('ballpoint pen',           'ボールペン',    'noun'),
+  item('bookstore',               'ほんや',        'noun'),
+  item('town',                    'まち',          'noun'),
+  item('post office',             'ゆうびんきょく','noun'),
+  item('dormitory',               'りょう',        'noun'),
+  item('restaurant',              'レストラン',    'noun'),
+]
+
+const CH4_VERB_RU: VocabBankItem[] = [
+  item('to exist / to be (animate beings)', 'います', 'verb-ru'),
+]
+
+const CH4_DEMONSTRATIVES: VocabBankItem[] = [
+  item('over there',                              'あそこ', 'demonstrative'),
+  item('that (far from both speaker & listener)', 'あれ',   'demonstrative'),
+  item('here',                                    'ここ',   'demonstrative'),
+  item('this (near speaker)',                     'これ',   'demonstrative'),
+  item('there (near listener)',                   'そこ',   'demonstrative'),
+  item('that (near listener)',                    'それ',   'demonstrative'),
+]
+
+const CH4_I_ADJ: VocabBankItem[] = [
+  item('blue',                          'あおい',    'i-adj'),
+  item('red',                           'あかい',    'i-adj'),
+  item('new',                           'あたらしい','i-adj'),
+  item('good',                          'いい',      'i-adj',
+    { notes: '⚠️ Irregular: Neg→よくない  Past→よかった  NEVER いくない / いかった' }),
+  item('big',                           'おおきい',  'i-adj'),
+  item('yellow',                        'きいろい',  'i-adj'),
+  item('black',                         'くろい',    'i-adj'),
+  item('white',                         'しろい',    'i-adj'),
+  item('tall / high / expensive',       'たかい',    'i-adj'),
+  item('small',                         'ちいさい',  'i-adj'),
+  item('brown',                         'ちゃいろい','i-adj'),
+  item('old (things, not people)',       'ふるい',    'i-adj'),
+]
+
+const CH4_NA_ADJ: VocabBankItem[] = [
+  item('pretty / clean',   'きれい(な)', 'na-adj',
+    { notes: '⚠️ Ends in い but is a な-adjective! Neg: きれいじゃないです' }),
+  item('famous',           'ゆうめい(な)','na-adj'),
+  item('splendid / fine',  'りっぱ(な)', 'na-adj'),
+]
+
+const CH4_PARTICLES: VocabBankItem[] = [
+  item('subject marker (new info, question answers, existence)', 'が', 'particle',
+    { notes: 'Question words always take が in the answer.' }),
+  item('location of existence (at / in / on)',                  'に', 'particle'),
+]
+
+// ─── CH. 5 VOCAB (pp. 166–167) ───────────────────────────────────────────────
+const CH5_LOCATION_NOUNS: VocabBankItem[] = [
+  item('above / on top', 'うえ',   'noun'),
+  item('behind',         'うしろ', 'noun'),
+  item('under / below',  'した',   'noun'),
+  item('outside',        'そと',   'noun'),
+  item('near',           'ちかく', 'noun'),
+  item('next to',        'となり', 'noun'),
+  item('inside',         'なか',   'noun'),
+  item('left',           'ひだり', 'noun'),
+  item('in front',       'まえ',   'noun'),
+  item('right',          'みぎ',   'noun'),
+  item('beside',         'よこ',   'noun'),
+]
+
+const CH5_NOUNS: VocabBankItem[] = [
+  item('chair',              'いす',             'noun'),
+  item('dog',                'いぬ',             'noun'),
+  item('picture',            'え',               'noun'),
+  item('Japanese closet',    'おしいれ',         'noun'),
+  item('school cafeteria',   'がくしょく',       'noun'),
+  item('student union',      'がくせいかいかん', 'noun'),
+  item('river',              'かわ',             'noun'),
+  item('tree',               'き',               'noun'),
+  item('classroom',          'きょうしつ',       'noun'),
+  item('car',                'くるま',           'noun'),
+  item('cell phone',         'けいたい(でんわ)', 'noun'),
+  item('chalkboard',         'こくばん',         'noun'),
+  item('computer',           'コンピュータ',     'noun'),
+  item('bicycle',            'じてんしゃ',       'noun'),
+  item('photograph',         'しゃしん',         'noun'),
+  item('sofa',               'ソファ',           'noun'),
+  item('gym',                'たいいくかん',     'noun'),
+  item('chest of drawers',   'たんす',           'noun'),
+  item('desk',               'つくえ',           'noun'),
+  item('table',              'テーブル',         'noun'),
+  item('telephone',          'でんわ',           'noun'),
+  item('door',               'ドア',             'noun'),
+  item('restroom',           'トイレ',           'noun'),
+  item('clock / watch',      'とけい',           'noun'),
+  item('place',              'ところ',           'noun'),
+  item('cat',                'ねこ',             'noun'),
+  item('bus',                'バス',             'noun'),
+  item('video',              'ビデオ',           'noun'),
+  item('person',             'ひと',             'noun'),
+  item('futon',              'ふとん',           'noun'),
+  item('bed',                'ベッド',           'noun'),
+  item('room',               'へや',             'noun'),
+  item('bookshelf',          'ほんだな',         'noun'),
+  item('window',             'まど',             'noun'),
+  item('thing (tangible)',   'もの',             'noun'),
+  item('mountain',           'やま',             'noun'),
+  item('room (loanword)',    'ルーム',           'noun'),
+]
+
+const CH5_VERB_U: VocabBankItem[] = [
+  item('to take (time / cost)', 'かかります', 'verb-u'),
+]
+
+const CH5_DEMONSTRATIVES: VocabBankItem[] = [
+  item('that ___ (far from both) [+ noun]',      'あの', 'demonstrative'),
+  item('this ___ [+ noun]',                       'この', 'demonstrative'),
+  item('that ___ (near listener) [+ noun]',       'その', 'demonstrative'),
+  item('which ___? [+ noun]',                     'どの', 'demonstrative'),
+]
+
+// ─── CH. 6 VOCAB (pp. 210–212) ───────────────────────────────────────────────
+const CH6_NOUNS: VocabBankItem[] = [
+  item('part-time job',    'アルバイト', 'noun'),
+  item('exercise',         'うんどう',   'noun'),
+  item('music',            'おんがく',   'noun'),
+  item('shopping',         'かいもの',   'noun'),
+  item('game',             'ゲーム',     'noun'),
+  item('concert',          'コンサート', 'noun'),
+  item('next time',        'こんど',     'noun'),
+  item('magazine',         'ざっし',     'noun'),
+  item('walk',             'さんぽ',     'noun'),
+  item('job',              'しごと',     'noun'),
+  item('question',         'しつもん',   'noun'),
+  item('jogging',          'ジョギング', 'noun'),
+  item('newspaper',        'しんぶん',   'noun'),
+  item('laundry',          'せんたく',   'noun'),
+  item('cleaning',         'そうじ',     'noun'),
+  item('letter',           'てがみ',     'noun'),
+  item('tennis',           'テニス',     'noun'),
+  item('friend',           'ともだち',   'noun'),
+  item('party',            'パーティ',   'noun'),
+  item('picnic',           'ピクニック', 'noun'),
+  item('pool',             'プール',     'noun'),
+  item('email',            'メール',     'noun'),
+  item('day off / rest',   'やすみ',     'noun'),
+  item('holiday / day off','やすみのひ', 'noun'),
+  item('parents',          'りょうしん', 'noun'),
+  item('cooking',          'りょうり',   'noun'),
+]
+
+const CH6_VERBS_U: VocabBankItem[] = [
+  item('to meet',         'あいます',   'verb-u'),
+  item('to play',         'あそびます', 'verb-u'),
+  item('to walk',         'あるきます', 'verb-u'),
+  item('to say',          'いいます',   'verb-u'),
+  item('to swim',         'およぎます', 'verb-u'),
+  item('to write',        'かきます',   'verb-u'),
+  item('to ask / listen', 'ききます',   'verb-u'),
+  item('to talk',         'はなします', 'verb-u'),
+  item('to wait',         'まちます',   'verb-u'),
+  item('to call / invite','よびます',   'verb-u'),
+]
+
+const CH6_VERBS_RU: VocabBankItem[] = [
+  item('to make (a phone call)', 'かけます',   'verb-ru'),
+  item('to go out',              'でかけます', 'verb-ru'),
+]
+
+const CH6_I_ADJ: VocabBankItem[] = [
+  item('busy',        'いそがしい', 'i-adj'),
+  item('happy',       'うれしい',   'i-adj'),
+  item('interesting', 'おもしろい', 'i-adj'),
+  item('sad',         'かなしい',   'i-adj'),
+  item('lonely',      'さびしい',   'i-adj'),
+  item('fun',         'たのしい',   'i-adj'),
+]
+
+const CH6_NA_ADJ: VocabBankItem[] = [
+  item('free / not busy',    'ひま(な)',    'na-adj'),
+  item('lively',             'にぎやか(な)','na-adj'),
+  item('healthy / energetic','げんき(な)',  'na-adj'),
+  item('quiet',              'しずか(な)',  'na-adj'),
+]
+
+const CH6_PARTICLES: VocabBankItem[] = [
+  item('with (person) / and (listing nouns)', 'と', 'particle'),
 ]
 
 // ─── Full export ──────────────────────────────────────────────────────────────
 export const DEFAULT_VOCAB_BANK: VocabBankItem[] = [
-  ...NOUNS,
-  ...VERBAL_NOUNS,
-  ...PRONOUNS,
-  ...VERBS_U,
-  ...VERBS_RU,
-  ...VERBS_IRR,
-  ...I_ADJ,
-  ...NA_ADJ,
-  ...ADVERBS,
-  ...PARTICLES,
-  ...CONJUNCTIONS,
-  ...INTERJECTIONS,
-  ...DEMONSTRATIVES,
-  ...QUESTION_WORDS,
-  ...COUNTERS,
-  ...GRAMMAR,
+  ...CH1_EXPRESSIONS, ...CH1_ADDRESS,
+  ...CH2_NOUNS, ...CH2_PRONOUNS, ...CH2_COPULA, ...CH2_TIME,
+  ...CH2_QUESTION_WORDS, ...CH2_PARTICLES, ...CH2_SUFFIXES,
+  ...CH3_NOUNS, ...CH3_VERBS_U, ...CH3_VERBS_RU, ...CH3_VERBS_IRR,
+  ...CH3_QUESTION, ...CH3_NUMBERS, ...CH3_COUNTER, ...CH3_ADVERBS,
+  ...CH3_PARTICLES, ...CH3_AFFIXES,
+  ...CH4_NOUNS, ...CH4_VERB_RU, ...CH4_DEMONSTRATIVES,
+  ...CH4_I_ADJ, ...CH4_NA_ADJ, ...CH4_PARTICLES,
+  ...CH5_LOCATION_NOUNS, ...CH5_NOUNS, ...CH5_VERB_U, ...CH5_DEMONSTRATIVES,
+  ...CH6_NOUNS, ...CH6_VERBS_U, ...CH6_VERBS_RU,
+  ...CH6_I_ADJ, ...CH6_NA_ADJ, ...CH6_PARTICLES,
 ]
 
 export const CATEGORY_LABELS: Record<string, string> = {
-  'noun':             '名詞 Noun',
-  'verbal-noun':      'する-Verb Noun',
-  'pronoun':          '代名詞 Pronoun',
-  'demonstrative':    '指示詞 Demonstrative',
-  'verb-u':           '動詞 u-Verb',
-  'verb-ru':          '動詞 ru-Verb',
-  'verb-irregular':   '動詞 Irregular',
-  'i-adj':            'い形容詞 i-Adj',
-  'na-adj':           'な形容詞 na-Adj',
-  'adverb':           '副詞 Adverb',
-  'particle':         '助詞 Particle',
-  'conjunction':      '接続詞 Conjunction',
-  'interjection':     '感動詞 Interjection',
-  'question-word':    '疑問詞 Question Word',
-  'counter':          '助数詞 Counter',
-  'grammar':          '文法 Grammar Pattern',
-  'other':            'その他 Other',
+  'noun':           '名詞 Noun',
+  'verbal-noun':    'する-Verb Noun',
+  'pronoun':        '代名詞 Pronoun',
+  'demonstrative':  '指示詞 Demonstrative',
+  'verb-u':         '動詞 u-Verb',
+  'verb-ru':        '動詞 ru-Verb',
+  'verb-irregular': '動詞 Irregular',
+  'i-adj':          'い形容詞 i-Adj',
+  'na-adj':         'な形容詞 na-Adj',
+  'adverb':         '副詞 Adverb',
+  'particle':       '助詞 Particle',
+  'conjunction':    '接続詞 Conjunction',
+  'interjection':   '感動詞 Interjection',
+  'question-word':  '疑問詞 Question Word',
+  'counter':        '助数詞 Counter',
+  'grammar':        '文法 Grammar Pattern',
+  'expression':     '表現 Expression / Phrase',
+  'other':          'その他 Other',
 }

@@ -29,6 +29,8 @@ export class ToolErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error(`[ToolErrorBoundary] "${this.props.toolName}" crashed:`, error, info);
+    console.error(`[ToolErrorBoundary] message:`, error?.message ?? String(error));
+    console.error(`[ToolErrorBoundary] stack:`, error?.stack ?? 'no stack');
   }
 
   handleReload = () => {

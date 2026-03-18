@@ -699,6 +699,19 @@ export default function App() {
         <SyncStatusBanner onLoad={loadRemoteData} onDismiss={dismissRemoteBanner} />
       )}
 
+      {/* Offline banner — visible on all pages including mobile (sidebar offline dot is not visible on mobile) */}
+      {syncStatus === 'offline' && (
+        <div role="status" aria-live="polite" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9998,
+          background: 'rgba(75,85,99,0.97)', color: '#fff',
+          padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 12, fontWeight: 600, gap: 6, letterSpacing: '0.2px',
+        }}>
+          <span style={{ opacity: 0.8 }}>●</span>
+          <span>You're offline — changes are being saved locally and will sync when reconnected.</span>
+        </div>
+      )}
+
       {/* Storage usage warning (≥80%) */}
       {storageWarning && (
         <div style={{

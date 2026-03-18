@@ -10,6 +10,8 @@ import type {
 } from './types'
 import { createEmptyData, generateQuizId } from './types'
 import { DEFAULT_VOCAB_BANK } from '../../data/jpVocabBank'
+import { DEFAULT_CONVERSATION_BANK } from '../../data/jpConversationBank'
+import { JP_SENTENCES } from '../../data/jpSentenceBank'
 import QuizMenu from './QuizMenu'
 import QuestionEditor from './QuestionEditor'
 import QuizSession from './QuizSession'
@@ -18,6 +20,8 @@ import VocabBankTab from './VocabBankTab'
 import MemoryFlipGame from './minigames/MemoryFlipGame'
 import SentenceBuilderGame from './minigames/SentenceBuilderGame'
 import ListeningQuizGame from './minigames/ListeningQuizGame'
+
+const DEFAULT_FULL_BANK = [...DEFAULT_VOCAB_BANK, ...DEFAULT_CONVERSATION_BANK, ...JP_SENTENCES]
 
 type View = 'menu' | 'editor' | 'session' | 'results' | 'minigame' | 'vocabbank'
 
@@ -40,8 +44,8 @@ function loadBank(courseId: string): VocabBankItem[] {
       if (Array.isArray(parsed.items)) return parsed.items
     }
   } catch { /* ignore */ }
-  // First load: seed with default pre-populated bank
-  return DEFAULT_VOCAB_BANK
+  // First load: seed with vocab bank + conversation patterns bank
+  return DEFAULT_FULL_BANK
 }
 
 interface Props {

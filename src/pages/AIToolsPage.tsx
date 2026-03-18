@@ -87,7 +87,7 @@ export default function AIToolsPage() {
   const navigate = useNavigate();
   const toolParam = searchParams.get('tool');
   const [activeTool, setActiveTool] = useState<AITool>(
-    toolParam && TOOLS.some(t => t.id === toolParam) ? toolParam as AITool : 'ocr'
+    toolParam && TOOLS.some(t => t.id === toolParam) ? toolParam as AITool : 'aichat'
   );
 
   if (!loaded) {

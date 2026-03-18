@@ -14,7 +14,8 @@ export type VocabCategory =
   | 'particle'
   | 'conjunction' | 'interjection'
   | 'question-word' | 'counter'
-  | 'grammar'   // sentence patterns for Sentence Builder
+  | 'grammar'     // sentence patterns for Sentence Builder
+  | 'expression'  // conversational phrases, classroom expressions, set patterns
   | 'other'
 
 export interface VocabBankItem {
@@ -26,6 +27,7 @@ export interface VocabBankItem {
   example?: string      // JP example sentence (Sentence Builder uses these)
   exampleEn?: string    // English translation of example
   notes?: string        // extra tips / warnings
+  breakdown?: string[]  // per-token grammatical role labels (PRN, N, V, COP, TOP, OBJ, …)
   source?: 'custom' | 'nakama1' | 'imported'
 }
 

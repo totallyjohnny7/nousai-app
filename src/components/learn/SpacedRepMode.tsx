@@ -381,13 +381,13 @@ export default function SpacedRepMode() {
         >
           <div style={{ ...cardStyle, background: 'var(--bg-primary)', minHeight: 100, textAlign: 'center', padding: 20, marginBottom: showAnswer ? 8 : 0 }}>
             <div className="text-xs text-muted mb-2">{card.topic}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.5 }}>{card.front}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{card.front}</div>
           </div>
           {showAnswer && (
             <div style={{ ...cardStyle, background: 'var(--accent-glow)', padding: 16, textAlign: 'center' }}>
               {/<[a-z][\s\S]*>/i.test(card.back)
                 ? <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.back) }} />
-                : <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5 }}>{card.back}</div>}
+                : <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{card.back}</div>}
             </div>
           )}
         </SwipeableCard>

@@ -2,7 +2,7 @@
  * LearnPage — 15 interactive learning modes
  * Each mode is a standalone tool with its own UI and state.
  */
-import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Zap, Lightbulb, Clock, MessageCircle, Search, Brain,
@@ -14,6 +14,8 @@ import {
   Atom, Languages
 } from 'lucide-react';
 import { useStore } from '../store';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
+import { ToolErrorBoundary } from '../components/ToolErrorBoundary';
 import { sanitizeHtml } from '../utils/sanitize';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -42,8 +44,8 @@ import TLDRMode from '../components/learn/TLDRMode';
 import ConnectMode from '../components/learn/ConnectMode';
 import { getLevel } from '../utils/gamification';
 
-const JpQuizTab = lazy(() => import('../components/jpquiz/JpQuizTab'));
-const PhysicsQuizTab = lazy(() => import('../components/physquiz/PhysicsQuizTab'));
+const JpQuizTab = lazyWithRetry(() => import('../components/jpquiz/JpQuizTab'));
+const PhysicsQuizTab = lazyWithRetry(() => import('../components/physquiz/PhysicsQuizTab'));
 
 // ─── Types ─────────────────────────────────────────────
 
@@ -509,27 +511,31 @@ function ModePanel({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
         const course = courses.find(c =>
           c.shortName?.toUpperCase().startsWith('JAPN') ||
           c.name.toLowerCase().includes('japanese')
-        );
+        ) ?? courses[0];
         if (!course) return (
           <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '16px 0' }}>
-            Select a Japanese course in the dropdown above to use Japanese Practicum.
+            No courses found. Create a course first.
           </div>
         );
         return (
-          <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading...</div>}>
-            <JpQuizTab course={course} />
-          </Suspense>
+          <ToolErrorBoundary toolName="Japanese Practicum">
+            <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading...</div>}>
+              <JpQuizTab course={course} />
+            </Suspense>
+          </ToolErrorBoundary>
         );
       })()}
       {mode === 'physics-practicum' && (() => {
         const course = courses.find(c =>
           (c.shortName?.match(/PHYS|PHY|SCI/i) != null) ||
           c.name.toLowerCase().match(/physics|physical science/) != null
-        ) ?? { id: 'global-physics', name: 'Physics', shortName: 'PHY', color: '#F5A623', topics: [], flashcards: [] };
+        ) ?? courses[0] ?? { id: 'global-physics', name: 'Physics', shortName: 'PHY', color: '#F5A623', topics: [], flashcards: [] };
         return (
-          <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading...</div>}>
-            <PhysicsQuizTab course={course} />
-          </Suspense>
+          <ToolErrorBoundary toolName="Physics Practicum">
+            <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading...</div>}>
+              <PhysicsQuizTab course={course} />
+            </Suspense>
+          </ToolErrorBoundary>
         );
       })()}
     </div>

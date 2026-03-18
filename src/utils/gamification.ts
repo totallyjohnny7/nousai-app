@@ -314,6 +314,22 @@ export function getCurrentWeekQuests(existing: WeeklyQuest[] | undefined): Weekl
   return generateWeeklyQuests(weekKey);
 }
 
+/** Award XP for completing a Pomodoro session (+25 XP) */
+export function applyPomodoroXP(data: GamificationData): GamificationData {
+  const xpGain = 25;
+  const updated: GamificationData = {
+    ...data,
+    xp: data.xp + xpGain,
+    level: Math.floor((data.xp + xpGain) / 100) + 1,
+    dailyGoal: {
+      ...data.dailyGoal,
+      todayXp: data.dailyGoal.todayXp + xpGain,
+    },
+  };
+  updated.badges = checkBadges(updated);
+  return updated;
+}
+
 /** Buy a streak freeze with XP (costs 50 XP, max 3 freezes) */
 export function buyStreakFreeze(data: GamificationData): GamificationData | null {
   const freezes = data.streakFreezes || 0;
