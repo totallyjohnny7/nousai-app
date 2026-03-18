@@ -145,8 +145,12 @@ Return ONLY valid JSON array, no markdown.`
         { role: 'user', content: `Generate BIOL 3020 questions about: ${aiPrompt}` },
       ])
 
-      const parsed = JSON.parse(response) as Partial<BiolQuestion>[]
-      const newQuestions: BiolQuestion[] = parsed.map(q => ({
+      const parsed = JSON.parse(response)
+      if (!Array.isArray(parsed)) {
+        setAiError('AI returned unexpected format. Please try again.')
+        return
+      }
+      const newQuestions: BiolQuestion[] = (parsed as Partial<BiolQuestion>[]).map(q => ({
         id: generateBiolId(),
         topic: q.topic ?? 'genomes',
         heading: q.heading ?? 'apply-it',

@@ -142,7 +142,7 @@ export default function BiolExam2Tab({ course }: Props) {
 
     const topicBreakdown = {} as Record<BiolTopic, { count: number; avgScore: number }>
     for (const answer of graded) {
-      const q = data.questions.find(q => q.id === answer.questionId)
+      const q = latestData.current.questions.find(q => q.id === answer.questionId)
       const topic = (q?.topic ?? 'other') as BiolTopic
       if (!topicBreakdown[topic]) topicBreakdown[topic] = { count: 0, avgScore: 0 }
       topicBreakdown[topic].count += 1
@@ -277,7 +277,6 @@ export default function BiolExam2Tab({ course }: Props) {
           <BiolSessionView
             session={session}
             questions={data.questions}
-            course={course}
             onFinish={finishSession}
             onQuit={backToMenu}
           />

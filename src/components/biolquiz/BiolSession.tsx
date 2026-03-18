@@ -6,14 +6,12 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { ChevronRight, SkipForward, X, Clock } from 'lucide-react'
 import type { BiolSession, BiolQuestion, BiolAnswer, BiolSessionMode } from './types'
-import { TOPIC_LABELS } from './types'
-import type { Course } from '../../types'
+import { TOPIC_LABELS, TOPIC_COLORS } from './types'
 import { callAI, isAIConfigured } from '../../utils/ai'
 
 interface Props {
   session: BiolSession
   questions: BiolQuestion[]
-  course: Course
   onFinish: (completed: BiolSession) => void
   onQuit: () => void
 }
@@ -46,22 +44,6 @@ export default function BiolSession({ session, questions, onFinish, onQuit }: Pr
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const startTimeRef = useRef(Date.now())
 
-  // ─── Timer for timed mode ──────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isTimed) return
-    timerRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTimeRef.current
-      const remaining = TIMED_DURATION_MS - elapsed
-      setTimeLeft(remaining)
-      if (remaining <= 0) {
-        clearInterval(timerRef.current!)
-        handleFinish()
-      }
-    }, 500)
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isTimed])
-
   const currentId = session.questionIds[currentIndex]
   const currentQ  = currentId ? qMap.get(currentId) : undefined
 
@@ -74,6 +56,28 @@ export default function BiolSession({ session, questions, onFinish, onQuit }: Pr
     }
     onFinish(completed)
   }, [session, answers, onFinish])
+
+  // Keep a ref to the latest handleFinish so the timer can call it without stale closure
+  const handleFinishRef = useRef(handleFinish)
+  useEffect(() => {
+    handleFinishRef.current = handleFinish
+  }, [handleFinish])
+
+  // ─── Timer for timed mode ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isTimed) return
+    timerRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTimeRef.current
+      const remaining = TIMED_DURATION_MS - elapsed
+      setTimeLeft(remaining)
+      if (remaining <= 0) {
+        clearInterval(timerRef.current!)
+        handleFinishRef.current()
+      }
+    }, 500)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTimed])
 
   const goNext = useCallback(() => {
     if (currentIndex < session.questionIds.length - 1) {
@@ -445,14 +449,3 @@ Respond with ONLY a JSON object: {"score": <0-100>, "feedback": "<1-2 sentence f
   )
 }
 
-// ─── Topic colors helper (local to session) ────────────────────────────────
-
-const TOPIC_COLORS: Record<string, string> = {
-  'genomes': '#22c55e',
-  'chromatin-chromosomes': '#3b82f6',
-  'bioinformatics': '#f59e0b',
-  'dna-replication': '#8b5cf6',
-  'dna-repair': '#ef4444',
-  'nucleus': '#06b6d4',
-  'other': '#6b7280',
-}
