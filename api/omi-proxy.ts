@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const ALLOWED_ORIGINS = ['https://nousai-app.vercel.app', 'http://localhost:5173', 'http://localhost:4173'];
+const ALLOWED_ORIGINS = ['https://studynous.com', 'https://www.studynous.com', 'https://nousai-app.vercel.app', 'http://localhost:5173', 'http://localhost:4173'];
 const ALLOWED_ENDPOINTS = ['user/conversations', 'user/memories', 'user/action-items'];
 
 function setCorsHeaders(req: VercelRequest, res: VercelResponse) {

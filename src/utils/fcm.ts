@@ -3,6 +3,7 @@
 
 import { getMessaging, getToken, onMessage, type Messaging } from 'firebase/messaging';
 import { getApp } from 'firebase/app';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
 let messaging: Messaging | null = null;
 
@@ -49,4 +50,43 @@ export function getFCMToken(): string | null {
 
 export function clearFCMToken(): void {
   localStorage.removeItem('nousai-fcm-token');
+}
+
+/**
+ * Save FCM token + notification metadata to Firestore /notif/{uid}.
+ * The cron job reads this to decide what push notifications to send each user.
+ */
+export async function saveFCMTokenToFirestore(uid: string, token: string): Promise<void> {
+  try {
+    const db = getFirestore(getApp());
+    await setDoc(doc(db, 'notif', uid), {
+      fcmToken: token,
+      notifEnabled: true,
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+  } catch {
+    // non-critical
+  }
+}
+
+/**
+ * Update lightweight notification metadata in Firestore /notif/{uid}.
+ * Call whenever streak, cards due, or Canvas assignments change so
+ * the cron job has fresh data to work with.
+ */
+export async function updateNotifMetadata(uid: string, data: {
+  streak?: number;
+  lastStudyDate?: string | null;
+  cardsDueCount?: number;
+  assignments?: { name: string; dueAt: string; courseCode: string }[];
+}): Promise<void> {
+  try {
+    const db = getFirestore(getApp());
+    await setDoc(doc(db, 'notif', uid), {
+      ...data,
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+  } catch {
+    // non-critical
+  }
 }

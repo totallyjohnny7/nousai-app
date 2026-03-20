@@ -19,11 +19,11 @@ function isAllowedDomain(url: string): boolean {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers — restrict to known origins
   const origin = req.headers.origin || '';
-  const allowedOrigins = ['https://nousai-app.vercel.app', 'http://localhost:5173', 'http://localhost:4173'];
+  const allowedOrigins = ['https://studynous.com', 'https://www.studynous.com', 'https://nousai-app.vercel.app', 'http://localhost:5173', 'http://localhost:4173'];
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else {
-    res.setHeader('Access-Control-Allow-Origin', 'https://nousai-app.vercel.app');
+    res.setHeader('Access-Control-Allow-Origin', 'https://studynous.com');
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

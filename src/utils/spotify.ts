@@ -1,7 +1,7 @@
 // src/utils/spotify.ts — Spotify PKCE OAuth + Now Playing
 
 const SPOTIFY_SCOPES = 'user-read-currently-playing user-read-playback-state';
-const REDIRECT_URI = 'https://nousai-app.vercel.app';
+const REDIRECT_URI = 'https://studynous.com';
 
 export interface SpotifyTrack {
   name: string;

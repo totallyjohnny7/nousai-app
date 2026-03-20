@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
-import type { NousAIData, FlashcardItem, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext } from './types';
+import type { NousAIData, FlashcardItem, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext, SavedVideo, VideoCaption, VideoNote, VideoNoteCategory, VideoNoteTemplate } from './types';
 import { writeClipboard, saveFilePicker, openFilePicker, getPermPref } from './utils/permissions';
 import { syncToCloud, syncFromCloud, subscribeToMetadataChanges } from './utils/auth';
 import { runMigrations } from './utils/migrations';
@@ -115,6 +115,7 @@ export function normalizeData(d: NousAIData): NousAIData {
       drawings: safeArray(p?.drawings),
       matchSets: safeArray(p?.matchSets),
       aiChatSessions: safeArray(p?.aiChatSessions),
+      savedVideos: safeArray(p?.savedVideos),
     } as NousAIData['pluginData'],
   };
 }
@@ -154,7 +155,7 @@ class AutoSyncScheduler {
   async flush() {
     if (!this.dirty) return;
     const uid = localStorage.getItem('nousai-auth-uid');
-    const autoSync = localStorage.getItem('nousai-auto-sync') === 'true';
+    const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
     if (!uid || !autoSync || !this.dataRef.current) return;
     // Safety: don't sync empty courses to cloud (likely stale/unloaded state)
     const courses = this.dataRef.current.pluginData?.coachData?.courses;
@@ -232,6 +233,11 @@ interface StoreCtx {
   // Tool visibility (Learn page customization)
   hiddenToolIds: string[]
   setHiddenToolIds: (ids: string[]) => void
+  // Video Studio
+  savedVideos: SavedVideo[]
+  addVideo: (video: SavedVideo) => void
+  deleteVideo: (videoId: string) => void
+  updateVideoMeta: (videoId: string, updates: Partial<Pick<SavedVideo, 'title' | 'captions' | 'defaultSpeed' | 'courseId' | 'downloadUrl' | 'thumbnailBase64' | 'notes' | 'noteTemplates'>>) => void
 }
 
 const Ctx = createContext<StoreCtx>({} as StoreCtx);
@@ -400,7 +406,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const msSinceSync = Date.now() - new Date(localLastSync).getTime();
           if (msSinceSync < 10_000) return;
         }
-        setRemoteUpdateAvailable(true);
+        // Auto-load silently — no banner click required
+        const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
+        if (autoSync) {
+          // Use a ref-safe approach: dispatch event so loadRemoteData can be called
+          window.dispatchEvent(new CustomEvent('nousai-remote-update-available'));
+        } else {
+          setRemoteUpdateAvailable(true);
+        }
       }
     }).then(unsub => { snapshotUnsubRef.current = unsub; });
   }, []);
@@ -445,6 +458,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!data) return;
     autoSyncRef.current.markDirty();
   }, [data]);
+
+  // Auto-load remote changes silently — no banner needed when auto-sync is on
+  useEffect(() => {
+    const handler = () => { loadRemoteData(); };
+    window.addEventListener('nousai-remote-update-available', handler);
+    return () => window.removeEventListener('nousai-remote-update-available', handler);
+  }, [loadRemoteData]);
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -572,6 +592,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  // ── Video Studio mutators ─────────────────────────────
+  const savedVideos: SavedVideo[] = useMemo(() => {
+    const v = data?.pluginData?.savedVideos;
+    return Array.isArray(v) ? (v as SavedVideo[]) : [];
+  }, [data?.pluginData?.savedVideos]);
+
+  function addVideo(video: SavedVideo) {
+    updatePluginData({ savedVideos: [...savedVideos, video] });
+  }
+
+  function deleteVideo(videoId: string) {
+    updatePluginData({ savedVideos: savedVideos.filter(v => v.id !== videoId) });
+  }
+
+  function updateVideoMeta(videoId: string, updates: Partial<Pick<SavedVideo, 'title' | 'captions' | 'defaultSpeed' | 'courseId' | 'downloadUrl' | 'thumbnailBase64' | 'notes' | 'noteTemplates'>>) {
+    updatePluginData({
+      savedVideos: savedVideos.map(v => v.id === videoId ? { ...v, ...updates } : v),
+    });
+  }
+
   function setTimerState(ts: TimerState) {
     if (!data) return;
     setData(prev => ({
@@ -636,7 +676,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setHiddenToolIds(ids);
       localStorage.setItem('nousai-hidden-tools', JSON.stringify(ids));
     },
-  }), [data, loaded, matchSets, events, quizHistory, courses, gamification, proficiency, srData, timerState, einkMode, betaMode, // eslint-disable-line react-hooks/exhaustive-deps
+    savedVideos, addVideo, deleteVideo, updateVideoMeta,
+  }), [data, loaded, matchSets, savedVideos, events, quizHistory, courses, gamification, proficiency, srData, timerState, einkMode, betaMode, // eslint-disable-line react-hooks/exhaustive-deps
     setData, updatePluginData, copyToClipboard, exportToFile, backupNow,
     syncStatus, lastSyncAt, remoteUpdateAvailable,
     startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,

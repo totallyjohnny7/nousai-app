@@ -13,21 +13,33 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getAuth } from 'firebase-admin/auth'
 
-// Initialize Firebase Admin SDK once
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  })
+// Lazy Firebase init — done inside handler to avoid module-level crashes
+// if env vars are missing (which causes FUNCTION_INVOCATION_FAILED for all requests)
+let db: ReturnType<typeof getFirestore> | null = null
+let auth: ReturnType<typeof getAuth> | null = null
+
+function getFirebaseClients(): { db: ReturnType<typeof getFirestore>; auth: ReturnType<typeof getAuth> } {
+  if (!getApps().length) {
+    const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = process.env
+    if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+      throw new Error('Missing Firebase Admin env vars (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY)')
+    }
+    initializeApp({
+      credential: cert({
+        projectId: FIREBASE_PROJECT_ID,
+        clientEmail: FIREBASE_CLIENT_EMAIL,
+        privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      }),
+    })
+  }
+  if (!db) db = getFirestore()
+  if (!auth) auth = getAuth()
+  return { db, auth }
 }
 
-const db = getFirestore()
-const auth = getAuth()
-
 const ALLOWED_ORIGINS = [
+  'https://studynous.com',
+  'https://www.studynous.com',
   'https://nousai-app.vercel.app',
   'http://localhost:5173',
   'http://localhost:4173',
@@ -51,9 +63,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const idToken = authHeader.replace(/^Bearer\s+/i, '').trim()
   if (!idToken) return res.status(401).json({ error: 'Missing Authorization token' })
 
+  let firebase: { db: ReturnType<typeof getFirestore>; auth: ReturnType<typeof getAuth> }
+  try {
+    firebase = getFirebaseClients()
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Firebase init failed'
+    return res.status(503).json({ error: 'Service unavailable', details: message })
+  }
+
   let uid: string
   try {
-    const decoded = await auth.verifyIdToken(idToken)
+    const decoded = await firebase.auth.verifyIdToken(idToken)
     uid = decoded.uid
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' })
@@ -64,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Store Canvas data from extension into Firestore (merged into user doc)
     if (grades || assignments) {
-      const ref = db.collection('users').doc(uid)
+      const ref = firebase.db.collection('users').doc(uid)
       const updateData: Record<string, unknown> = {}
       if (grades) updateData['extensionSync.grades'] = { ...grades, syncedAt: new Date().toISOString() }
       if (assignments) updateData['extensionSync.assignments'] = { items: assignments, syncedAt: new Date().toISOString() }
@@ -72,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Return NousAI study data for display in the extension sidebar
-    const userDoc = await db.collection('users').doc(uid).get()
+    const userDoc = await firebase.db.collection('users').doc(uid).get()
     const userData = userDoc.data() || {}
 
     // Extract lightweight study summary from stored PluginData

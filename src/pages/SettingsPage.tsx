@@ -5,11 +5,12 @@ import {
   Key, Brain, Eye, EyeOff, Palette, BookOpen, Volume2, VolumeX,
   Globe, Zap, Bug, Lightbulb, LogOut, LogIn, UserPlus, Check,
   AlertTriangle, Settings, Shield, Clock, Minus, Plus, ExternalLink, FolderPlus,
-  Bell, Mic, Sun, Clipboard, HardDrive, FileText, Wifi, Headphones
+  Bell, Mic, Sun, Clipboard, HardDrive, FileText, Wifi, Headphones, Keyboard
 } from 'lucide-react'
+import { quickKeysService, QuickKeysService, ALL_QUICK_KEY_ACTIONS, type QuickKeysMode } from '../utils/quickKeysService'
 import { useStore, normalizeData, forceWriteToIDB, clearPWACache, saveBackupHandle, loadBackupHandle, clearBackupHandle } from '../store'
 import { checkForUpdates, getAppVersion, getStoredUpdate, dismissUpdate, getPlatform } from '../utils/updater'
-import { signUp, signIn, logOut, onAuthChange, syncToCloud, syncFromCloud, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, type AuthUser } from '../utils/auth'
+import { signUp, signIn, logOut, onAuthChange, syncToCloud, syncFromCloud, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, saveOmiConfig, type AuthUser } from '../utils/auth'
 // testData is lazy-loaded only when user clicks "Load Test Data" button
 import { SHORTCUT_DEFS, getShortcutKey, setShortcutKey, resetAllShortcuts, formatKey } from '../utils/shortcuts'
 import { getLevel, THEME_PRESETS } from '../utils/gamification'
@@ -24,7 +25,7 @@ import { getSpotifyAuthUrl, isSpotifyConnected, disconnectSpotify } from '../uti
 import { runFullCanvasSync } from '../utils/canvasSync'
 
 // ─── Section Collapse State ────────────────────────────────
-type SectionId = 'account' | 'ai' | 'extensions' | 'study' | 'display' | 'permissions' | 'data' | 'howto' | 'appinfo' | 'spotify'
+type SectionId = 'account' | 'ai' | 'extensions' | 'study' | 'display' | 'permissions' | 'data' | 'howto' | 'appinfo' | 'spotify' | 'inputdevices' | 'guide'
 
 // ─── AI Provider Types ─────────────────────────────────────
 type AIProvider = 'none' | 'openai' | 'anthropic' | 'openrouter' | 'google' | 'groq' | 'mistral' | 'custom'
@@ -473,6 +474,13 @@ export default function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [updateInfo, setUpdateInfo] = useState(getStoredUpdate())
+
+  // Quick Keys state
+  const [qkConnected, setQkConnected] = useState(quickKeysService.connected)
+  const [qkConfig, setQkConfig] = useState(() => quickKeysService.getConfig())
+  const [qkActiveMode, setQkActiveMode] = useState<QuickKeysMode>('flashcard')
+  const [qkConnecting, setQkConnecting] = useState(false)
+  const [qkLastPressed, setQkLastPressed] = useState<{ btn: number; action: string } | null>(null)
   const [checking, setChecking] = useState(false)
   // Update URL is now hardcoded in updater.ts for security
   const platform = getPlatform()
@@ -489,6 +497,8 @@ export default function SettingsPage() {
     howto: false,
     appinfo: false,
     spotify: false,
+    inputdevices: false,
+    guide: false,
   })
 
   // Auth state
@@ -513,12 +523,24 @@ export default function SettingsPage() {
   // Sync state
   const [syncing, setSyncing] = useState(false)
   const [lastSync, setLastSync] = useState<string | null>(localStorage.getItem('nousai-last-sync'))
-  const [autoSync, setAutoSync] = useState(localStorage.getItem('nousai-auto-sync') === 'true')
+  const [autoSync, setAutoSync] = useState(localStorage.getItem('nousai-auto-sync') !== 'false')
 
   // Omi device
   const [omiApiKey, setOmiApiKey] = useState(localStorage.getItem('nousai-omi-api-key') || '')
   const [omiKeyInput, setOmiKeyInput] = useState('')
   const [omiTesting, setOmiTesting] = useState(false)
+  const [omiSetupOpen, setOmiSetupOpen] = useState(
+    !localStorage.getItem('nousai-omi-setup-seen'),
+  )
+  const [omiAutoSettings, setOmiAutoSettings] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem('nousai-omi-auto-settings') || '{}') }
+    catch { return {} }
+  })
+  const [speechProfile, setSpeechProfile] = useState<Record<string, unknown>>(() => {
+    try { return JSON.parse(localStorage.getItem('nousai-omi-speech-profile') || '{}') }
+    catch { return {} }
+  })
+  const [customCorrInput, setCustomCorrInput] = useState({ heard: '', actual: '' })
   const [canvasSyncing, setCanvasSyncing] = useState(false)
   const [canvasSyncStatus, setCanvasSyncStatus] = useState<{
     ok: boolean; message: string; lastSync?: string
@@ -591,8 +613,24 @@ export default function SettingsPage() {
   })
   const isCustomFb = !!localStorage.getItem('nousai-fb-apiKey')
 
-  // AI config state
-  const [aiConfig, setAiConfig] = useState(getAIConfig)
+  // AI config state — restored from cloud if localStorage is empty
+  const [aiConfig, setAiConfig] = useState(() => {
+    const local = getAIConfig()
+    // If no API key in localStorage, try cloud copy (loaded after store hydration)
+    if (!local.apiKey && !local.provider || local.provider === 'none') {
+      const cloud = (data as any)?.pluginData?.aiSettings as { provider: string; apiKey: string; model: string; baseUrl?: string; customModel?: string } | undefined
+      if (cloud?.apiKey && cloud.provider && cloud.provider !== 'none') {
+        // Restore to localStorage so the app-level AI utils can use it immediately
+        localStorage.setItem('nousai-ai-provider', cloud.provider)
+        localStorage.setItem('nousai-ai-apikey', cloud.apiKey)
+        localStorage.setItem('nousai-ai-model', cloud.model || '')
+        if (cloud.baseUrl) localStorage.setItem('nousai-ai-baseurl', cloud.baseUrl)
+        if (cloud.customModel) localStorage.setItem('nousai-ai-custom-model', cloud.customModel)
+        return getAIConfig()
+      }
+    }
+    return local
+  })
   const [showApiKey, setShowApiKey] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionResult, setConnectionResult] = useState<{ ok: boolean; msg: string } | null>(null)
@@ -686,6 +724,15 @@ export default function SettingsPage() {
   useEffect(() => {
     saveDisplayPrefs(displayPrefs)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Quick Keys subscription
+  useEffect(() => {
+    const unsub = quickKeysService.subscribe(() => {
+      setQkConnected(quickKeysService.connected)
+      setQkConfig(quickKeysService.getConfig())
+    })
+    return unsub
+  }, [])
 
   // ─── Helpers ───────────────────────────────────────────
   function showToast(msg: string) {
@@ -1009,6 +1056,8 @@ export default function SettingsPage() {
     }
     setAiConfig(next)
     saveAIConfig(next)
+    // Also sync to cloud (stored in pluginData which bypasses the settings key-filter)
+    updatePluginData({ aiSettings: { provider: next.provider, apiKey: next.apiKey, model: next.model, baseUrl: next.baseUrl, customModel: next.customModel } } as never)
   }
 
   async function handleTestConnection() {
@@ -3094,13 +3143,55 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700 }}>Omi AI Wearable</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Sync conversations & transcriptions</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Always-on wearable · fully automated pipeline</div>
                 </div>
               </div>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6, margin: '4px 0' }}>
-                Connect your Omi device to sync recorded conversations into your NousAI library.
-                Get your Developer API key from the Omi app: <strong>Settings → Developer → Create Key</strong>
-              </p>
+
+              {/* Collapsible setup guide */}
+              <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+                <button
+                  style={{
+                    width: '100%', textAlign: 'left', padding: '8px 12px',
+                    background: 'var(--bg-secondary)', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    fontSize: 12, fontWeight: 700, color: 'var(--text-primary)',
+                  }}
+                  onClick={() => setOmiSetupOpen(v => !v)}
+                >
+                  <span>📖 Setup Guide {!localStorage.getItem('nousai-omi-setup-seen') && <span style={{ color: 'var(--accent)', marginLeft: 4 }}>● New</span>}</span>
+                  {omiSetupOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                {omiSetupOpen && (
+                  <div style={{ padding: '10px 12px', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.8 }}>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>One-time setup, then forget it exists:</div>
+                    <ol style={{ paddingLeft: 16, margin: 0 }}>
+                      <li><strong>Unbox:</strong> charge fully (~45 min), hold button 3s to power on</li>
+                      <li><strong>Omi app:</strong> Download "Omi" → Settings → Experimental → enable Auto-create Speakers, Follow-up Questions, Goal Tracker, Daily Reflection</li>
+                      <li><strong>API Key:</strong> Omi app → Settings → Developer → Create Key → paste below</li>
+                      <li><strong>Webhook:</strong> copy URL below → Omi app → Developer → Webhooks → Add URL → subscribe to Conversation Events + Day Summary</li>
+                      <li><strong>Voice Accuracy:</strong> select your speech profile below, add custom corrections</li>
+                      <li><strong>Omi Apps (omi.me/apps):</strong> Improved Transcript, Insight Extractor, Class Notes Summarizer</li>
+                    </ol>
+                    <div style={{ marginTop: 8, padding: '8px 10px', background: 'var(--bg-primary)', borderRadius: 6, fontSize: 11 }}>
+                      <strong>After setup, NousAI runs silently. You just wear it:</strong><br />
+                      Every 90s of silence → 1 memory saved → flashcards queued → vocab extracted → notes auto-saved → gaps logged
+                    </div>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ marginTop: 8, fontSize: 10 }}
+                      onClick={() => {
+                        localStorage.setItem('nousai-omi-setup-seen', '1');
+                        setOmiSetupOpen(false);
+                      }}
+                    >
+                      ✓ Mark Setup Complete
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* API Key */}
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Step 3: Developer API Key</div>
               {omiApiKey ? (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <div style={{ flex: 1, fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>
@@ -3144,7 +3235,7 @@ export default function SettingsPage() {
                             localStorage.setItem('nousai-omi-api-key', key);
                             setOmiApiKey(key);
                             setOmiKeyInput('');
-                            showToast('Omi connected! Go to AI Tools → Omi to sync.');
+                            showToast('Omi connected! Copy the webhook URL below to complete setup.');
                           } else {
                             const err = await res.json().catch(() => ({})) as { error?: string };
                             showToast(`Connection failed: ${err.error || res.status}`);
@@ -3167,6 +3258,248 @@ export default function SettingsPage() {
                     >
                       <ExternalLink size={12} /> Docs
                     </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Webhook URL — shown after API key is set */}
+              {omiApiKey && authUser && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Step 4: Webhook URL</div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      readOnly
+                      value={`https://studynous.com/api/omi-webhook?uid=${authUser.uid}`}
+                      style={{ ...inputStyle, fontSize: 10, flex: 1, cursor: 'text', color: 'var(--text-muted)' }}
+                      onClick={e => (e.target as HTMLInputElement).select()}
+                    />
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 11, flexShrink: 0 }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `https://studynous.com/api/omi-webhook?uid=${authUser.uid}`,
+                        );
+                        localStorage.setItem('nousai-omi-webhook-configured', '1');
+                        showToast('Webhook URL copied! Paste it in Omi app → Developer → Webhooks');
+                      }}
+                    >
+                      <Clipboard size={12} /> Copy
+                    </button>
+                  </div>
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Paste into Omi app → Developer → Webhooks → subscribe to: <strong>Conversation Events</strong> + <strong>Day Summary</strong>
+                  </p>
+                </div>
+              )}
+
+              {/* Auto-processing toggles */}
+              {omiApiKey && (
+                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Zap size={12} color="var(--accent)" /> Auto-Processing
+                  </div>
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8, lineHeight: 1.5 }}>
+                    Everything runs automatically when Omi fires a webhook. Toggle off to disable individual processors.
+                  </p>
+                  {([
+                    { key: 'autoSaveNotes', label: 'Auto-save memories as Notes' },
+                    { key: 'autoFlashcards', label: 'Auto-generate flashcards (lectures)' },
+                    { key: 'autoVocab', label: 'Auto-extract vocabulary' },
+                    { key: 'autoGaps', label: 'Auto-detect knowledge gaps' },
+                    { key: 'autoVoiceCorrect', label: 'Auto-correct transcripts (AI, speech-aware)' },
+                  ] as const).map(({ key, label }) => {
+                    const enabled = omiAutoSettings[key] !== false; // default ON
+                    return (
+                      <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={enabled}
+                          onChange={() => {
+                            const next = { ...omiAutoSettings, [key]: !enabled };
+                            setOmiAutoSettings(next);
+                            localStorage.setItem('nousai-omi-auto-settings', JSON.stringify(next));
+                            // Sync to Firestore so webhook can read it
+                            if (authUser) {
+                              const aiKey = localStorage.getItem(
+                                `nousai-ai-slot-generation-apikey`,
+                              ) || localStorage.getItem(`nousai-ai-slot-chat-apikey`) || '';
+                              saveOmiConfig(authUser.uid, {
+                                omiAutoSettings: next,
+                                omiAiKey: aiKey,
+                              }).catch(() => {});
+                            }
+                          }}
+                        />
+                        <span style={{ fontSize: 12 }}>{label}</span>
+                      </label>
+                    );
+                  })}
+                  {/* Sync AI key button */}
+                  {authUser && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 10, marginTop: 4 }}
+                      onClick={() => {
+                        const aiKey = localStorage.getItem('nousai-ai-slot-generation-apikey')
+                          || localStorage.getItem('nousai-ai-slot-chat-apikey') || '';
+                        if (!aiKey) {
+                          showToast('No AI API key found. Set an OpenRouter key in AI Settings first.');
+                          return;
+                        }
+                        saveOmiConfig(authUser.uid, {
+                          omiAutoSettings,
+                          omiAiKey: aiKey,
+                        }).then(() => showToast('Auto-processing settings synced to webhook ✓')).catch(() => showToast('Sync failed. Check your connection.'));
+                      }}
+                    >
+                      <Cloud size={11} /> Sync AI key to webhook
+                    </button>
+                  )}
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5 }}>
+                    AI processors use your generation slot API key. Click "Sync AI key to webhook" after changing keys.
+                  </p>
+                </div>
+              )}
+
+              {/* Voice Accuracy / Speech Profile */}
+              {omiApiKey && (
+                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Mic size={12} color="var(--accent)" /> Voice Accuracy
+                  </div>
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8, lineHeight: 1.5 }}>
+                    Helps AI correction produce cleaner transcripts. Works for any speech difference or multilingual codeswitching.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 3 }}>Speech pattern</label>
+                      <select
+                        value={String(speechProfile.speechDifference || '')}
+                        onChange={e => {
+                          const next = { ...speechProfile, speechDifference: e.target.value };
+                          setSpeechProfile(next);
+                          localStorage.setItem('nousai-omi-speech-profile', JSON.stringify(next));
+                          if (authUser) saveOmiConfig(authUser.uid, { omiSpeechProfile: next }).catch(() => {});
+                        }}
+                        style={{ ...inputStyle, fontSize: 11 }}
+                      >
+                        <option value="">None (default)</option>
+                        <option value="lisp_interdental">Interdental lisp (s/z → th)</option>
+                        <option value="lisp_lateral">Lateral lisp (slushy s)</option>
+                        <option value="lisp_dentalized">Dentalized lisp (muffled s)</option>
+                        <option value="lisp_palatal">Palatal lisp (compressed s)</option>
+                        <option value="stutter">Stutter (repeated syllables)</option>
+                        <option value="dysarthria">Dysarthria (motor speech)</option>
+                        <option value="accent">Non-native accent</option>
+                        <option value="other">Other (describe below)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 3 }}>Languages spoken</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. english, japanese"
+                        value={String(speechProfile.languagesInput || '')}
+                        onChange={e => {
+                          const next = {
+                            ...speechProfile,
+                            languagesInput: e.target.value,
+                            languages: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
+                          };
+                          setSpeechProfile(next);
+                          localStorage.setItem('nousai-omi-speech-profile', JSON.stringify(next));
+                          if (authUser) saveOmiConfig(authUser.uid, { omiSpeechProfile: next }).catch(() => {});
+                        }}
+                        style={{ ...inputStyle, fontSize: 11 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 3 }}>Subject areas</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. biology, premed, computer science"
+                        value={String(speechProfile.subjectsInput || '')}
+                        onChange={e => {
+                          const next = {
+                            ...speechProfile,
+                            subjectsInput: e.target.value,
+                            subjects: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
+                          };
+                          setSpeechProfile(next);
+                          localStorage.setItem('nousai-omi-speech-profile', JSON.stringify(next));
+                          if (authUser) saveOmiConfig(authUser.uid, { omiSpeechProfile: next }).catch(() => {});
+                        }}
+                        style={{ ...inputStyle, fontSize: 11 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 3 }}>My custom corrections</label>
+                      {Array.isArray(speechProfile.customCorrections) && (speechProfile.customCorrections as { heard: string; actual: string }[]).map((c, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 4, fontSize: 11 }}>
+                          <span style={{ color: 'var(--error)', flex: 1 }}>{c.heard}</span>
+                          <span style={{ color: 'var(--text-muted)' }}>→</span>
+                          <span style={{ color: 'var(--green)', flex: 1 }}>{c.actual}</span>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: 10, padding: '2px 6px' }}
+                            onClick={() => {
+                              const next = {
+                                ...speechProfile,
+                                customCorrections: (speechProfile.customCorrections as { heard: string; actual: string }[]).filter((_, j) => j !== i),
+                              };
+                              setSpeechProfile(next);
+                              localStorage.setItem('nousai-omi-speech-profile', JSON.stringify(next));
+                              if (authUser) saveOmiConfig(authUser.uid, { omiSpeechProfile: next }).catch(() => {});
+                            }}
+                          >✕</button>
+                        </div>
+                      ))}
+                      <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                        <input
+                          type="text"
+                          placeholder="word heard"
+                          value={customCorrInput.heard}
+                          onChange={e => setCustomCorrInput(p => ({ ...p, heard: e.target.value }))}
+                          style={{ ...inputStyle, fontSize: 11, flex: 1 }}
+                        />
+                        <span style={{ alignSelf: 'center', color: 'var(--text-muted)', fontSize: 12 }}>→</span>
+                        <input
+                          type="text"
+                          placeholder="actual word"
+                          value={customCorrInput.actual}
+                          onChange={e => setCustomCorrInput(p => ({ ...p, actual: e.target.value }))}
+                          style={{ ...inputStyle, fontSize: 11, flex: 1 }}
+                        />
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          style={{ fontSize: 11, flexShrink: 0 }}
+                          disabled={!customCorrInput.heard || !customCorrInput.actual}
+                          onClick={() => {
+                            if (!customCorrInput.heard || !customCorrInput.actual) return;
+                            const prev = Array.isArray(speechProfile.customCorrections)
+                              ? speechProfile.customCorrections as { heard: string; actual: string }[]
+                              : [];
+                            const next = {
+                              ...speechProfile,
+                              customCorrections: [...prev, { heard: customCorrInput.heard, actual: customCorrInput.actual }],
+                            };
+                            setSpeechProfile(next);
+                            localStorage.setItem('nousai-omi-speech-profile', JSON.stringify(next));
+                            if (authUser) saveOmiConfig(authUser.uid, { omiSpeechProfile: next }).catch(() => {});
+                            setCustomCorrInput({ heard: '', actual: '' });
+                          }}
+                        >
+                          + Add
+                        </button>
+                      </div>
+                      <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                        Test your pronunciation at{' '}
+                        <a href="https://speech.microsoft.com/portal" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
+                          speech.microsoft.com/portal ↗
+                        </a>
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -3248,7 +3581,7 @@ export default function SettingsPage() {
           <div style={cardBodyStyle}>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.6 }}>
               Connect Spotify to show what you're listening to on the Dashboard.<br />
-              <strong>Setup:</strong> Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>developer.spotify.com/dashboard</a> → Create App → Add Redirect URI: <code>https://nousai-app.vercel.app</code> → Copy Client ID below.
+              <strong>Setup:</strong> Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>developer.spotify.com/dashboard</a> → Create App → Add Redirect URI: <code>https://studynous.com</code> → Copy Client ID below.
             </div>
             <div style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Spotify Client ID</div>
@@ -3341,6 +3674,119 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* ──────────── Input Devices (Quick Keys) ──────────── */}
+      <div className="settings-section">
+        <SectionHeader id="inputdevices" icon={<Keyboard size={16} />} title="Input Devices" subtitle="Xencelabs Quick Keys, hardware shortcuts" />
+        {expanded.inputdevices && (
+          <div style={{ padding: '12px 0' }}>
+            {!QuickKeysService.isSupported() ? (
+              <div style={{ padding: '16px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
+                  WebHID not available. Use <strong>Chrome or Edge</strong> on Windows or macOS.<br />
+                  Not supported on iPad, Boox, Firefox, Safari, or mobile browsers.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: qkConnected ? '#22c55e' : 'var(--text-muted)' }} />
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{qkConnected ? 'Connected' : 'Disconnected'}</span>
+                  </div>
+                  <button
+                    className="btn btn-sm"
+                    style={{ marginLeft: 'auto' }}
+                    disabled={qkConnecting}
+                    onClick={async () => {
+                      if (qkConnected) {
+                        await quickKeysService.disconnect()
+                      } else {
+                        setQkConnecting(true)
+                        try { await quickKeysService.connect() }
+                        catch (e) { showToast('Could not connect — check device and browser permission') }
+                        finally { setQkConnecting(false) }
+                      }
+                    }}
+                  >
+                    {qkConnecting ? 'Connecting…' : qkConnected ? 'Disconnect' : 'Connect Quick Keys'}
+                  </button>
+                </div>
+
+                {/* Mode tabs */}
+                <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+                  {(['flashcard', 'quiz', 'drawing', 'navigation', 'notes'] as QuickKeysMode[]).map(m => (
+                    <button
+                      key={m}
+                      className={`btn btn-sm${qkActiveMode === m ? '' : ' btn-ghost'}`}
+                      style={{ textTransform: 'capitalize', fontSize: 11 }}
+                      onClick={() => setQkActiveMode(m)}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Button mapping grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                  {qkConfig.modes[qkActiveMode].buttons.map((btn, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent)', minWidth: 18 }}>Btn {i + 1}</span>
+                      <select
+                        style={{ flex: 1, fontSize: 11, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 4px' }}
+                        value={btn.actionId}
+                        onChange={e => {
+                          const action = ALL_QUICK_KEY_ACTIONS.find(a => a.id === e.target.value)
+                          if (!action) return
+                          const newConfig = { ...qkConfig }
+                          newConfig.modes = { ...newConfig.modes }
+                          newConfig.modes[qkActiveMode] = { ...newConfig.modes[qkActiveMode] }
+                          newConfig.modes[qkActiveMode].buttons = [...newConfig.modes[qkActiveMode].buttons]
+                          newConfig.modes[qkActiveMode].buttons[i] = { actionId: action.id, label: action.label.slice(0, 8).toUpperCase() }
+                          quickKeysService.saveConfig(newConfig)
+                          setQkConfig(newConfig)
+                        }}
+                      >
+                        {ALL_QUICK_KEY_ACTIONS.map(a => (
+                          <option key={a.id} value={a.id}>{a.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Last pressed indicator */}
+                {qkLastPressed && (
+                  <div style={{ fontSize: 12, color: 'var(--color-accent)', padding: '6px 10px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', marginBottom: 8 }}>
+                    Button {qkLastPressed.btn + 1} pressed → {qkLastPressed.action}
+                  </div>
+                )}
+
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => {
+                    const defaultCfg = { modes: quickKeysService['DEFAULT_CONFIGS' as keyof typeof quickKeysService] ?? qkConfig.modes, currentMode: qkConfig.currentMode }
+                    quickKeysService.saveConfig(qkConfig)
+                    showToast('Reset to defaults')
+                  }}
+                >
+                  Reset to Defaults
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ──────────── How to Use NousAI (Guide Hub) ──────────── */}
+      <div className="settings-section">
+        <SectionHeader id="guide" icon={<BookOpen size={16} />} title="How to Use NousAI" subtitle="Interactive guides for all features" />
+        {expanded.guide && (
+          <div style={{ padding: '12px 0' }}>
+            <GuideHubInline />
+          </div>
+        )}
+      </div>
+
       {/* ──────────── Footer ──────────── */}
       <div style={{ textAlign: 'center', padding: '16px 0 32px', fontSize: 11, color: 'var(--text-muted)' }}>
         NousAI v{getAppVersion()} &bull; {platform}
@@ -3377,6 +3823,233 @@ export default function SettingsPage() {
 }
 
 // ─── Sub-components ────────────────────────────────────────
+
+interface GuideEntry {
+  id: string;
+  title: string;
+  tldr: string;
+  content: string;
+}
+
+const GUIDE_ENTRIES: GuideEntry[] = [
+  {
+    id: 'quickkeys',
+    title: 'Xencelabs Quick Keys — Setup & Modes',
+    tldr: 'A one-handed controller with hardware buttons + OLED display for every NousAI action.',
+    content: `Requirements: Chrome or Edge on Windows or macOS, Quick Keys connected via USB or Bluetooth.
+
+Setup (3 steps):
+1. Open Settings → Input Devices
+2. Click "Connect Quick Keys" → browser asks for USB permission → allow
+3. The OLED display updates with labels for the current mode
+
+Modes (auto-switch by page):
+• Flashcard Mode — on /flashcards: Dial = pre-select confidence (1-4) before flipping. Btn 1=FLIP, 2=RECALL, 3=NEXT, 4=PREV, 5=AGAIN, 6=HARD, 7=GOOD, 8=EASY
+• Quiz Mode — on /quiz: Btn 1-4 = select options, Btn 5=SUBMIT, Btn 6=NEXT
+• Drawing Mode — on /draw: Btn 1=UNDO, Btn 2=REDO, Dial = brush size
+• Navigation Mode — all other pages: Btn 1-8 = jump to Home/Quiz/Cards/Notes/Timer/Cal/Learn/Settings
+• Notes Mode — on /library or /learn: Btn 3=RELAY, Btn 4=LASSO
+
+Remapping: Settings → Input Devices → choose mode → click any button → select new action
+
+⚡ Pro Tip: The dial in flashcard mode pre-selects your confidence rating. Dial to 3 (Good), then press FLIP — faster than reaching for keyboard 1-4.`,
+  },
+  {
+    id: 'cloze',
+    title: 'Cloze Cards — Syntax & Tips',
+    tldr: 'Fill-in-the-blank cards. Wrap terms in {{double braces}} to create blanks.',
+    content: `Creating a Cloze Card:
+1. Click "New Card" → select type "Cloze"
+2. Front: "The {{mitochondria}} is the {{powerhouse}} of the cell."
+3. Back: Optional explanation / extra context
+
+Review Flow:
+• Card shows: "The [_____] is the [_____] of the cell."
+• Press Space → reveals first blank: "mitochondria"
+• Press Space again → reveals second blank: "powerhouse"
+• Back shown → rate 1-4
+
+Tips for Great Cloze Cards:
+✓ One concept per card: "The {{nucleus}} controls cell activity"
+✓ Keep blanks to 1-3 per card
+✗ Avoid too many blanks per card
+
+⚡ Pro Tip: After making cloze cards from vocab, use RSVP Speed Preview to see all terms fast, then let FSRS schedule the actual review.`,
+  },
+  {
+    id: 'type-recall',
+    title: 'Type-to-Recall Mode — The Generation Effect',
+    tldr: 'Type your answer before seeing it. Research shows 40-60% better retention than passive flip.',
+    content: `Enable: Press T on any flashcard page, or Settings → Flashcards → "Type-to-Recall Mode" toggle.
+
+How it works:
+1. Card front shows
+2. You type your answer in the text box
+3. Press Enter or "Check"
+4. If AI grading is on: EXACT → 4, PARTIAL → 2 (shows what was missing), WRONG → 1
+5. If AI grading is off: correct answer shown, you self-grade
+
+Why it works (The Science):
+Generating an answer — even incorrectly — activates more memory pathways than simply recognizing it. This is the "generation effect" (Slamecka & Graf, 1978). Even failed recall attempts strengthen long-term memory.
+
+⚡ Pro Tip: Keep AI grading OFF for speed. Keep it ON for high-stakes subjects where accuracy matters most.`,
+  },
+  {
+    id: 'rsvp',
+    title: 'RSVP Speed Preview — When & How to Use',
+    tldr: 'Flash through an entire deck in minutes to build familiarity before deep study.',
+    content: `Open: Learn → "⚡ Speed Preview" or Flashcard page header → "Speed Preview" button.
+
+Speed Settings:
+100 WPM — Slow, good for complex material
+200 WPM — Default
+300 WPM — Fast, good for vocabulary you mostly know
+500 WPM — Very fast, good for warm-up on familiar decks
+
+Controls: Space = pause · → = skip card · Quick Keys dial = adjust WPM live
+
+When to Use:
+✓ Before starting a new deck (reduces first-review overwhelm)
+✓ Before an exam (rapid exposure refresher)
+✓ When returning after a long break (re-familiarize before deep review)
+✗ Not a replacement for FSRS active recall — always follow with real review
+
+⚡ Pro Tip: Run RSVP at the START of every study session as a 3-minute warm-up. Retention improves significantly vs. jumping straight to flashcards cold.`,
+  },
+  {
+    id: 'leeches',
+    title: 'Leech Cards — What They Are & How to Fix',
+    tldr: 'Leeches are cards you keep failing. The system detects them and helps you fix them.',
+    content: `What is a Leech?
+A card that has failed (graded "Again") 4+ times OR has average recall below 50%. These cards take 80% of your effort for 20% of the value.
+
+How to find them: Learn → Leech Manager tool, or FlashcardAnalytics → "Leeches" tab.
+
+What to do:
+Option 1 — Suspend: Removes from review queue temporarily
+Option 2 — AI Rewrite: AI suggests a simpler rewrite or how to split into 2 atomic cards
+Option 3 — Add Context: Add more info to the back of the card
+
+Why this matters:
+Suspending 10 leeches = saving 20-30 minutes per week. Keeping leeches active = scheduling bad cards every 1-3 days forever.
+
+⚡ Pro Tip: Run leech detection monthly. Aim for 0 active leeches. If you have 20+ leeches, your cards need restructuring before FSRS can work effectively.`,
+  },
+  {
+    id: 'fsrs',
+    title: 'How FSRS Schedules Your Cards (Plain English)',
+    tldr: 'FSRS predicts when you\'ll forget each card and shows it right before that moment.',
+    content: `The Core Idea:
+Every card has a "stability" (how long your memory will last) and a "difficulty" (how hard the card is for you). FSRS uses these + 19 calibration weights to predict when you'll recall the card with 92% confidence.
+
+Your Ratings Explained:
+1 = Again — "I forgot completely" → interval resets to 1 day
+2 = Hard — "I remembered but struggled" → short interval
+3 = Good — "I remembered normally" → interval doubles-ish
+4 = Easy — "Instant recall" → large interval jump
+
+What happens over time:
+• New card: shown again in 1-2 days (building initial memory)
+• After 3-4 good reviews: shown weekly, then monthly
+• Mature card (21+ day stability): shown every few months
+
+Daily Cap: 50 cards per course per day (configurable in Settings). This prevents overwhelm when you add a large deck all at once.
+
+⚡ Pro Tip: Grade honestly. Rating "Easy" when it was "Hard" corrupts the schedule. The algorithm only works if your self-ratings are accurate.`,
+  },
+  {
+    id: 'relay',
+    title: 'Content Relay — Step-by-Step Cross-Device',
+    tldr: 'Send text, notes, or URLs from any device to any other device instantly via Firebase.',
+    content: `Method 1 — Screen Lasso (Windows → Boox):
+1. Quick Keys Notes Btn 4, OR: Learn → Screen Lasso tool
+2. Select your screen (browser permission asked once)
+3. Draw a polygon around the text you want
+4. AI extracts the text (OCR)
+5. Click "Send to Relay"
+6. On Boox: amber dot appears → tap → "Save to Notes"
+
+Method 2 — Manual Relay (any device):
+1. Tap the relay button (bottom-right corner, circle icon)
+2. Type or paste content → select type: Text/URL/Note → Send
+3. Other device: amber dot appears within 5 seconds → accept
+
+Requirements: Both devices must be logged in with the same account.
+Works across: Windows, macOS, Boox, iPad, iOS, Android — any browser.
+
+⚡ Pro Tip: Relay works offline-to-online — if your Boox is offline when you send, the message waits in Firestore and delivers when Boox reconnects.`,
+  },
+  {
+    id: 'pretest',
+    title: 'Pre-Test Mode — Hypercorrection Effect',
+    tldr: 'Test before learning → 15-20% better retention. High-confidence wrong answers corrected most strongly.',
+    content: `What it does:
+Before each card: "Do you think you know this? Yes / No" (confidence prediction)
+You type an answer → correct answer shown immediately (no FSRS grading during pretest)
+
+Post-run summary shows:
+• "Knew correctly" — good!
+• "Thought you knew, got wrong" — these get reviewed first (hypercorrection)
+• "Knew you didn't know" — normal review order
+
+Science: The hypercorrection effect means that when you're WRONG with high confidence, your brain is primed for deeper correction. These cards stick much faster than ones you were uncertain about.
+
+Open it: Learn → "🎯 Pre-Test Mode"
+
+⚡ Pro Tip: Use Pre-Test Mode on a brand new deck before you've studied anything. Even guessing wrong primes your memory for the correct answers.`,
+  },
+];
+
+function GuideHubInline() {
+  const [search, setSearch] = useState('')
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set())
+
+  const filtered = GUIDE_ENTRIES.filter(g => {
+    const q = search.toLowerCase()
+    return !q || g.title.toLowerCase().includes(q) || g.tldr.toLowerCase().includes(q) || g.content.toLowerCase().includes(q)
+  })
+
+  const toggle = (id: string) => {
+    setOpenIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  return (
+    <div>
+      <input
+        type="text"
+        placeholder="Search guides…"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        style={{ width: '100%', marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: 13 }}
+      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {filtered.map(guide => (
+          <div key={guide.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+            <button
+              onClick={() => toggle(guide.id)}
+              style={{ width: '100%', textAlign: 'left', padding: '10px 12px', background: 'var(--bg-secondary)', border: 'none', cursor: 'pointer', color: 'var(--text-primary)' }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{guide.title}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{guide.tldr}</div>
+            </button>
+            {openIds.has(guide.id) && (
+              <div style={{ padding: '12px', background: 'var(--bg-primary)', borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
+                {guide.content}
+              </div>
+            )}
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: 16 }}>No guides match "{search}"</p>
+        )}
+      </div>
+    </div>
+  )
+}
 
 function StatRow({ label, value }: { label: string; value: string | number }) {
   return (
