@@ -21,6 +21,24 @@ jobs:
         with:
           fetch-depth: 1
 
+      # Auto-select model based on complexity keywords
+      # Opus: architecture, refactoring, security, performance, migrations
+      # Sonnet: features, bug fixes, UI changes, content updates (default)
+      - name: Select model based on complexity
+        id: model
+        run: |
+          TITLE="${{ github.event.issue.title || '' }}"
+          BODY="${{ github.event.issue.body || github.event.comment.body || '' }}"
+          COMBINED="$TITLE $BODY"
+          if echo "$COMBINED" | grep -iE "architect|refactor|redesign|complex|performance|security|migrate|overhaul|rebuild|pipeline|infrastructure|system.design|breaking.change|rework" > /dev/null; then
+            echo "model=claude-opus-4-6" >> $GITHUB_OUTPUT
+            echo "Selected: Opus (complex task detected)"
+          else
+            echo "model=claude-sonnet-4-6" >> $GITHUB_OUTPUT
+            echo "Selected: Sonnet (standard task)"
+          fi
+
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: --model ${{ steps.model.outputs.model }}

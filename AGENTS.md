@@ -6,8 +6,8 @@
 
 NousAI is a personal AI-powered study companion — a PWA built with React 19 + TypeScript + Vite. Features include flashcards (FSRS spaced repetition), courses, quizzes, Japanese mode, drawing canvas, gamification (XP/levels/badges), cloud sync, Omi wearable integration, Canvas LMS sync, and PDF upload + OCR → flashcard generation.
 
-- **Production**: https://nousai-app.vercel.app
-- **Repo**: `C:\Users\johnn\Desktop\NousAI-App`
+- **Production**: https://studynous.com (also https://nousai-app.vercel.app — redirects to studynous.com)
+- **Repo**: `C:\Users\johnn\Desktop\NousAI-App` / https://github.com/totallyjohnny7/nousai-app
 - **Version**: 2.0.0
 
 ---
@@ -137,11 +137,21 @@ Cloud sync data lives in Firestore `users/{uid}` as a gzip-compressed JSON blob 
 
 ---
 
+## GitHub Action Behavior
+
+When responding to issues via the Claude Code GitHub Action:
+- **Default model**: `claude-sonnet-4-6` — features, bug fixes, UI, content
+- **Auto-upgraded to Opus**: when issue contains architecture/refactor/security/performance/migration keywords
+- Always run `npm run build` before committing — zero TypeScript errors required
+- Always deploy to `studynous.com` branch (`dev`) — Vercel auto-deploys on push
+- After any UI change, note in the PR what to visually verify on studynous.com
+- Never commit `.env` files or API keys
+
 ## Testing Login
 
 Use the real user account for all production testing (sync bugs only appear with real data volume):
 - **Email**: johnnyluu7@icloud.com
-- **Production**: https://nousai-app.vercel.app
+- **Production**: https://studynous.com
 
 ---
 
