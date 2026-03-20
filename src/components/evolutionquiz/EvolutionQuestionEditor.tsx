@@ -136,7 +136,7 @@ Return ONLY valid JSON array, no markdown.`
 
       const response = await callAI([
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Generate Evolution Exam 2 questions about: ${aiPrompt}` },
+        { role: 'user', content: `Generate Evolution Practium questions about: ${aiPrompt}` },
       ])
 
       const parsed = JSON.parse(response)

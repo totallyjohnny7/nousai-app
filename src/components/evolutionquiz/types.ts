@@ -46,6 +46,7 @@ export interface EvolQuestion {
   expectedAnswer: string
   difficulty: 1 | 2 | 3 | 4 | 5
   examTag?: 'exam1' | 'exam2' | 'exam3'
+  chapterTag?: string
   wrongCount?: number
   lastReviewDate?: string
   srNextReview?: string

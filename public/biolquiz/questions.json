@@ -1,0 +1,135 @@
+{
+  "ch1": {
+    "chapter": 1,
+    "name": "Introduction to Cells and Cell Research",
+    "subtitle": "The molecular approach to cell biology",
+    "topic": "cell-structure",
+    "questions": []
+  },
+  "ch2": {
+    "chapter": 2,
+    "name": "Physical Principles Underlying Cell Structure and Function",
+    "subtitle": "Thermodynamics, chemical bonds, and macromolecular interactions",
+    "topic": "cell-structure",
+    "questions": []
+  },
+  "ch3": {
+    "chapter": 3,
+    "name": "Fundamentals of Molecular Biology",
+    "subtitle": "DNA, RNA, proteins, and the central dogma",
+    "topic": "dna-replication",
+    "questions": []
+  },
+  "ch4": {
+    "chapter": 4,
+    "name": "Genes and Genomes",
+    "subtitle": "Genome organization, gene structure, and regulation",
+    "topic": "genomes",
+    "questions": []
+  },
+  "ch5": {
+    "chapter": 5,
+    "name": "Replication, Maintenance, and Rearrangements of Genomic DNA",
+    "subtitle": "DNA replication, repair, and recombination mechanisms",
+    "topic": "dna-replication",
+    "questions": []
+  },
+  "ch6": {
+    "chapter": 6,
+    "name": "RNA Synthesis and Processing",
+    "subtitle": "Transcription, splicing, and RNA processing",
+    "topic": "genomes",
+    "questions": []
+  },
+  "ch7": {
+    "chapter": 7,
+    "name": "Translational Control and Post-Translational Events",
+    "subtitle": "Translation, protein folding, and modification",
+    "topic": "genomes",
+    "questions": []
+  },
+  "ch8": {
+    "chapter": 8,
+    "name": "Transcriptional Regulation and Epigenetics",
+    "subtitle": "Gene expression control, chromatin remodeling, and epigenetic mechanisms",
+    "topic": "chromatin-chromosomes",
+    "questions": []
+  },
+  "ch9": {
+    "chapter": 9,
+    "name": "Genomics, Proteomics, and Systems Biology",
+    "subtitle": "High-throughput analysis and computational approaches",
+    "topic": "bioinformatics",
+    "questions": []
+  },
+  "ch10": {
+    "chapter": 10,
+    "name": "The Nucleus",
+    "subtitle": "Nuclear envelope, chromatin organization, and nuclear transport",
+    "topic": "nucleus",
+    "questions": []
+  },
+  "ch11": {
+    "chapter": 11,
+    "name": "Protein Processing and Sorting",
+    "subtitle": "ER, Golgi, vesicular trafficking, and secretory pathway",
+    "topic": "cell-structure",
+    "questions": []
+  },
+  "ch12": {
+    "chapter": 12,
+    "name": "Mitochondria, Chloroplasts, and Peroxisomes",
+    "subtitle": "Energy organelles, oxidative phosphorylation, and photosynthesis",
+    "topic": "cell-structure",
+    "questions": []
+  },
+  "ch13": {
+    "chapter": 13,
+    "name": "The Cytoskeleton and Cell Movement",
+    "subtitle": "Actin, microtubules, intermediate filaments, and motor proteins",
+    "topic": "cell-structure",
+    "questions": []
+  },
+  "ch14": {
+    "chapter": 14,
+    "name": "The Plasma Membrane",
+    "subtitle": "Membrane structure, transport, and permeability",
+    "topic": "cell-structure",
+    "questions": []
+  },
+  "ch15": {
+    "chapter": 15,
+    "name": "Cell Walls, the Extracellular Matrix, and Cell Interactions",
+    "subtitle": "ECM components, cell adhesion, and junctions",
+    "topic": "cell-structure",
+    "questions": []
+  },
+  "ch16": {
+    "chapter": 16,
+    "name": "Cell Signaling",
+    "subtitle": "Receptors, signal transduction pathways, and second messengers",
+    "topic": "cell-structure",
+    "questions": []
+  },
+  "ch17": {
+    "chapter": 17,
+    "name": "The Cell Cycle",
+    "subtitle": "Cyclins, CDKs, checkpoints, and cell cycle regulation",
+    "topic": "chromatin-chromosomes",
+    "questions": []
+  },
+  "ch18": {
+    "chapter": 18,
+    "name": "Cell Renewal and Cell Death",
+    "subtitle": "Stem cells, apoptosis, autophagy, and tissue homeostasis",
+    "topic": "dna-repair",
+    "questions": []
+  },
+  "ch19": {
+    "chapter": 19,
+    "name": "Cancer",
+    "subtitle": "Oncogenes, tumor suppressors, and cancer biology",
+    "topic": "dna-repair",
+    "questions": []
+  }
+}

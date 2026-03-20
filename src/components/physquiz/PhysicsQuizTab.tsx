@@ -21,8 +21,9 @@ const PhysicsQuestionEditor = React.lazy(() => import('./PhysicsQuestionEditor')
 const PhysicsSessionView    = React.lazy(() => import('./PhysicsSession'))
 const PhysicsResultsView    = React.lazy(() => import('./PhysicsResults'))
 const PhysicsStatsView      = React.lazy(() => import('./PhysicsStats'))
+const PhysMindMap           = React.lazy(() => import('./PhysMindMap'))
 
-type View = 'menu' | 'editor' | 'session' | 'results' | 'stats'
+type View = 'menu' | 'editor' | 'session' | 'results' | 'stats' | 'mindmap'
 
 const CALC_STATE_KEY = 'nousai-physquiz-calc-state'
 
@@ -49,10 +50,21 @@ interface Props {
 }
 
 export default function PhysicsQuizTab({ course }: Props) {
-  const { updatePluginData } = useStore()
+  const { data: storeData, updatePluginData } = useStore()
 
   const [view, setView]       = useState<View>('menu')
-  const [data, setData]       = useState<PhysicsCourseData>(() => loadData(course.id))
+  const [data, setData]       = useState<PhysicsCourseData>(() => {
+    const local = loadData(course.id)
+    // If localStorage is empty (new device), fall back to cloud copy
+    if (local.questions.length === 0 && local.sessionHistory.length === 0) {
+      const cloudKey = `physicsQuizData_${course.id}`
+      const cloudData = storeData?.pluginData?.[cloudKey]
+      if (cloudData) {
+        try { return migratePhysicsCourseData(cloudData as PhysicsCourseData) } catch { /* ignore */ }
+      }
+    }
+    return local
+  })
   const [session, setSession] = useState<PhysicsSession | null>(null)
   const [calcState, setCalcStateRaw] = useState<Record<string, unknown>>(loadCalcState)
   const [calcActivePanel, setCalcActivePanel] = useState<'calc' | 'units' | 'dimcheck' | null>(null)
@@ -83,8 +95,10 @@ export default function PhysicsQuizTab({ course }: Props) {
           console.error('Physics quiz storage full')
         }
       }
+      // Sync to cloud so questions survive clearing localStorage / switching devices
+      updatePluginData({ [`physicsQuizData_${course.id}`]: next } as never)
     }, 500)
-  }, [course.id])
+  }, [course.id, updatePluginData])
 
   // Cleanup timers
   useEffect(() => () => {
@@ -237,13 +251,38 @@ export default function PhysicsQuizTab({ course }: Props) {
     }
   }
 
+  // ─── Load built-in chapter questions from /physquiz/questions.json ───────
+  const loadChapter = useCallback(async (chapters: string[]) => {
+    const res = await fetch('/physquiz/questions.json')
+    if (!res.ok) throw new Error('Failed to fetch question bank')
+    const bank = await res.json() as Record<string, { questions: PhysicsQuestion[] }>
+    const existingIds = new Set(latestData.current.questions.map(q => q.id))
+    const toAdd: PhysicsQuestion[] = []
+    for (const ch of chapters) {
+      const chData = bank[ch]
+      if (!chData) continue
+      for (const q of chData.questions) {
+        if (!existingIds.has(q.id)) { toAdd.push(q); existingIds.add(q.id) }
+      }
+    }
+    if (toAdd.length > 0) {
+      saveData({ ...latestData.current, questions: [...latestData.current.questions, ...toAdd] })
+    }
+  }, [saveData])
+
   // ─── Start a new session ───────────────────────────────────────────────────
   const startSession = useCallback((
     mode: PhysicsSessionMode,
-    options: { topicFilter?: import('./types').PhysicsTopic; scrambleValues: boolean; stepMode: boolean },
+    options: { topicFilter?: import('./types').PhysicsTopic; chapterFilter?: string[]; scrambleValues: boolean; stepMode: boolean },
   ) => {
     let pool = [...data.questions]
     if (pool.length === 0) return
+
+    // Apply chapter filter first (if set)
+    if (options.chapterFilter && options.chapterFilter.length > 0) {
+      const filtered = pool.filter(q => q.chapterTag && options.chapterFilter!.includes(q.chapterTag))
+      if (filtered.length > 0) pool = filtered
+    }
 
     if (mode === 'weak-topics') {
       pool = pool.filter(q => (q.wrongCount ?? 0) >= 2)
@@ -320,6 +359,8 @@ export default function PhysicsQuizTab({ course }: Props) {
           onStart={startSession}
           onManage={() => setView('editor')}
           onStats={() => setView('stats')}
+          onMindMap={() => setView('mindmap')}
+          onLoadChapter={loadChapter}
         />
       )}
 
@@ -365,6 +406,15 @@ export default function PhysicsQuizTab({ course }: Props) {
           <PhysicsStatsView
             courseData={data}
             onBack={() => setView('menu')}
+          />
+        </React.Suspense>
+      )}
+
+      {view === 'mindmap' && (
+        <React.Suspense fallback={<div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading mind map…</div>}>
+          <PhysMindMap
+            onBack={() => setView('menu')}
+            onQuizBubble={(topic) => startSession('topic-drill', { topicFilter: topic, scrambleValues: false, stepMode: false })}
           />
         </React.Suspense>
       )}

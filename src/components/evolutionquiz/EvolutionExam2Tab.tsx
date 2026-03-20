@@ -14,6 +14,7 @@ import {
 } from './types'
 import { useStore } from '../../store'
 import EvolutionMenu from './EvolutionMenu'
+import { flushQueue } from '../../utils/physicsGradingQueue'
 
 // ─── Lazy-loaded views ────────────────────────────────────────────────────────
 const EvolutionQuestionEditor = React.lazy(() => import('./EvolutionQuestionEditor'))
@@ -39,10 +40,20 @@ interface Props {
 }
 
 export default function EvolutionExam2Tab({ course }: Props) {
-  const { updatePluginData } = useStore()
+  const { data: storeData, updatePluginData } = useStore()
 
   const [view, setView]       = useState<View>('menu')
-  const [data, setData]       = useState<EvolCourseData>(() => loadData(course.id))
+  const [data, setData]       = useState<EvolCourseData>(() => {
+    const local = loadData(course.id)
+    if (local.questions.length === 0 && local.sessionHistory.length === 0) {
+      const cloudKey = `evolQuizData_${course.id}`
+      const cloudData = storeData?.pluginData?.[cloudKey]
+      if (cloudData) {
+        try { return migrateEvolCourseData(cloudData as EvolCourseData) } catch { /* ignore */ }
+      }
+    }
+    return local
+  })
   const [session, setSession] = useState<EvolSession | null>(null)
 
   const saveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -62,8 +73,9 @@ export default function EvolutionExam2Tab({ course }: Props) {
           console.error('Evolution quiz storage full')
         }
       }
+      updatePluginData({ [`evolQuizData_${course.id}`]: next } as never)
     }, 500)
-  }, [course.id])
+  }, [course.id, updatePluginData])
 
   // Cleanup timers
   useEffect(() => () => {
@@ -176,6 +188,47 @@ export default function EvolutionExam2Tab({ course }: Props) {
     }
   }
 
+  // ─── Flush grading queue on reconnect ──────────────────────────────────────
+  useEffect(() => {
+    const onOnline = () => { flushQueue() }
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
+  }, [])
+
+  // ─── Load built-in chapter questions from /evolquiz/questions.json ────────
+  const loadChapter = useCallback(async (chapters: string[]) => {
+    const res = await fetch('/evolquiz/questions.json')
+    if (!res.ok) throw new Error('Failed to fetch evolution question bank')
+    const bank = await res.json() as Record<string, { questions: EvolQuestion[] }>
+    const existingIds = new Set(latestData.current.questions.map(q => q.id))
+    const toAdd: EvolQuestion[] = []
+    for (const ch of chapters) {
+      const chData = bank[ch]
+      if (!chData) continue
+      for (const q of chData.questions) {
+        if (!existingIds.has(q.id)) { toAdd.push(q); existingIds.add(q.id) }
+      }
+    }
+    if (toAdd.length > 0) {
+      saveData({ ...latestData.current, questions: [...latestData.current.questions, ...toAdd] })
+    }
+  }, [saveData])
+
+  // ─── Auto-load all built-in chapters on mount ──────────────────────────────
+  const bankLoadedRef = useRef(false)
+  useEffect(() => {
+    if (bankLoadedRef.current) return
+    bankLoadedRef.current = true
+    const ALL_CHAPTERS = [
+      'ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','ch9',
+      'ch10','ch11','ch12','ch13','ch14','ch15','ch16','ch17','ch18',
+    ]
+    const t = setTimeout(() => {
+      loadChapter(ALL_CHAPTERS).catch(console.error)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [loadChapter])
+
   // ─── Start a new session ───────────────────────────────────────────────────
   const startSession = useCallback((
     mode: EvolSessionMode,
@@ -183,10 +236,17 @@ export default function EvolutionExam2Tab({ course }: Props) {
       topicFilter?: EvolTopic
       headingFilter?: EvolHeading
       examFilter?: 'exam1' | 'exam2' | 'exam3' | 'all'
+      chapterFilter?: string[]
     },
   ) => {
     let pool = [...data.questions]
     if (pool.length === 0) return
+
+    // Apply chapter filter first
+    if (options.chapterFilter && options.chapterFilter.length > 0) {
+      const filtered = pool.filter(q => q.chapterTag && options.chapterFilter!.includes(q.chapterTag))
+      if (filtered.length > 0) pool = filtered
+    }
 
     if (mode === 'weak-topics') {
       pool = pool.filter(q => (q.wrongCount ?? 0) >= 2)
@@ -280,6 +340,7 @@ export default function EvolutionExam2Tab({ course }: Props) {
           onManage={() => setView('editor')}
           onStats={() => setView('stats')}
           onMindMap={() => setView('mindmap')}
+          onLoadChapter={loadChapter}
         />
       )}
 

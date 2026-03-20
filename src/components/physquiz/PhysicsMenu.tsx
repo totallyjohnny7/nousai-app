@@ -3,21 +3,35 @@
  * Shows mode cards, options toggles, stats row, and action buttons.
  */
 import React, { useState } from 'react'
-import { Play, Clock, AlertTriangle, Target, Repeat, BookOpen, BarChart3, Plus } from 'lucide-react'
+import { Play, Clock, AlertTriangle, Target, Repeat, BarChart3, Plus, Download, ChevronDown, ChevronUp } from 'lucide-react'
 import type { PhysicsCourseData, PhysicsSessionMode, PhysicsTopic } from './types'
 import { TOPIC_LABELS, todayDateStr } from './types'
 
 interface StartOptions {
   topicFilter?: PhysicsTopic
+  chapterFilter?: string[]
   scrambleValues: boolean
   stepMode: boolean
 }
+
+const BUILT_IN_CHAPTERS = [
+  { id: 'ch19', label: 'Ch 19', name: 'Current & DC Circuits' },
+  { id: 'ch20', label: 'Ch 20', name: 'Magnetic Forces' },
+  { id: 'ch21', label: 'Ch 21', name: 'EM Induction' },
+  { id: 'ch22', label: 'Ch 22', name: 'Alternating Current' },
+  { id: 'ch23', label: 'Ch 23', name: 'EM Waves' },
+  { id: 'ch24', label: 'Ch 24', name: 'Geometric Optics' },
+  { id: 'ch25', label: 'Ch 25', name: 'Optical Instruments' },
+  { id: 'ch26', label: 'Ch 26', name: 'Interference & Diffraction' },
+]
 
 interface Props {
   data: PhysicsCourseData
   onStart: (mode: PhysicsSessionMode, options: StartOptions) => void
   onManage: () => void
   onStats: () => void
+  onMindMap: () => void
+  onLoadChapter?: (chapters: string[]) => Promise<void>
 }
 
 interface ModeCard {
@@ -71,11 +85,16 @@ const TOPICS_ORDERED: PhysicsTopic[] = [
   'optics', 'electromagnetism', 'circuits', 'modern', 'nuclear', 'other',
 ]
 
-export default function PhysicsMenu({ data, onStart, onManage, onStats }: Props) {
-  const [selectedMode, setSelectedMode] = useState<PhysicsSessionMode | null>(null)
-  const [topicFilter, setTopicFilter]   = useState<PhysicsTopic>('mechanics')
-  const [scramble, setScramble]         = useState(false)
-  const [stepMode, setStepMode]         = useState(false)
+export default function PhysicsMenu({ data, onStart, onManage, onStats, onMindMap, onLoadChapter }: Props) {
+  const [selectedMode, setSelectedMode]   = useState<PhysicsSessionMode | null>(null)
+  const [topicFilter, setTopicFilter]     = useState<PhysicsTopic>('mechanics')
+  const [scramble, setScramble]           = useState(false)
+  const [stepMode, setStepMode]           = useState(false)
+  const [chapterFilter, setChapterFilter] = useState<string[]>([])
+  const [loadSel, setLoadSel]             = useState<string[]>([])
+  const [loading, setLoading]             = useState(false)
+  const [loadSuccess, setLoadSuccess]     = useState<string | null>(null)
+  const [bankExpanded, setBankExpanded]   = useState(false)
 
   const qCount       = data.questions.length
   const sessionCount = data.sessionHistory.length
@@ -104,9 +123,29 @@ export default function PhysicsMenu({ data, onStart, onManage, onStats }: Props)
     if (qCount === 0) return
     onStart(selectedMode, {
       topicFilter: selectedMode === 'topic-drill' ? topicFilter : undefined,
+      chapterFilter: chapterFilter.length > 0 ? chapterFilter : undefined,
       scrambleValues: scramble && hasVariableRanges,
       stepMode: stepMode && hasFreeResponse,
     })
+  }
+
+  async function handleLoadChapters() {
+    if (loadSel.length === 0) return
+    setLoading(true)
+    setLoadSuccess(null)
+    try {
+      await onLoadChapter?.(loadSel)
+      setLoadSuccess(`Loaded ${loadSel.map(c => c.toUpperCase()).join(', ')} into your bank`)
+      setLoadSel([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Count loaded questions per chapter
+  const loadedPerChapter: Record<string, number> = {}
+  for (const q of data.questions) {
+    if (q.chapterTag) loadedPerChapter[q.chapterTag] = (loadedPerChapter[q.chapterTag] ?? 0) + 1
   }
 
   return (
@@ -126,6 +165,112 @@ export default function PhysicsMenu({ data, onStart, onManage, onStats }: Props)
             <StatPill label="Streak" value={`${data.currentStreak}d 🔥`} />
           )}
         </div>
+      </div>
+
+      {/* ── Mind Map button ── */}
+      <button
+        onClick={onMindMap}
+        style={{
+          width: '100%', marginBottom: 16, padding: '14px 16px',
+          background: 'linear-gradient(135deg, #0a0a0a 0%, #0f172a 50%, #1e1b4b 100%)',
+          border: '1px solid #3b82f6', borderRadius: 14, cursor: 'pointer',
+          fontFamily: 'inherit', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', gap: 10, color: '#93c5fd', fontSize: 15, fontWeight: 600,
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = '#60a5fa'; e.currentTarget.style.boxShadow = '0 0 16px #3b82f633' }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = 'none' }}
+      >
+        <span style={{ fontSize: 20 }}>🗺️</span>
+        <div style={{ textAlign: 'left' }}>
+          <div>Physics Mind Map</div>
+          <div style={{ fontSize: 12, color: '#60a5fa', fontWeight: 400 }}>10 topic bubbles — tap to explore</div>
+        </div>
+      </button>
+
+      {/* ── Built-in Question Bank ── */}
+      <div style={{
+        marginBottom: 16, border: '1px solid var(--border-color)',
+        borderRadius: 12, overflow: 'hidden',
+        background: 'var(--bg-card, var(--bg-secondary))',
+      }}>
+        <button
+          onClick={() => setBankExpanded(e => !e)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 16px', background: 'none', border: 'none',
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+            <Download size={15} color="#3b82f6" />
+            Built-in Question Bank (Ch 19–26)
+          </span>
+          {bankExpanded ? <ChevronUp size={15} color="var(--text-muted)" /> : <ChevronDown size={15} color="var(--text-muted)" />}
+        </button>
+
+        {bankExpanded && (
+          <div style={{ padding: '0 16px 14px', borderTop: '1px solid var(--border-color)' }}>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '10px 0 10px' }}>
+              Select chapters to load into your question bank. Already-loaded questions are skipped.
+            </p>
+
+            {/* Chapter chips — load selection */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+              {BUILT_IN_CHAPTERS.map(ch => {
+                const sel = loadSel.includes(ch.id)
+                const loaded = loadedPerChapter[ch.id] ?? 0
+                return (
+                  <button
+                    key={ch.id}
+                    onClick={() => setLoadSel(prev => sel ? prev.filter(x => x !== ch.id) : [...prev, ch.id])}
+                    title={ch.name}
+                    style={{
+                      padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+                      border: `1px solid ${sel ? '#3b82f6' : 'var(--border-color)'}`,
+                      background: sel ? '#3b82f622' : 'transparent',
+                      color: sel ? '#3b82f6' : 'var(--text-muted)',
+                      cursor: 'pointer', fontFamily: 'inherit', position: 'relative',
+                    }}
+                  >
+                    {ch.label}
+                    {loaded > 0 && (
+                      <span style={{ marginLeft: 4, fontSize: 10, color: '#22c55e' }}>✓{loaded}</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={handleLoadChapters}
+                disabled={loadSel.length === 0 || loading}
+                style={{
+                  flex: 1, padding: '8px 12px', background: '#3b82f6', color: '#fff',
+                  border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  cursor: loadSel.length === 0 || loading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit', opacity: loadSel.length === 0 || loading ? 0.6 : 1,
+                }}
+              >
+                {loading ? 'Loading…' : `Load ${loadSel.length > 0 ? loadSel.map(c=>c.toUpperCase()).join(', ') : 'Selected'}`}
+              </button>
+              {loadSel.length < BUILT_IN_CHAPTERS.length && (
+                <button
+                  onClick={() => setLoadSel(BUILT_IN_CHAPTERS.map(c => c.id))}
+                  style={{ padding: '8px 12px', background: 'transparent', color: '#3b82f6', border: '1px solid #3b82f6', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  All
+                </button>
+              )}
+            </div>
+
+            {loadSuccess && (
+              <div style={{ marginTop: 8, fontSize: 12, color: '#22c55e', padding: '6px 10px', background: '#22c55e18', borderRadius: 6, border: '1px solid #22c55e' }}>
+                ✓ {loadSuccess}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Mode cards ── */}
@@ -259,6 +404,39 @@ export default function PhysicsMenu({ data, onStart, onManage, onStats }: Props)
           onChange={setStepMode}
         />
       </div>
+
+      {/* ── Chapter filter for session ── */}
+      {selectedMode && qCount > 0 && data.questions.some(q => q.chapterTag) && (
+        <div style={{
+          marginBottom: 16, padding: '12px 16px',
+          background: 'var(--bg-card, var(--bg-secondary))',
+          border: '1px solid var(--border-color)', borderRadius: 12,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>
+            FILTER BY CHAPTER (optional — empty = all)
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {BUILT_IN_CHAPTERS.filter(ch => (loadedPerChapter[ch.id] ?? 0) > 0).map(ch => {
+              const active = chapterFilter.includes(ch.id)
+              return (
+                <button
+                  key={ch.id}
+                  onClick={() => setChapterFilter(prev => active ? prev.filter(x=>x!==ch.id) : [...prev, ch.id])}
+                  style={{
+                    padding: '3px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+                    border: `1px solid ${active ? '#F5A623' : 'var(--border-color)'}`,
+                    background: active ? '#F5A62322' : 'transparent',
+                    color: active ? '#F5A623' : 'var(--text-muted)',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  {ch.label} <span style={{ fontSize: 10 }}>({loadedPerChapter[ch.id]})</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Start button ── */}
       {selectedMode && (

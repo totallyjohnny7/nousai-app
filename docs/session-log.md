@@ -40,6 +40,27 @@ At the start of every run:
 
 ## Sessions (newest first)
 
+### Session: 2026-03-18 — Automated weekly UX audit + 3 auto-fixes (DEPLOYED)
+- **date**: 2026-03-18
+- **active_branch**: main
+- **status**: completed
+- **files_changed**:
+  - src/App.tsx (offline banner added — shows when syncStatus==='offline')
+  - src/pages/AIToolsPage.tsx (default tool changed from 'ocr' to 'aichat')
+  - src/pages/Dashboard.tsx (welcome CTA for 0-course users in OverviewTab)
+- **skip_testing**: offline-banner, ai-tools-default, dashboard-welcome-cta
+- **notes**: 82-check UX audit (Tester A: pre-med student + Tester B: zero-context onboarding).
+  3 AUTO-FIX items applied and deployed. 6 HUMAN-REVIEW items flagged (see below).
+  HUMAN-REVIEW flags:
+  1. [CRITICAL] No onboarding tour/setup checklist for new users
+  2. [CRITICAL/MAJOR] Learn nav vs Library "Study" tab naming confusion
+  3. [MAJOR] NOUS panel tab discoverability (36px strip)
+  4. [MAJOR] Due count copy — clarify "today's cap" vs "total backlog"
+  5. [MAJOR] Badge earn condition tooltips missing
+  6. [MAJOR] Move "Study Now" card above knowledge graph in Dashboard
+
+---
+
 ### Session: 2026-03-17 — Critical bug fixes (#2 #4 #6 #7)
 - **date**: 2026-03-17
 - **active_branch**: dev

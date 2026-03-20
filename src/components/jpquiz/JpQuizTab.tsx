@@ -21,9 +21,12 @@ import MemoryFlipGame from './minigames/MemoryFlipGame'
 import SentenceBuilderGame from './minigames/SentenceBuilderGame'
 import ListeningQuizGame from './minigames/ListeningQuizGame'
 
+const JpMindMap   = React.lazy(() => import('./JpMindMap'))
+const JpStudyTool = React.lazy(() => import('../aitools/JpStudyTool'))
+
 const DEFAULT_FULL_BANK = [...DEFAULT_VOCAB_BANK, ...DEFAULT_CONVERSATION_BANK, ...JP_SENTENCES]
 
-type View = 'menu' | 'editor' | 'session' | 'results' | 'minigame' | 'vocabbank'
+type View = 'menu' | 'editor' | 'session' | 'results' | 'minigame' | 'vocabbank' | 'mindmap' | 'jpstudy'
 
 function storageKey(courseId: string) { return `nousai-jpquiz-${courseId}` }
 function bankKey(courseId: string) { return `nousai-jpvocab-${courseId}` }
@@ -139,9 +142,34 @@ export default function JpQuizTab({ course, onGoToCourseQuizzes }: Props) {
     setMiniGame(null)
   }, [])
 
+  const TAB_STYLE = (active: boolean, color: string): React.CSSProperties => ({
+    flex: 1, padding: '10px 8px', border: 'none', borderRadius: 8,
+    background: active ? color : 'var(--bg-secondary)',
+    color: active ? '#fff' : 'var(--text-muted)',
+    fontFamily: 'inherit', fontSize: 13, fontWeight: active ? 700 : 400,
+    cursor: 'pointer', transition: 'all 0.15s',
+  })
+
+  const inQuizView = !['mindmap', 'jpstudy'].includes(view)
+  const inMindMap = view === 'mindmap'
+  const inStudy = view === 'jpstudy'
+
   return (
     <div style={{ padding: '0 4px' }}>
-      {view === 'menu' && (
+      {/* ── Top tab bar ── */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, padding: '4px', background: 'var(--bg-card, var(--bg-primary))', borderRadius: 10, border: '1px solid var(--border-color)' }}>
+        <button style={TAB_STYLE(inQuizView, '#F5A623')} onClick={() => { if (!inQuizView) setView('menu') }}>
+          🇯🇵 Quiz
+        </button>
+        <button style={TAB_STYLE(inMindMap, '#ec4899')} onClick={() => setView('mindmap')}>
+          🗺️ Mind Map
+        </button>
+        <button style={TAB_STYLE(inStudy, '#8b5cf6')} onClick={() => setView('jpstudy')}>
+          📖 JP Study
+        </button>
+      </div>
+
+      {inQuizView && view === 'menu' && (
         <QuizMenu
           data={data}
           bank={bank}
@@ -198,6 +226,18 @@ export default function JpQuizTab({ course, onGoToCourseQuizzes }: Props) {
       )}
       {view === 'minigame' && miniGame === 'listening-quiz' && (
         <ListeningQuizGame onBack={backToMenu} bank={bank} />
+      )}
+
+      {view === 'mindmap' && (
+        <React.Suspense fallback={<div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading mind map…</div>}>
+          <JpMindMap onBack={() => setView('menu')} />
+        </React.Suspense>
+      )}
+
+      {view === 'jpstudy' && (
+        <React.Suspense fallback={<div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading JP Study…</div>}>
+          <JpStudyTool />
+        </React.Suspense>
       )}
     </div>
   )

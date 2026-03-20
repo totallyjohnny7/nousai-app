@@ -1,5 +1,5 @@
 /**
- * EvolutionMindMap — Interactive SVG mind map for Evolution Exam 2.
+ * EvolutionMindMap — Interactive SVG mind map for Evolution Practium.
  * 20 bubbles arranged radially (grouped by chapter color).
  * Chapter filter chips to show/hide chapters.
  * Heading filter chips to auto-expand a heading in the detail panel.
@@ -7,10 +7,13 @@
  * isTrap bullets in red. Apply It with AI grading. Exam Traps as flip cards.
  */
 import React, { useState, useRef, useCallback, useEffect } from 'react'
-import { ArrowLeft, X, Maximize2, Minimize2 } from 'lucide-react'
+import { ArrowLeft, X, Maximize2, Minimize2, Pencil, Plus, Trash2, Check } from 'lucide-react'
 import type { EvolBubble, EvolHeading, EvolTopic } from './types'
 import { EVOL_BUBBLES, HEADING_LABELS, CHAPTER_COLORS, CHAPTER_LABELS } from './types'
 import { callAI, isAIConfigured } from '../../utils/ai'
+import { useMindMapEdits } from '../../hooks/useMindMapEdits'
+
+const EDIT_COLORS = ['#22c55e','#3b82f6','#ef4444','#8b5cf6','#f59e0b','#06b6d4','#ec4899','#f97316','#6366f1','#a78bfa']
 
 interface Props {
   onBack: () => void
@@ -165,12 +168,18 @@ interface DetailPanelProps {
   focusMode: boolean
   onToggleFocus: () => void
   activeHeading: EvolHeading | null
+  isEditMode?: boolean
+  onAddBullet?: (heading: EvolHeading) => void
+  onDeleteBullet?: (heading: EvolHeading, index: number) => void
+  onEditBullet?: (heading: EvolHeading, index: number, text: string) => void
+  onRename?: () => void
 }
 
-function DetailPanel({ bubble, onClose, onQuizBubble, focusMode, onToggleFocus, activeHeading }: DetailPanelProps) {
+function DetailPanel({ bubble, onClose, onQuizBubble, focusMode, onToggleFocus, activeHeading, isEditMode, onAddBullet, onDeleteBullet, onEditBullet, onRename }: DetailPanelProps) {
   const [expanded, setExpanded] = useState<Set<EvolHeading>>(
     new Set(activeHeading ? [activeHeading] : ['what-and-why'])
   )
+  const [editingBullet, setEditingBulletDP] = useState<{ heading: EvolHeading; index: number; value: string } | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
   // Auto-expand and scroll when activeHeading changes
@@ -218,9 +227,11 @@ function DetailPanel({ bubble, onClose, onQuizBubble, focusMode, onToggleFocus, 
         <div style={{ width: 14, height: 14, borderRadius: '50%', background: bubble.color, flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, color: bubble.color, fontWeight: 600, marginBottom: 2 }}>{bubble.chapterLabel}</div>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
             {bubble.title}
+            {isEditMode && onRename && <button onClick={onRename} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#F5A623', padding: 2 }}><Pencil size={12} /></button>}
           </h3>
+          {isEditMode && <div style={{ fontSize: 11, color: '#F5A623', marginTop: 2 }}>Edit mode</div>}
         </div>
         <button
           onClick={onToggleFocus}
@@ -340,34 +351,43 @@ function DetailPanel({ bubble, onClose, onQuizBubble, focusMode, onToggleFocus, 
                       </tbody>
                     </table>
                   ) : (
-                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    <ul style={{ margin: 0, paddingLeft: isEditMode ? 0 : 18, listStyle: isEditMode ? 'none' : undefined }}>
                       {hContent.bullets.map((b, i) => (
-                        <li key={i} style={{ marginBottom: 8, lineHeight: 1.5 }}>
-                          <span style={{ fontSize: 13, color: b.isTrap ? '#ef4444' : 'var(--text-primary)' }}>
-                            {b.text}
-                          </span>
-                          {b.isTrap && (
-                            <span style={{
-                              marginLeft: 6, fontSize: 10, padding: '1px 6px',
-                              borderRadius: 4, background: '#ef444422',
-                              color: '#ef4444', border: '1px solid #ef4444',
-                              fontWeight: 700,
-                            }}>
-                              ← trap
-                            </span>
-                          )}
-                          {b.examRef && (
-                            <span style={{
-                              marginLeft: 6, fontSize: 10, padding: '1px 6px',
-                              borderRadius: 4, background: '#f59e0b22',
-                              color: '#f59e0b', border: '1px solid #f59e0b',
-                            }}>
-                              {b.examRef}
-                            </span>
+                        <li key={i} style={{ marginBottom: 8, lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                          {!isEditMode && <span style={{ flexShrink: 0 }}>•</span>}
+                          {isEditMode && editingBullet?.heading === hContent.heading && editingBullet.index === i ? (
+                            <div style={{ flex: 1, display: 'flex', gap: 4 }}>
+                              <textarea value={editingBullet.value} onChange={e => setEditingBulletDP({ ...editingBullet, value: e.target.value })} rows={2} style={{ flex: 1, fontSize: 12, padding: '4px 6px', borderRadius: 4, border: '1px solid #F5A623', background: 'var(--bg-primary)', color: 'var(--text-primary)', resize: 'vertical', fontFamily: 'inherit' }} />
+                              <button onClick={() => { onEditBullet?.(hContent.heading, i, editingBullet.value); setEditingBulletDP(null) }} style={{ background: '#22c55e', border: 'none', borderRadius: 4, cursor: 'pointer', padding: '4px 6px', color: '#fff', flexShrink: 0 }}><Check size={12} /></button>
+                              <button onClick={() => setEditingBulletDP(null)} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 4, cursor: 'pointer', padding: '4px 6px', color: 'var(--text-muted)', flexShrink: 0 }}><X size={12} /></button>
+                            </div>
+                          ) : (
+                            <>
+                              <span style={{ fontSize: 13, color: b.isTrap ? '#ef4444' : 'var(--text-primary)', flex: 1 }}>
+                                {b.text}
+                                {b.isTrap && !isEditMode && (
+                                  <span style={{ marginLeft: 6, fontSize: 10, padding: '1px 6px', borderRadius: 4, background: '#ef444422', color: '#ef4444', border: '1px solid #ef4444', fontWeight: 700 }}>← trap</span>
+                                )}
+                                {b.examRef && !isEditMode && (
+                                  <span style={{ marginLeft: 6, fontSize: 10, padding: '1px 6px', borderRadius: 4, background: '#f59e0b22', color: '#f59e0b', border: '1px solid #f59e0b' }}>{b.examRef}</span>
+                                )}
+                              </span>
+                              {isEditMode && (
+                                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                                  <button onClick={() => setEditingBulletDP({ heading: hContent.heading, index: i, value: b.text })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}><Pencil size={11} /></button>
+                                  <button onClick={() => onDeleteBullet?.(hContent.heading, i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2 }}><Trash2 size={11} /></button>
+                                </div>
+                              )}
+                            </>
                           )}
                         </li>
                       ))}
                     </ul>
+                  )}
+                  {isEditMode && onAddBullet && (
+                    <button onClick={() => onAddBullet(hContent.heading)} style={{ marginTop: 4, width: '100%', padding: '5px', fontSize: 12, background: 'transparent', border: '1px dashed var(--border-color)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-muted)', fontFamily: 'inherit' }}>
+                      <Plus size={11} style={{ display: 'inline', marginRight: 4 }} />Add bullet
+                    </button>
                   )}
                 </div>
               )}
@@ -382,14 +402,58 @@ function DetailPanel({ bubble, onClose, onQuizBubble, focusMode, onToggleFocus, 
 // ─── Main component ────────────────────────────────────────────────────────
 
 export default function EvolutionMindMap({ onBack, onQuizBubble }: Props) {
+  const { bubbles, saveBubbles, isEditMode, setIsEditMode } = useMindMapEdits<EvolBubble>('evol', EVOL_BUBBLES)
   const [selectedBubble, setSelectedBubble] = useState<EvolBubble | null>(null)
   const [focusMode, setFocusMode]           = useState(false)
   const [activeHeading, setActiveHeading]   = useState<EvolHeading | null>(null)
+  const [addModal, setAddModal] = useState<{ title: string; color: string } | null>(null)
+  const [editingTitle, setEditingTitle] = useState<{ id: string; value: string } | null>(null)
 
   // Chapter filter state
   const [visibleChapters, setVisibleChapters] = useState<Set<string>>(
     new Set(['ch10', 'ch11', 'ch12', 'ch15', 'ch16'])
   )
+
+  const deleteBubble = (id: string) => {
+    if (!confirm('Delete this bubble and all its content?')) return
+    saveBubbles(bubbles.filter(b => b.id !== id))
+    if (selectedBubble?.id === id) setSelectedBubble(null)
+  }
+  const commitTitle = (id: string, title: string) => {
+    if (!title.trim()) { setEditingTitle(null); return }
+    const next = bubbles.map(b => b.id === id ? { ...b, title: title.trim() } : b)
+    saveBubbles(next)
+    setSelectedBubble(prev => prev?.id === id ? { ...prev, title: title.trim() } : prev)
+    setEditingTitle(null)
+  }
+  const addBullet = (bubbleId: string, heading: EvolHeading) => {
+    const next = bubbles.map(b => b.id !== bubbleId ? b : {
+      ...b, headings: b.headings.map(h => h.heading !== heading ? h : { ...h, bullets: [...h.bullets, { text: 'New bullet' }] })
+    })
+    saveBubbles(next)
+    setSelectedBubble(next.find(b => b.id === bubbleId) ?? null)
+  }
+  const deleteBulletItem = (bubbleId: string, heading: EvolHeading, index: number) => {
+    const next = bubbles.map(b => b.id !== bubbleId ? b : {
+      ...b, headings: b.headings.map(h => h.heading !== heading ? h : { ...h, bullets: h.bullets.filter((_, i) => i !== index) })
+    })
+    saveBubbles(next)
+    setSelectedBubble(next.find(b => b.id === bubbleId) ?? null)
+  }
+  const editBulletItem = (bubbleId: string, heading: EvolHeading, index: number, text: string) => {
+    const next = bubbles.map(b => b.id !== bubbleId ? b : {
+      ...b, headings: b.headings.map(h => h.heading !== heading ? h : { ...h, bullets: h.bullets.map((bl, i) => i === index ? { ...bl, text } : bl) })
+    })
+    saveBubbles(next)
+    setSelectedBubble(next.find(b => b.id === bubbleId) ?? null)
+  }
+  const addNewBubble = () => {
+    if (!addModal?.title.trim()) return
+    const id = `user_${Date.now().toString(36)}`
+    const newB: EvolBubble = { id, topic: id as EvolBubble['topic'], title: addModal.title.trim(), color: addModal.color, chapter: 'ch10', chapterLabel: 'Custom', headings: [] }
+    saveBubbles([...bubbles, newB])
+    setAddModal(null)
+  }
 
   // Pan + zoom state
   const [pan, setPan]   = useState({ x: 0, y: 0 })
@@ -428,12 +492,12 @@ export default function EvolutionMindMap({ onBack, onQuizBubble }: Props) {
   }, [handleWheel])
 
   // Filter visible bubbles
-  const visibleBubbles = EVOL_BUBBLES.filter(b => visibleChapters.has(b.chapter))
+  const visibleBubbles = bubbles.filter(b => visibleChapters.has(b.chapter))
 
-  // Compute positions for all 20 bubbles (fixed positions based on full array index, not filtered index)
-  const bubblePositions = EVOL_BUBBLES.map((b, i) => ({
+  // Compute positions for all bubbles (fixed positions based on full array index, not filtered index)
+  const bubblePositions = bubbles.map((b, i) => ({
     ...b,
-    ...getBubblePos(i, EVOL_BUBBLES.length),
+    ...getBubblePos(i, bubbles.length),
     visible: visibleChapters.has(b.chapter),
   }))
 
@@ -496,6 +560,18 @@ export default function EvolutionMindMap({ onBack, onQuizBubble }: Props) {
         }}
       >
         <ArrowLeft size={14} /> Back
+      </button>
+
+      {/* ── Edit toggle ── */}
+      <button onClick={() => setIsEditMode(m => !m)} style={{
+        position: 'absolute', top: 48, right: selectedBubble ? 460 : 12, zIndex: 20,
+        background: isEditMode ? '#F5A62333' : 'rgba(0,0,0,0.6)',
+        border: `1px solid ${isEditMode ? '#F5A623' : 'var(--border-color)'}`,
+        borderRadius: 8, color: isEditMode ? '#F5A623' : 'var(--text-muted)', padding: '6px 12px',
+        cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+        display: 'flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(4px)',
+      }}>
+        <Pencil size={13} />{isEditMode ? 'Done Editing' : 'Edit'}
       </button>
 
       {/* ── Chapter filter chips ── */}
@@ -650,9 +726,17 @@ export default function EvolutionMindMap({ onBack, onQuizBubble }: Props) {
           <circle cx={CX} cy={CY} r={CENTER_R + 12} fill="url(#evol-center-grad)" />
           <circle cx={CX} cy={CY} r={CENTER_R} fill="#111" stroke="#a78bfa" strokeWidth={2} />
           <text x={CX} y={CY - 12} textAnchor="middle" fontSize={12} fontWeight={700} fill="#a78bfa">Evolution</text>
-          <text x={CX} y={CY + 4} textAnchor="middle" fontSize={11} fill="#a78bfa" opacity={0.8}>Exam 2</text>
+          <text x={CX} y={CY + 4} textAnchor="middle" fontSize={11} fill="#a78bfa" opacity={0.8}>Practium</text>
           <text x={CX} y={CY + 18} textAnchor="middle" fontSize={10} fill="#9ca3af">20 Bubbles</text>
         </g>
+
+        {/* Add bubble button (edit mode) */}
+        {isEditMode && (
+          <g style={{ cursor: 'pointer' }} onClick={() => setAddModal({ title: '', color: '#a78bfa' })}>
+            <circle cx={CX} cy={CY + CENTER_R + 30} r={20} fill="#F5A62322" stroke="#F5A623" strokeWidth={2} strokeDasharray="4 3" />
+            <text x={CX} y={CY + CENTER_R + 37} textAnchor="middle" fill="#F5A623" fontSize={22}>+</text>
+          </g>
+        )}
 
         {/* Bubble nodes */}
         {bubblePositions.map(b => {
@@ -707,10 +791,66 @@ export default function EvolutionMindMap({ onBack, onQuizBubble }: Props) {
               <text x={b.x} y={b.y + lineOffset + lines.length * 14 + 2} textAnchor="middle" fontSize={8} fill="#555">
                 {b.chapterLabel.split(' — ')[0]}
               </text>
+              {/* Delete overlay in edit mode */}
+              {isEditMode && (
+                <g onClick={e => { e.stopPropagation(); deleteBubble(b.id) }} style={{ cursor: 'pointer' }}>
+                  <circle cx={b.x + BUBBLE_R - 8} cy={b.y - BUBBLE_R + 8} r={10} fill="#ef4444" />
+                  <text x={b.x + BUBBLE_R - 8} y={b.y - BUBBLE_R + 13} textAnchor="middle" fontSize={13} fill="#fff" fontWeight={700}>✕</text>
+                </g>
+              )}
             </g>
           )
         })}
       </svg>
+
+      {/* ── Rename modal ── */}
+      {editingTitle && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg-secondary, #111)', border: '1px solid var(--border-color)', borderRadius: 12, padding: 24, minWidth: 320 }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: 16, color: 'var(--text-primary)' }}>Rename Bubble</h3>
+            <input
+              autoFocus
+              value={editingTitle.value}
+              onChange={e => setEditingTitle(t => t ? { ...t, value: e.target.value } : t)}
+              onKeyDown={e => { if (e.key === 'Enter') commitTitle(editingTitle.id, editingTitle.value); if (e.key === 'Escape') setEditingTitle(null) }}
+              style={{ width: '100%', padding: '8px 10px', boxSizing: 'border-box', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit' }}
+            />
+            <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
+              <button onClick={() => setEditingTitle(null)} style={{ padding: '7px 16px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 6, color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>Cancel</button>
+              <button onClick={() => commitTitle(editingTitle.id, editingTitle.value)} style={{ padding: '7px 16px', background: '#F5A623', border: 'none', borderRadius: 6, color: '#000', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add bubble modal ── */}
+      {addModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg-secondary, #111)', border: '1px solid var(--border-color)', borderRadius: 12, padding: 24, minWidth: 320 }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: 16, color: 'var(--text-primary)' }}>Add New Bubble</h3>
+            <input
+              autoFocus
+              placeholder="Bubble title"
+              value={addModal.title}
+              onChange={e => setAddModal(m => m ? { ...m, title: e.target.value } : m)}
+              onKeyDown={e => { if (e.key === 'Enter') addNewBubble(); if (e.key === 'Escape') setAddModal(null) }}
+              style={{ width: '100%', padding: '8px 10px', boxSizing: 'border-box', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 6, color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit' }}
+            />
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>Color</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {EDIT_COLORS.map(c => (
+                  <button key={c} onClick={() => setAddModal(m => m ? { ...m, color: c } : m)} style={{ width: 24, height: 24, borderRadius: '50%', background: c, border: addModal.color === c ? '3px solid #fff' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+              <button onClick={() => setAddModal(null)} style={{ padding: '7px 16px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 6, color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>Cancel</button>
+              <button onClick={addNewBubble} disabled={!addModal.title.trim()} style={{ padding: '7px 16px', background: '#F5A623', border: 'none', borderRadius: 6, color: '#000', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, opacity: addModal.title.trim() ? 1 : 0.5 }}>Add</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Detail panel ── */}
       {selectedBubble && (
@@ -722,6 +862,11 @@ export default function EvolutionMindMap({ onBack, onQuizBubble }: Props) {
             focusMode={focusMode}
             onToggleFocus={() => setFocusMode(f => !f)}
             activeHeading={activeHeading}
+            isEditMode={isEditMode}
+            onAddBullet={heading => addBullet(selectedBubble.id, heading)}
+            onDeleteBullet={(heading, index) => deleteBulletItem(selectedBubble.id, heading, index)}
+            onEditBullet={(heading, index, text) => editBulletItem(selectedBubble.id, heading, index, text)}
+            onRename={() => setEditingTitle({ id: selectedBubble.id, value: selectedBubble.title })}
           />
         </div>
       )}

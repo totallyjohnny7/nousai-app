@@ -74,6 +74,7 @@ export interface PhysicsQuestion {
   questionImageMime?: string
   diagramData?: string            // JSON.stringify(ExcalidrawScene), gzip-compressed → base64
   diagramThumbnailBase64?: string
+  questionImageUrl?: string       // URL to static image (e.g. /physquiz/images/ch19/img-0.jpeg)
   starred?: boolean
   examTag?: string
   chapterTag?: string

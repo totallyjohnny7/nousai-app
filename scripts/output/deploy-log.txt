@@ -1,0 +1,19 @@
+Retrieving project…
+Deploying totallyjohnny7s-projects/nousai-app
+Uploading [--------------------] (0.0B/11.7MB)
+Uploading [=====---------------] (2.9MB/11.7MB)
+Uploading [==========----------] (5.8MB/11.7MB)
+Uploading [===============-----] (8.7MB/11.7MB)
+Uploading [====================] (11.7MB/11.7MB)
+Inspect: https://vercel.com/totallyjohnny7s-projects/nousai-app/DugSSjwwDjQ5LtUHA7aHTuxdNyD3 [7s]
+Production: https://nousai-hd1h9did3-totallyjohnny7s-projects.vercel.app [7s]
+https://nousai-hd1h9did3-totallyjohnny7s-projects.vercel.appBuilding...
+Building...
+Building: Running build in Washington, D.C., USA (East) – iad1
+Building: Build machine configuration: 2 cores, 8 GB
+Building: Retrieving list of deployment files...
+Building: Downloading 2586 deployment files...
+Building: Restored build cache from previous deployment (DXXcLjeJQZ3zVBiVHwwTCiFDeNB1)
+Building: Running "vercel build"
+Building: Vercel CLI 50.32.4
+Building: Installing dependencies...

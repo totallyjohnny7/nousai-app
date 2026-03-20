@@ -86,7 +86,7 @@ export default function PathTab({
   const [editingContentId, setEditingContentId] = useState<string | null>(null);
   const [editContentText, setEditContentText] = useState('');
 
-  const chapters = course.topics;
+  const chapters = course.topics || [];
 
   // --- CRUD helpers ---
   const updateCourseTopics = useCallback((newTopics: import('../../types').CourseTopic[]) => {
@@ -294,7 +294,7 @@ export default function PathTab({
             if (c.id !== course.id) return c;
             return {
               ...c,
-              topics: c.topics.map(t => t.id === topicId ? { ...t, links } : t),
+              topics: (c.topics || []).map(t => t.id === topicId ? { ...t, links } : t),
             };
           }),
         },

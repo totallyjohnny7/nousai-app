@@ -1,0 +1,40 @@
+<h2>When should the figure be generated?</h2>
+<p class="subtitle">This shapes the whole architecture — pick the trigger that fits how you study</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>On-Demand — "Generate Figure" button</h3>
+      <p>A button appears below the question text when no image exists. Tap it → AI generates the diagram in ~3s → it appears and is cached. Never fires automatically, zero cost until clicked.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Zero API cost until you want it</li><li>You stay in control</li><li>Cached forever after first tap</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Requires manual tap every new question</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Auto — generates silently when question loads</h3>
+      <p>As soon as a question with no image is shown, a background AI call fires. A small spinner appears where the figure will be. Diagram slots in when ready. Cached after first view.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Seamless — figure just appears</li><li>No extra interaction needed</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>API call on every unimaged question, even if you skip it</li><li>Slight distraction during load</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Batch Pre-generate — run once, embedded in all questions</h3>
+      <p>A one-time script generates figures for all 179 image-less questions, writes the HTML into storage, done. Every question instantly shows its figure from then on — no per-session AI calls.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Fastest in-session (no wait ever)</li><li>Works offline after generation</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>One upfront API cost (~179 calls)</li><li>Requires running a script once</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

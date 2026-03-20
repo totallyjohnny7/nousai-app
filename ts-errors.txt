@@ -1,0 +1,81 @@
+src/components/aitools/BigContentTool.tsx(11,15): error TS2305: Module '"../../types"' has no exported member 'PipelineConfig'.
+src/components/aitools/BigContentTool.tsx(57,41): error TS7006: Parameter '_' implicitly has an 'any' type.
+src/components/aitools/BigContentTool.tsx(57,44): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/aitools/BigContentTool.tsx(110,81): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/components/aitools/BigContentTool.tsx(208,71): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/components/aitools/BigContentTool.tsx(215,72): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/components/aitools/BigContentTool.tsx(224,41): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/components/aitools/LeechManagerTool.tsx(22,85): error TS2345: Argument of type '(c: Record<string, unknown>) => { key: string; lapses: number; state: string | undefined; history: { grade: number; }[] | undefined; front: string | undefined; back: string | undefined; }' is not assignable to parameter of type '(value: SRCard, index: number, array: SRCard[]) => { key: string; lapses: number; state: string | undefined; history: { grade: number; }[] | undefined; front: string | undefined; back: string | undefined; }'.
+  Types of parameters 'c' and 'value' are incompatible.
+    Type 'SRCard' is not assignable to type 'Record<string, unknown>'.
+      Index signature for type 'string' is missing in type 'SRCard'.
+src/components/aitools/LeechManagerTool.tsx(34,38): error TS2345: Argument of type '(c: Record<string, unknown>) => Record<string, unknown>' is not assignable to parameter of type '(value: SRCard, index: number, array: SRCard[]) => Record<string, unknown>'.
+  Types of parameters 'c' and 'value' are incompatible.
+    Type 'SRCard' is not assignable to type 'Record<string, unknown>'.
+      Index signature for type 'string' is missing in type 'SRCard'.
+src/components/aitools/LeechManagerTool.tsx(38,63): error TS2322: Type 'Record<string, unknown>[]' is not assignable to type 'SRCard[]'.
+  Type 'Record<string, unknown>' is missing the following properties from type 'SRCard': key, subject, subtopic, S, and 9 more.
+src/components/aitools/ProcedureQuizTool.tsx(11,15): error TS2305: Module '"../../types"' has no exported member 'SavedProcedure'.
+src/components/aitools/ProcedureQuizTool.tsx(11,31): error TS2305: Module '"../../types"' has no exported member 'ProcedureQuizResult'.
+src/components/aitools/ProcedureQuizTool.tsx(148,9): error TS2740: Type '{}' is missing the following properties from type 'SavedProcedure[]': length, pop, push, concat, and 29 more.
+src/components/aitools/ProcedureQuizTool.tsx(255,33): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/components/aitools/ProcedureQuizTool.tsx(306,12): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/components/aitools/ProcedureQuizTool.tsx(761,36): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/aitools/ProcedureQuizTool.tsx(761,42): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/aitools/ProcedureQuizTool.tsx(776,35): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/aitools/ProcedureQuizTool.tsx(776,41): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/aitools/ProcedureQuizTool.tsx(791,35): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/aitools/ProcedureQuizTool.tsx(791,41): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/components/aitools/VideoTool.tsx(3,15): error TS2305: Module '"../../types"' has no exported member 'SavedVideo'.
+src/components/aitools/VideoTool.tsx(3,27): error TS2305: Module '"../../types"' has no exported member 'VideoCaption'.
+src/components/aitools/VideoTool.tsx(3,41): error TS2305: Module '"../../types"' has no exported member 'VideoUploadProgress'.
+src/components/aitools/VideoTool.tsx(40,11): error TS2339: Property 'addVideo' does not exist on type 'StoreCtx'.
+src/components/aitools/VideoTool.tsx(40,21): error TS2339: Property 'savedVideos' does not exist on type 'StoreCtx'.
+src/components/ContentRelay.tsx(13,15): error TS2305: Module '"../types"' has no exported member 'RelayPayload'.
+src/components/ContentRelay.tsx(13,29): error TS2305: Module '"../types"' has no exported member 'RelayContentType'.
+src/components/evolutionquiz/EvolutionPractiumTab.tsx(247,43): error TS2339: Property 'chapterTag' does not exist on type 'EvolQuestion'.
+src/components/evolutionquiz/EvolutionPractiumTab.tsx(247,91): error TS2339: Property 'chapterTag' does not exist on type 'EvolQuestion'.
+src/components/evolutionquiz/EvolutionPractiumTab.tsx(343,11): error TS2322: Type '{ data: EvolCourseData; onStart: (mode: EvolSessionMode, options: { topicFilter?: EvolTopic | undefined; headingFilter?: EvolHeading | undefined; examFilter?: "all" | ... 3 more ... | undefined; chapterFilter?: string[] | undefined; }) => void; onManage: () => void; onStats: () => void; onMindMap: () => void; onLoad...' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'onLoadChapter' does not exist on type 'IntrinsicAttributes & Props'.
+src/components/flashcards/LeechPanel.tsx(10,15): error TS2305: Module '"../../types"' has no exported member 'LeechAnalysis'.
+src/components/learn/PreTestMode.tsx(10,30): error TS2305: Module '"../../types"' has no exported member 'PreTestResult'.
+src/components/VideoPlayer.tsx(2,15): error TS2305: Module '"../types"' has no exported member 'SavedVideo'.
+src/components/VideoPlayer.tsx(2,27): error TS2305: Module '"../types"' has no exported member 'VideoCaption'.
+src/components/VideoPlayer.tsx(2,41): error TS2305: Module '"../types"' has no exported member 'VideoNote'.
+src/components/VideoPlayer.tsx(2,52): error TS2305: Module '"../types"' has no exported member 'VideoNoteCategory'.
+src/components/VideoPlayer.tsx(2,71): error TS2305: Module '"../types"' has no exported member 'VideoNoteTemplate'.
+src/components/VideoPlayer.tsx(34,11): error TS2339: Property 'updateVideoMeta' does not exist on type 'StoreCtx'.
+src/components/VideoPlayer.tsx(201,85): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/components/VideoPlayer.tsx(508,52): error TS7006: Parameter 'ts' implicitly has an 'any' type.
+src/pages/UnifiedLearnPage.tsx(150,17): error TS2352: Conversion of type 'SRCard[]' to type 'FlashcardItem[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'SRCard' is missing the following properties from type 'FlashcardItem': front, back
+src/pages/UnifiedLearnPage.tsx(161,17): error TS2352: Conversion of type 'SRCard[]' to type 'FlashcardItem[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'SRCard' is missing the following properties from type 'FlashcardItem': front, back
+src/pages/VideosPage.tsx(2,15): error TS2305: Module '"../types"' has no exported member 'SavedVideo'.
+src/pages/VideosPage.tsx(29,11): error TS2339: Property 'savedVideos' does not exist on type 'StoreCtx'.
+src/pages/VideosPage.tsx(29,24): error TS2339: Property 'deleteVideo' does not exist on type 'StoreCtx'.
+src/pages/VideosPage.tsx(39,13): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/pages/VideosPage.tsx(45,12): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/pages/VideosPage.tsx(45,15): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/pages/VideosPage.tsx(48,32): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/pages/VideosPage.tsx(110,25): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/utils/bigContentPipeline.ts(9,15): error TS2305: Module '"../types"' has no exported member 'PipelineConfig'.
+src/utils/bigContentPipeline.ts(9,31): error TS2305: Module '"../types"' has no exported member 'PipelineResult'.
+src/utils/bigContentPipeline.ts(9,47): error TS2305: Module '"../types"' has no exported member 'CardQualityScore'.
+src/utils/bigContentPipeline.ts(72,76): error TS2339: Property 'type' does not exist on type 'FlashcardItem'.
+src/utils/bigContentPipeline.ts(83,39): error TS2339: Property 'type' does not exist on type 'FlashcardItem'.
+src/utils/calibrationTracker.ts(9,15): error TS2305: Module '"../types"' has no exported member 'CalibrationPoint'.
+src/utils/calibrationTracker.ts(9,33): error TS2305: Module '"../types"' has no exported member 'CalibrationStats'.
+src/utils/cardQualityAnalyzer.ts(9,15): error TS2305: Module '"../types"' has no exported member 'CardQualityScore'.
+src/utils/cardQualityAnalyzer.ts(9,33): error TS2305: Module '"../types"' has no exported member 'CardIssueType'.
+src/utils/clozeParser.ts(9,15): error TS2305: Module '"../types"' has no exported member 'ClozePart'.
+src/utils/contentRelay.ts(9,15): error TS2305: Module '"../types"' has no exported member 'RelayPayload'.
+src/utils/contentRelay.ts(9,29): error TS2305: Module '"../types"' has no exported member 'RelayContentType'.
+src/utils/contentRelay.ts(10,10): error TS2305: Module '"./auth"' has no exported member 'writeRelayDoc'.
+src/utils/contentRelay.ts(10,25): error TS2305: Module '"./auth"' has no exported member 'watchRelayDoc'.
+src/utils/contentRelay.ts(10,40): error TS2305: Module '"./auth"' has no exported member 'deleteRelayDoc'.
+src/utils/contentRelay.ts(53,30): error TS7006: Parameter 'rawData' implicitly has an 'any' type.
+src/utils/forgettingAlerts.ts(9,15): error TS2305: Module '"../types"' has no exported member 'ForgettingAlert'.
+src/utils/leechDetection.ts(9,15): error TS2305: Module '"../types"' has no exported member 'LeechAnalysis'.
+src/utils/leechDetection.ts(9,30): error TS2305: Module '"../types"' has no exported member 'LeechSuggestedAction'.
+src/utils/videoStorage.ts(9,10): error TS2305: Module '"./auth"' has no exported member 'getFirebaseStorageFns'.

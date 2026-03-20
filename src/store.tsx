@@ -138,6 +138,7 @@ const AUTO_SYNC_DEBOUNCE_MS = 30 * 1000; // 30 seconds
 class AutoSyncScheduler {
   private timer: ReturnType<typeof setTimeout> | null = null;
   dirty = false;
+  private failCount = 0;           // consecutive failure count for retry backoff
   private dataRef: React.RefObject<NousAIData | null>;
   onFlushStart?: () => void;
   onFlushEnd?: (success: boolean) => void;
@@ -169,12 +170,22 @@ class AutoSyncScheduler {
       await syncToCloud(uid, this.dataRef.current);
       const now = new Date().toISOString();
       localStorage.setItem('nousai-last-sync', now);
+      this.failCount = 0; // reset on success
       console.log('[AUTO-SYNC] Synced to cloud at', now);
       window.dispatchEvent(new CustomEvent('nousai-synced'));
       this.onFlushEnd?.(true);
     } catch (e) {
-      console.error('[AUTO-SYNC] Failed:', e);
+      this.failCount++;
+      console.error('[AUTO-SYNC] Failed (attempt', this.failCount, '):', e);
       this.dirty = true; // retry on next change
+      // Notify UI about the delay — dispatch with retry count so components can show context
+      window.dispatchEvent(new CustomEvent('nousai-sync-delayed', {
+        detail: { attempt: this.failCount, error: e instanceof Error ? e.message : 'Unknown error' }
+      }));
+      // Exponential backoff retry: 30s × 2^(failCount-1), capped at 5 minutes
+      const retryDelay = Math.min(AUTO_SYNC_DEBOUNCE_MS * Math.pow(2, this.failCount - 1), 300_000);
+      if (this.timer) clearTimeout(this.timer);
+      this.timer = setTimeout(() => this.flush(), retryDelay);
       this.onFlushEnd?.(false);
     }
   }
@@ -371,6 +382,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     autoSyncRef.current.onFlushStart = () => setSyncStatus('syncing');
     autoSyncRef.current.onFlushEnd = (success) => setSyncStatus(success ? 'synced' : 'error');
+  }, []);
+
+  // Show sync delay toast via CustomEvent — emitted by AutoSyncScheduler on retry
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ attempt: number; error: string }>).detail;
+      // Dispatch a global toast event that any component can listen to
+      window.dispatchEvent(new CustomEvent('nousai-toast', {
+        detail: {
+          message: detail.attempt === 1
+            ? '⚠ Sync delayed — retrying…'
+            : `⚠ Sync failed (attempt ${detail.attempt}) — retrying in ${Math.min(30 * Math.pow(2, detail.attempt - 1), 300)}s`,
+          type: 'warning',
+          duration: 5000,
+        }
+      }));
+    };
+    window.addEventListener('nousai-sync-delayed', handler);
+    return () => window.removeEventListener('nousai-sync-delayed', handler);
   }, []);
 
   // Listen to nousai-synced event (fired by AutoSyncScheduler on success)

@@ -31,7 +31,7 @@ const DEFAULT_CONFIG: FSRSConfig = {
 };
 
 export type Grade = 1 | 2 | 3 | 4; // 1=Again, 2=Hard, 3=Good, 4=Easy
-export type CardState = 'new' | 'learning' | 'review' | 'mature';
+export type CardState = 'new' | 'learning' | 'review' | 'mature' | 'suspended';
 
 export interface FSRSCard {
   key: string;
@@ -173,7 +173,7 @@ export function questionToGrade(correct: boolean, responseTimeMs: number): Grade
 export function getDueCards(cards: FSRSCard[]): FSRSCard[] {
   const now = Date.now();
   return cards
-    .filter(c => new Date(c.nextReview).getTime() <= now)
+    .filter(c => c.state !== 'suspended' && new Date(c.nextReview).getTime() <= now)
     .sort((a, b) => new Date(a.nextReview).getTime() - new Date(b.nextReview).getTime());
 }
 

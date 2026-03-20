@@ -5,5 +5,9 @@ service firebase.storage {
     match /users/{uid}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+    // Video Studio: users can only access their own uploaded/recorded videos
+    match /videos/{userId}/{allPaths=**} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }

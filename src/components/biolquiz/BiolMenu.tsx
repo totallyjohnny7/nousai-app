@@ -1,5 +1,5 @@
 /**
- * BiolMenu — Start screen for the BIOL 3020 Exam 2 Practicum.
+ * BiolMenu — Start screen for the BIOL3020 Practium.
  * Shows mode cards, topic picker, exam filter, streak, and action buttons.
  */
 import React, { useState } from 'react'
@@ -112,7 +112,7 @@ export default function BiolMenu({ data, onStart, onManage, onStats, onMindMap }
       {/* ── Header ── */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
         <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-          🧬 BIOL 3020 Exam 2 Practicum
+          🧬 BIOL3020 Practium
         </h2>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap' }}>
           <StatPill label="Questions" value={String(qCount)} />

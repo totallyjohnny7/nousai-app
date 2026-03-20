@@ -536,7 +536,7 @@ function SchedulerTab({
       c.name.toLowerCase().includes(courseName.toLowerCase()) ||
       courseName.toLowerCase().includes(c.name.toLowerCase())
     );
-    const topics = matchedCourse?.topics.map(t => t.name) || [];
+    const topics = matchedCourse?.topics?.map(t => t.name) || [];
 
     // Try AI-powered generation first
     if (isAIConfigured() && topics.length > 0) {

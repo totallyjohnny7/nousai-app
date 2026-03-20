@@ -1,10 +1,10 @@
 /**
- * EvolutionMenu — Start screen for the Evolution Exam 2 Practicum.
+ * EvolutionMenu — Start screen for the Evolution Practium.
  * Shows mode cards (including heading-drill), topic/heading picker,
  * exam filter, streak, and action buttons.
  */
 import React, { useState } from 'react'
-import { Play, Clock, AlertTriangle, Target, Repeat, BarChart3, Plus, Map, Sparkles, BookOpen } from 'lucide-react'
+import { Play, Clock, AlertTriangle, Target, Repeat, BarChart3, Plus, Map, Sparkles, BookOpen, ChevronDown, ChevronUp, Download } from 'lucide-react'
 import type { EvolCourseData, EvolSessionMode, EvolTopic, EvolHeading } from './types'
 import { TOPIC_LABELS, HEADING_LABELS, todayDateStr } from './types'
 
@@ -12,6 +12,7 @@ interface StartOptions {
   topicFilter?: EvolTopic
   headingFilter?: EvolHeading
   examFilter?: 'exam1' | 'exam2' | 'exam3' | 'all'
+  chapterFilter?: string[]
 }
 
 interface Props {
@@ -20,7 +21,29 @@ interface Props {
   onManage: () => void
   onStats: () => void
   onMindMap: () => void
+  onLoadChapter?: (chapters: string[]) => Promise<void>
 }
+
+const BUILT_IN_CHAPTERS = [
+  { id: 'ch1',  label: 'Ch 1 – The Whale & the Virus' },
+  { id: 'ch2',  label: 'Ch 2 – Natural Philosophy to Darwin' },
+  { id: 'ch3',  label: 'Ch 3 – What the Rocks Say' },
+  { id: 'ch4',  label: 'Ch 4 – The Tree of Life' },
+  { id: 'ch5',  label: 'Ch 5 – Raw Material' },
+  { id: 'ch6',  label: 'Ch 6 – The Ways of Change' },
+  { id: 'ch7',  label: 'Ch 7 – Beyond Alleles' },
+  { id: 'ch8',  label: 'Ch 8 – Natural Selection' },
+  { id: 'ch9',  label: 'Ch 9 – The History in Our Genes' },
+  { id: 'ch10', label: 'Ch 10 – Adaptation' },
+  { id: 'ch11', label: 'Ch 11 – Sex' },
+  { id: 'ch12', label: 'Ch 12 – After Conception' },
+  { id: 'ch13', label: 'Ch 13 – The Origin of Species' },
+  { id: 'ch14', label: 'Ch 14 – Macroevolution' },
+  { id: 'ch15', label: 'Ch 15 – Intimate Partnerships' },
+  { id: 'ch16', label: 'Ch 16 – Brains and Behavior' },
+  { id: 'ch17', label: 'Ch 17 – Human Evolution' },
+  { id: 'ch18', label: 'Ch 18 – Evolutionary Medicine' },
+]
 
 interface ModeCard {
   mode: EvolSessionMode
@@ -95,11 +118,16 @@ const EXAM_FILTERS = [
   { value: 'exam3', label: 'Exam 3' },
 ] as const
 
-export default function EvolutionMenu({ data, onStart, onManage, onStats, onMindMap }: Props) {
+export default function EvolutionMenu({ data, onStart, onManage, onStats, onMindMap, onLoadChapter }: Props) {
   const [selectedMode, setSelectedMode] = useState<EvolSessionMode | null>(null)
   const [topicFilter, setTopicFilter]     = useState<EvolTopic>('evo-devo')
   const [headingFilter, setHeadingFilter] = useState<EvolHeading>('apply-it')
   const [examFilter, setExamFilter]       = useState<'exam1' | 'exam2' | 'exam3' | 'all'>('all')
+  const [chapterFilter, setChapterFilter] = useState<string[]>([])
+  const [bankExpanded, setBankExpanded]   = useState(false)
+  const [loadSel, setLoadSel]             = useState<string[]>([])
+  const [loading, setLoading]             = useState(false)
+  const [loadSuccess, setLoadSuccess]     = useState('')
 
   const qCount       = data.questions.length
   const sessionCount = data.sessionHistory.length
@@ -115,6 +143,23 @@ export default function EvolutionMenu({ data, onStart, onManage, onStats, onMind
       )
     : null
 
+  const loadedPerChapter = BUILT_IN_CHAPTERS.reduce<Record<string, number>>((acc, ch) => {
+    acc[ch.id] = data.questions.filter(q => q.chapterTag === ch.id).length
+    return acc
+  }, {})
+
+  async function handleLoadChapters() {
+    if (!onLoadChapter || loadSel.length === 0) return
+    setLoading(true)
+    try {
+      await onLoadChapter(loadSel)
+      setLoadSuccess(`✓ Loaded ${loadSel.length} chapter(s)`)
+      setLoadSel([])
+      setTimeout(() => setLoadSuccess(''), 3000)
+    } catch { /* ignore */ }
+    setLoading(false)
+  }
+
   function handleStart() {
     if (!selectedMode) return
     if (qCount === 0) return
@@ -122,6 +167,7 @@ export default function EvolutionMenu({ data, onStart, onManage, onStats, onMind
       topicFilter: selectedMode === 'topic-drill' ? topicFilter : undefined,
       headingFilter: selectedMode === 'heading-drill' ? headingFilter : undefined,
       examFilter,
+      chapterFilter: chapterFilter.length > 0 ? chapterFilter : undefined,
     })
   }
 
@@ -131,7 +177,7 @@ export default function EvolutionMenu({ data, onStart, onManage, onStats, onMind
       {/* ── Header ── */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
         <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
-          🌿 Evolution Exam 2 Practicum
+          🌿 Evolution Practium
         </h2>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap' }}>
           <StatPill label="Questions" value={String(qCount)} />
@@ -351,6 +397,134 @@ export default function EvolutionMenu({ data, onStart, onManage, onStats, onMind
                 </button>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Built-in Chapter Bank ── */}
+      {onLoadChapter && (
+        <div style={{
+          marginBottom: 16,
+          border: '1px solid #6366f1',
+          borderRadius: 12,
+          overflow: 'hidden',
+        }}>
+          <button
+            onClick={() => setBankExpanded(e => !e)}
+            style={{
+              width: '100%', padding: '12px 16px',
+              background: '#6366f111',
+              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              color: '#a5b4fc', fontSize: 13, fontWeight: 700,
+            }}
+          >
+            <span>
+              <BookOpen size={13} style={{ marginRight: 7, verticalAlign: 'middle' }} />
+              Built-in Question Bank (Ch 1–18)
+              {qCount > 0 && <span style={{ marginLeft: 8, fontSize: 11, opacity: 0.7 }}>· {qCount} loaded</span>}
+            </span>
+            {bankExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          {bankExpanded && (
+            <div style={{ padding: '12px 16px', background: '#6366f108' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                {BUILT_IN_CHAPTERS.map(ch => {
+                  const loaded = loadedPerChapter[ch.id] ?? 0
+                  const sel = loadSel.includes(ch.id)
+                  return (
+                    <button
+                      key={ch.id}
+                      onClick={() => setLoadSel(s => sel ? s.filter(x => x !== ch.id) : [...s, ch.id])}
+                      style={{
+                        padding: '5px 10px', borderRadius: 7, fontSize: 11, fontFamily: 'inherit',
+                        cursor: 'pointer',
+                        border: `1px solid ${sel ? '#6366f1' : loaded > 0 ? '#22c55e' : 'var(--border-color)'}`,
+                        background: sel ? '#6366f133' : loaded > 0 ? '#22c55e11' : 'transparent',
+                        color: sel ? '#a5b4fc' : loaded > 0 ? '#86efac' : 'var(--text-muted)',
+                        fontWeight: sel ? 700 : 400,
+                      }}
+                    >
+                      {ch.label}{loaded > 0 ? ` ✓${loaded}` : ''}
+                    </button>
+                  )
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  onClick={() => setLoadSel(BUILT_IN_CHAPTERS.map(c => c.id))}
+                  style={{
+                    fontSize: 11, padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
+                    border: '1px solid var(--border-color)', background: 'transparent',
+                    color: 'var(--text-muted)', fontFamily: 'inherit',
+                  }}
+                >All</button>
+                <button
+                  onClick={() => setLoadSel([])}
+                  style={{
+                    fontSize: 11, padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
+                    border: '1px solid var(--border-color)', background: 'transparent',
+                    color: 'var(--text-muted)', fontFamily: 'inherit',
+                  }}
+                >None</button>
+                <button
+                  disabled={loading || loadSel.length === 0}
+                  onClick={handleLoadChapters}
+                  style={{
+                    marginLeft: 'auto',
+                    fontSize: 12, padding: '6px 14px', borderRadius: 8, cursor: loading || loadSel.length === 0 ? 'not-allowed' : 'pointer',
+                    border: 'none', background: loading || loadSel.length === 0 ? '#6366f155' : '#6366f1',
+                    color: '#fff', fontWeight: 700, fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <Download size={12} />
+                  {loading ? 'Loading…' : `Load ${loadSel.length > 0 ? `(${loadSel.length})` : ''}`}
+                </button>
+              </div>
+              {loadSuccess && (
+                <p style={{ marginTop: 8, color: '#86efac', fontSize: 12, fontWeight: 700 }}>{loadSuccess}</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Chapter filter chips (when chapter-tagged questions exist) ── */}
+      {data.questions.some(q => q.chapterTag) && (
+        <div style={{ marginBottom: 12 }}>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>
+            FILTER BY CHAPTER (optional)
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {BUILT_IN_CHAPTERS.filter(ch => (loadedPerChapter[ch.id] ?? 0) > 0).map(ch => {
+              const active = chapterFilter.includes(ch.id)
+              return (
+                <button
+                  key={ch.id}
+                  onClick={() => setChapterFilter(s => active ? s.filter(x => x !== ch.id) : [...s, ch.id])}
+                  style={{
+                    padding: '4px 9px', borderRadius: 6, fontSize: 11, fontFamily: 'inherit', cursor: 'pointer',
+                    border: `1px solid ${active ? '#6366f1' : 'var(--border-color)'}`,
+                    background: active ? '#6366f133' : 'transparent',
+                    color: active ? '#a5b4fc' : 'var(--text-muted)',
+                    fontWeight: active ? 700 : 400,
+                  }}
+                >
+                  {ch.label}
+                </button>
+              )
+            })}
+            {chapterFilter.length > 0 && (
+              <button
+                onClick={() => setChapterFilter([])}
+                style={{
+                  padding: '4px 9px', borderRadius: 6, fontSize: 11, fontFamily: 'inherit', cursor: 'pointer',
+                  border: '1px solid var(--border-color)', background: 'transparent',
+                  color: 'var(--text-muted)',
+                }}
+              >Clear</button>
+            )}
           </div>
         </div>
       )}

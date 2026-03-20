@@ -1,0 +1,1 @@
+feat: add Procedural Chain manual template to CardEditPanel  

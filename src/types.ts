@@ -1,5 +1,106 @@
 /* ── Plugin data.json types ────────────────────────────── */
 
+// ─── Cross-Device Content Relay ─────────────────────────
+export type RelayContentType = 'text' | 'image' | 'url' | 'note' | 'drawing';
+export interface RelayPayload {
+  type: RelayContentType;
+  content: string;         // raw text / base64 / URL / Note JSON (empty string when contentRef is set)
+  contentRef?: string;     // Firebase Storage download URL for payloads > 100KB
+  sizeBytes?: number;      // original content byte size (for progress display)
+  sourceDevice: string;   // fingerprint — prevents echo to sender
+  sentAt: string;          // ISO timestamp
+  expiresAt: string;       // sentAt + 30 seconds
+}
+
+// ─── Chunked File Processing ─────────────────────────────
+export interface ChunkManifest {
+  fileId: string;
+  fileName: string;
+  totalSize: number;
+  chunkSize: number;
+  totalChunks: number;
+  chunksComplete: number[];
+  status: 'pending' | 'processing' | 'complete' | 'cancelled';
+  createdAt: string;
+  storageUrls?: string[];
+}
+
+// ─── Cloze Cards ────────────────────────────────────────
+export interface ClozePart {
+  text: string;
+  isCloze: boolean;
+  id: number;
+}
+
+// ─── Leech Management ────────────────────────────────────
+export type LeechSuggestedAction = 'suspend' | 'rewrite' | 'split' | 'add-context';
+export interface LeechAnalysis {
+  cardKey: string;
+  lapseCount: number;
+  avgRetrieval: number;
+  severity: number;         // 0-100
+  suggestedAction: LeechSuggestedAction;
+  aiRewriteSuggestion?: string;
+}
+
+// ─── Card Quality Scoring ────────────────────────────────
+export type CardIssueType = 'too-long' | 'ambiguous' | 'no-context' | 'multi-part' | 'vague-answer' | 'unclear-question';
+export interface CardQualityScore {
+  cardKey: string;
+  score: number;          // 0-100
+  issues: CardIssueType[];
+  suggestion: string;
+  improvedFront?: string;
+  improvedBack?: string;
+}
+
+// ─── Big Content Pipeline ─────────────────────────────────
+export interface PipelineConfig {
+  chunkWords: number;
+  cardType: 'standard' | 'cloze' | 'mixed';
+  focusMode: 'facts' | 'concepts' | 'vocabulary' | 'all';
+  maxCardsPerChunk: number;
+  targetCourse?: string;
+}
+export interface PipelineResult {
+  cards: Partial<FlashcardItem>[];
+  qualityScores: CardQualityScore[];
+  chunks: number;
+  totalCards: number;
+  processingMs: number;
+}
+
+// ─── Forgetting Alerts ────────────────────────────────────
+export interface ForgettingAlert {
+  cardKey: string;
+  currentR: number;
+  daysUntilBelow70: number;
+}
+
+// ─── Image Occlusion ─────────────────────────────────────
+export interface OcclusionMask { id: string; x: number; y: number; width: number; height: number; label?: string; }
+export interface OcclusionCardData { imageDataUrl: string; masks: OcclusionMask[]; }
+
+// ─── Pre-Test Mode ────────────────────────────────────────
+export interface PreTestResult {
+  cardKey: string;
+  typedAnswer: string;
+  wasCorrect: boolean;
+  wasHighConfidence: boolean;
+  hypercorrectionScore: number;
+}
+
+// ─── Calibration Tracking ────────────────────────────────
+export interface CalibrationPoint { grade: 1|2|3|4; nextGrade: 1|2|3|4; cardKey: string; reviewedAt: string; }
+export interface CalibrationStats {
+  score: number;
+  overconfidenceRate: number;
+  underconfidenceRate: number;
+}
+
+// ─── Transfer-Appropriate Processing ─────────────────────
+export type CardTestFormat = 'mcq' | 'open-ended' | 'calculation' | 'verbal' | 'identification';
+
 export interface PdfCard {
   question: string
   answer: string
@@ -50,12 +151,19 @@ export interface FlashcardItem {
   front: string;
   back: string;
   topic?: string;
+  type?: 'standard' | 'cloze' | 'occlusion';
   media?: {
     type: 'youtube' | 'image' | 'video';
     src: string;
     side: 'front' | 'back' | 'both';
     caption?: string;
   };
+  // Scientific learning fields
+  prerequisites?: string[];          // card keys (courseId::front)
+  elaboration?: string;              // "Why does this work?" cached explanation
+  testFormat?: CardTestFormat;       // for transfer-appropriate processing
+  priority?: 'high' | 'normal';     // 'high' = show first (Pre-Test hypercorrection)
+  occlusionData?: OcclusionCardData; // for occlusion card type
 }
 
 export interface CourseTopic {
@@ -288,6 +396,82 @@ export interface AIChatSession {
   updatedAt: string;
 }
 
+export interface ProcedureStep {
+  order: number;
+  text: string;
+}
+
+export interface SavedProcedure {
+  id: string;
+  name: string;
+  steps: ProcedureStep[];
+  createdAt: number;
+  lastQuizzedAt?: number;
+  bestScore?: number;
+  quizCount?: number;
+}
+
+export interface ProcedureQuizResult {
+  score: number;
+  correct: string[];
+  missed: string[];
+  errors: string[];
+  mnemonic: string;
+}
+
+// ── Video Studio ─────────────────────────────────────────────────────────────
+
+export type VideoNoteCategory = 'why' | 'how' | 'when' | 'fail' | 'general' | string;
+
+export interface VideoNoteTemplate {
+  id: string;
+  label: string;
+  color: string;   // CSS color or CSS variable
+  template: string; // pre-filled note text (can be empty)
+}
+
+export interface VideoNote {
+  id: string;
+  timestamp: number;           // seconds — where in the video this note was taken
+  text: string;
+  category: VideoNoteCategory; // structured type for analysis
+  linkedTimestamps?: number[]; // cross-references to other moments in the video
+  createdAt: string;           // ISO date
+}
+
+export interface VideoCaption {
+  id: string;
+  start: number;  // seconds
+  end: number;    // seconds
+  text: string;
+}
+
+export interface VideoUploadProgress {
+  videoId: string;
+  filename: string;
+  progress: number;  // 0–100
+  status: 'uploading' | 'processing' | 'done' | 'error';
+  error?: string;
+}
+
+export interface SavedVideo {
+  id: string;
+  title: string;
+  storagePath: string;       // Firebase Storage path: videos/{uid}/{id}.{ext}
+  downloadUrl?: string;      // cached signed URL — NOT synced to Firestore
+  duration: number;          // seconds
+  captions: VideoCaption[];  // synced (text only, small)
+  defaultSpeed: number;      // 1.0
+  courseId?: string;
+  createdAt: string;         // ISO date
+  thumbnailBase64?: string;  // canvas frame — NOT synced
+  size: number;              // bytes
+  type: 'upload' | 'recording';
+  mimeType: string;          // 'video/mp4' | 'video/webm'
+  notes?: VideoNote[];             // timestamped playback notes (synced — text only)
+  noteTemplates?: VideoNoteTemplate[]; // custom note categories/templates for this video
+}
+
 export interface PluginData {
   quizHistory: QuizAttempt[];
   coachData: CoachData;
@@ -306,6 +490,7 @@ export interface PluginData {
   studySchedules?: StudySchedule[];
   annotations?: QuizAnnotation[];
   aiChatSessions?: AIChatSession[];
+  savedProcedures?: SavedProcedure[];
   goals?: StudyGoal[];
   weeklyQuests?: WeeklyQuest[];
   userProfile?: { avatarEmoji?: string; customDisplayName?: string; bio?: string; };
@@ -315,6 +500,15 @@ export interface PluginData {
   courseSpaces?: Record<string, CourseSpace>;
   // Home dashboard sticky notes
   dashboardNotes?: StickyNote[];
+  // Video Studio
+  savedVideos?: SavedVideo[];
+  // Card quality cache — keyed by cardKey; stripped from trimForSync (ephemeral)
+  cardQualityCache?: Record<string, CardQualityScore>;
+  // Mind map user edits — keyed by map id ('phys'|'biol'|'evol'|'jp')
+  mindmapOverrides_phys?: unknown[];
+  mindmapOverrides_biol?: unknown[];
+  mindmapOverrides_evol?: unknown[];
+  mindmapOverrides_jp?: unknown[];
   canvasLive?: {
     courses: CanvasLiveCourse[];
     assignments: CanvasLiveAssignment[];

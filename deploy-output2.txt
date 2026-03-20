@@ -1,0 +1,875 @@
+Retrieving project…
+Deploying totallyjohnny7s-projects/nousai-app
+Uploading [--------------------] (0.0B/51.6MB)
+Uploading [=====---------------] (12.9MB/51.6MB)
+Uploading [==========----------] (25.8MB/51.6MB)
+Uploading [===============-----] (38.7MB/51.6MB)
+Uploading [====================] (51.6MB/51.6MB)
+Inspect: https://vercel.com/totallyjohnny7s-projects/nousai-app/4o5TYXRPjjsdXR6kGZ5KXTvK5CCG [15s]
+Production: https://nousai-cgsr0fap4-totallyjohnny7s-projects.vercel.app [15s]
+https://nousai-cgsr0fap4-totallyjohnny7s-projects.vercel.appBuilding...
+Building...
+Building: Running build in Washington, D.C., USA (East) – iad1 (Turbo Build Machine)
+Building: Build machine configuration: 30 cores, 60 GB
+Building: Retrieving list of deployment files...
+Building: Concatenating deployment archive files...
+Building: Extracting deployment files...
+Building: Extracted 3340 deployment files...
+Building: Restored build cache from previous deployment (8a8qwjCAxSXLXA7DMqsyJMgNsXdt)
+Building: Running "vercel build"
+Building: Vercel CLI 50.34.2
+Building: Installing dependencies...
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-tabs@1.0.2
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn   @radix-ui/react-tabs@"1.0.2" from @excalidraw/excalidraw@0.18.0
+Building: npm warn   node_modules/@excalidraw/excalidraw
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn     @radix-ui/react-tabs@"1.0.2" from @excalidraw/excalidraw@0.18.0
+Building: npm warn     node_modules/@excalidraw/excalidraw
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-tabs@1.0.2
+Building: npm warn Found: react-dom@19.2.4
+Building: npm warn node_modules/react-dom
+Building: npm warn   react-dom@"^19.2.0" from the root project
+Building: npm warn   25 more (@dnd-kit/core, @excalidraw/excalidraw, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react-dom@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn   @radix-ui/react-tabs@"1.0.2" from @excalidraw/excalidraw@0.18.0
+Building: npm warn   node_modules/@excalidraw/excalidraw
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react-dom@18.3.1
+Building: npm warn node_modules/react-dom
+Building: npm warn   peer react-dom@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn     @radix-ui/react-tabs@"1.0.2" from @excalidraw/excalidraw@0.18.0
+Building: npm warn     node_modules/@excalidraw/excalidraw
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-context@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-context@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-context
+Building: npm warn   @radix-ui/react-context@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn   2 more (@radix-ui/react-roving-focus, @radix-ui/react-collection)
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-context@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-context
+Building: npm warn     @radix-ui/react-context@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn     2 more (@radix-ui/react-roving-focus, @radix-ui/react-collection)
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-direction@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-direction@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-direction
+Building: npm warn   @radix-ui/react-direction@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn   1 more (@radix-ui/react-roving-focus)
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-direction@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-direction
+Building: npm warn     @radix-ui/react-direction@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn     1 more (@radix-ui/react-roving-focus)
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-id@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-id@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-id
+Building: npm warn   @radix-ui/react-id@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn   1 more (@radix-ui/react-roving-focus)
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-id@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-id
+Building: npm warn     @radix-ui/react-id@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn     1 more (@radix-ui/react-roving-focus)
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-presence@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-presence@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence
+Building: npm warn   @radix-ui/react-presence@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-presence@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence
+Building: npm warn     @radix-ui/react-presence@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-presence@1.0.0
+Building: npm warn Found: react-dom@19.2.4
+Building: npm warn node_modules/react-dom
+Building: npm warn   react-dom@"^19.2.0" from the root project
+Building: npm warn   25 more (@dnd-kit/core, @excalidraw/excalidraw, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react-dom@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-presence@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence
+Building: npm warn   @radix-ui/react-presence@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react-dom@18.3.1
+Building: npm warn node_modules/react-dom
+Building: npm warn   peer react-dom@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-presence@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence
+Building: npm warn     @radix-ui/react-presence@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-primitive@1.0.1
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-primitive@1.0.1
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive
+Building: npm warn   @radix-ui/react-primitive@"1.0.1" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn   2 more (@radix-ui/react-roving-focus, @radix-ui/react-collection)
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-primitive@1.0.1
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive
+Building: npm warn     @radix-ui/react-primitive@"1.0.1" from @radix-ui/react-tabs@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn     2 more (@radix-ui/react-roving-focus, @radix-ui/react-collection)
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-primitive@1.0.1
+Building: npm warn Found: react-dom@19.2.4
+Building: npm warn node_modules/react-dom
+Building: npm warn   react-dom@"^19.2.0" from the root project
+Building: npm warn   25 more (@dnd-kit/core, @excalidraw/excalidraw, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react-dom@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-primitive@1.0.1
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive
+Building: npm warn   @radix-ui/react-primitive@"1.0.1" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn   2 more (@radix-ui/react-roving-focus, @radix-ui/react-collection)
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react-dom@18.3.1
+Building: npm warn node_modules/react-dom
+Building: npm warn   peer react-dom@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-primitive@1.0.1
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive
+Building: npm warn     @radix-ui/react-primitive@"1.0.1" from @radix-ui/react-tabs@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn     2 more (@radix-ui/react-roving-focus, @radix-ui/react-collection)
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-roving-focus@1.0.2
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn   @radix-ui/react-roving-focus@"1.0.2" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn     @radix-ui/react-roving-focus@"1.0.2" from @radix-ui/react-tabs@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-roving-focus@1.0.2
+Building: npm warn Found: react-dom@19.2.4
+Building: npm warn node_modules/react-dom
+Building: npm warn   react-dom@"^19.2.0" from the root project
+Building: npm warn   25 more (@dnd-kit/core, @excalidraw/excalidraw, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react-dom@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn   @radix-ui/react-roving-focus@"1.0.2" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react-dom@18.3.1
+Building: npm warn node_modules/react-dom
+Building: npm warn   peer react-dom@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn     @radix-ui/react-roving-focus@"1.0.2" from @radix-ui/react-tabs@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-use-controllable-state@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-use-controllable-state@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-use-controllable-state
+Building: npm warn   @radix-ui/react-use-controllable-state@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn   1 more (@radix-ui/react-roving-focus)
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-use-controllable-state@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-use-controllable-state
+Building: npm warn     @radix-ui/react-use-controllable-state@"1.0.0" from @radix-ui/react-tabs@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs
+Building: npm warn     1 more (@radix-ui/react-roving-focus)
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-use-layout-effect@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-use-layout-effect@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-id/node_modules/@radix-ui/react-use-layout-effect
+Building: npm warn   @radix-ui/react-use-layout-effect@"1.0.0" from @radix-ui/react-id@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-id
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-use-layout-effect@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-id/node_modules/@radix-ui/react-use-layout-effect
+Building: npm warn     @radix-ui/react-use-layout-effect@"1.0.0" from @radix-ui/react-id@1.0.0
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-id
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-compose-refs@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-compose-refs@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence/node_modules/@radix-ui/react-compose-refs
+Building: npm warn   @radix-ui/react-compose-refs@"1.0.0" from @radix-ui/react-presence@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-compose-refs@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence/node_modules/@radix-ui/react-compose-refs
+Building: npm warn     @radix-ui/react-compose-refs@"1.0.0" from @radix-ui/react-presence@1.0.0
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-use-layout-effect@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-use-layout-effect@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence/node_modules/@radix-ui/react-use-layout-effect
+Building: npm warn   @radix-ui/react-use-layout-effect@"1.0.0" from @radix-ui/react-presence@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-use-layout-effect@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence/node_modules/@radix-ui/react-use-layout-effect
+Building: npm warn     @radix-ui/react-use-layout-effect@"1.0.0" from @radix-ui/react-presence@1.0.0
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-presence
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-slot@1.0.1
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-slot@1.0.1
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive/node_modules/@radix-ui/react-slot
+Building: npm warn   @radix-ui/react-slot@"1.0.1" from @radix-ui/react-primitive@1.0.1
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-slot@1.0.1
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive/node_modules/@radix-ui/react-slot
+Building: npm warn     @radix-ui/react-slot@"1.0.1" from @radix-ui/react-primitive@1.0.1
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-collection@1.0.1
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-collection@1.0.1
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-collection
+Building: npm warn   @radix-ui/react-collection@"1.0.1" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-collection@1.0.1
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-collection
+Building: npm warn     @radix-ui/react-collection@"1.0.1" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-collection@1.0.1
+Building: npm warn Found: react-dom@19.2.4
+Building: npm warn node_modules/react-dom
+Building: npm warn   react-dom@"^19.2.0" from the root project
+Building: npm warn   25 more (@dnd-kit/core, @excalidraw/excalidraw, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react-dom@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-collection@1.0.1
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-collection
+Building: npm warn   @radix-ui/react-collection@"1.0.1" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react-dom@18.3.1
+Building: npm warn node_modules/react-dom
+Building: npm warn   peer react-dom@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-collection@1.0.1
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-collection
+Building: npm warn     @radix-ui/react-collection@"1.0.1" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-compose-refs@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-compose-refs@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-compose-refs
+Building: npm warn   @radix-ui/react-compose-refs@"1.0.0" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn   2 more (@radix-ui/react-collection, @radix-ui/react-slot)
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-compose-refs@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-compose-refs
+Building: npm warn     @radix-ui/react-compose-refs@"1.0.0" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn     2 more (@radix-ui/react-collection, @radix-ui/react-slot)
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-use-callback-ref@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-use-callback-ref@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-use-callback-ref
+Building: npm warn   @radix-ui/react-use-callback-ref@"1.0.0" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-use-callback-ref@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-use-callback-ref
+Building: npm warn     @radix-ui/react-use-callback-ref@"1.0.0" from @radix-ui/react-roving-focus@1.0.2
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-use-callback-ref@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-use-callback-ref@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-use-controllable-state/node_modules/@radix-ui/react-use-callback-ref
+Building: npm warn   @radix-ui/react-use-callback-ref@"1.0.0" from @radix-ui/react-use-controllable-state@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-use-controllable-state
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-use-callback-ref@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-use-controllable-state/node_modules/@radix-ui/react-use-callback-ref
+Building: npm warn     @radix-ui/react-use-callback-ref@"1.0.0" from @radix-ui/react-use-controllable-state@1.0.0
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-use-controllable-state
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-compose-refs@1.0.0
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-compose-refs@1.0.0
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive/node_modules/@radix-ui/react-slot/node_modules/@radix-ui/react-compose-refs
+Building: npm warn   @radix-ui/react-compose-refs@"1.0.0" from @radix-ui/react-slot@1.0.1
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive/node_modules/@radix-ui/react-slot
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-compose-refs@1.0.0
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive/node_modules/@radix-ui/react-slot/node_modules/@radix-ui/react-compose-refs
+Building: npm warn     @radix-ui/react-compose-refs@"1.0.0" from @radix-ui/react-slot@1.0.1
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-primitive/node_modules/@radix-ui/react-slot
+Building: npm warn ERESOLVE overriding peer dependency
+Building: npm warn While resolving: @radix-ui/react-slot@1.0.1
+Building: npm warn Found: react@19.2.4
+Building: npm warn node_modules/react
+Building: npm warn   react@"^19.2.0" from the root project
+Building: npm warn   53 more (@dnd-kit/accessibility, @dnd-kit/core, ...)
+Building: npm warn
+Building: npm warn Could not resolve dependency:
+Building: npm warn peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-slot@1.0.1
+Building: npm warn node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-collection/node_modules/@radix-ui/react-slot
+Building: npm warn   @radix-ui/react-slot@"1.0.1" from @radix-ui/react-collection@1.0.1
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-collection
+Building: npm warn
+Building: npm warn Conflicting peer dependency: react@18.3.1
+Building: npm warn node_modules/react
+Building: npm warn   peer react@"^16.8 || ^17.0 || ^18.0" from @radix-ui/react-slot@1.0.1
+Building: npm warn   node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-collection/node_modules/@radix-ui/react-slot
+Building: npm warn     @radix-ui/react-slot@"1.0.1" from @radix-ui/react-collection@1.0.1
+Building: npm warn     node_modules/@excalidraw/excalidraw/node_modules/@radix-ui/react-tabs/node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-collection
+Building: up to date in 3s
+Building: 281 packages are looking for funding
+Building: run `npm fund` for details
+Building: Running "npm run build"
+Building: > nousai-companion@2.0.0 build
+Building: > tsc -b && vite build
+Building: vite v7.3.1 building client environment for production...
+Building: transforming...
+Building: ✓ 5342 modules transformed.
+Building: rendering chunks...
+Building: [plugin vite:reporter]
+Building: (!) /vercel/path0/src/utils/courseSpaceInit.ts is dynamically imported by /vercel/path0/src/pages/Dashboard.tsx but also statically imported by /vercel/path0/src/components/dashboard/CourseCards.tsx, /vercel/path0/src/components/dashboard/ExamCountdown.tsx, /vercel/path0/src/components/dashboard/GlobalCalendarWidget.tsx, /vercel/path0/src/components/dashboard/RecentGapsWidget.tsx, /vercel/path0/src/components/dashboard/StudyPriorityWidget.tsx, dynamic import will not move module into another chunk.
+Building: computing gzip size...
+Building: dist/registerSW.js                                             0.13 kB
+Building: dist/manifest.webmanifest                                      0.50 kB
+Building: dist/index.html                                                1.43 kB │ gzip:   0.61 kB
+Building: dist/assets/KaTeX_Size3-Regular-CTq5MqoE.woff                  4.42 kB
+Building: dist/assets/KaTeX_Size4-Regular-Dl5lxZxV.woff2                 4.93 kB
+Building: dist/assets/KaTeX_Size2-Regular-Dy4dx90m.woff2                 5.21 kB
+Building: dist/assets/KaTeX_Size1-Regular-mCD8mA8B.woff2                 5.47 kB
+Building: dist/assets/KaTeX_Size4-Regular-BF-4gkZK.woff                  5.98 kB
+Building: dist/assets/KaTeX_Size2-Regular-oD1tc_U0.woff                  6.19 kB
+Building: dist/assets/KaTeX_Size1-Regular-C195tn64.woff                  6.50 kB
+Building: dist/assets/KaTeX_Caligraphic-Regular-Di6jR-x-.woff2           6.91 kB
+Building: dist/assets/KaTeX_Caligraphic-Bold-Dq_IR9rO.woff2              6.91 kB
+Building: dist/assets/KaTeX_Size3-Regular-DgpXs0kz.ttf                   7.59 kB
+Building: dist/assets/KaTeX_Caligraphic-Regular-CTRA-rTL.woff            7.66 kB
+Building: dist/assets/KaTeX_Caligraphic-Bold-BEiXGLvX.woff               7.72 kB
+Building: dist/assets/KaTeX_Script-Regular-D3wIWfF6.woff2                9.64 kB
+Building: dist/assets/KaTeX_SansSerif-Regular-DDBCnlJ7.woff2            10.34 kB
+Building: dist/assets/KaTeX_Size4-Regular-DWFBv043.ttf                  10.36 kB
+Building: dist/assets/KaTeX_Script-Regular-D5yQViql.woff                10.59 kB
+Building: dist/assets/KaTeX_Fraktur-Regular-CTYiF6lA.woff2              11.32 kB
+Building: dist/assets/KaTeX_Fraktur-Bold-CL6g_b3V.woff2                 11.35 kB
+Building: dist/assets/KaTeX_Size2-Regular-B7gKUWhC.ttf                  11.51 kB
+Building: dist/assets/KaTeX_SansSerif-Italic-C3H0VqGB.woff2             12.03 kB
+Building: dist/assets/KaTeX_SansSerif-Bold-D1sUS0GD.woff2               12.22 kB
+Building: dist/assets/KaTeX_Size1-Regular-Dbsnue_I.ttf                  12.23 kB
+Building: dist/assets/KaTeX_SansSerif-Regular-CS6fqUqJ.woff             12.32 kB
+Building: dist/assets/KaTeX_Caligraphic-Regular-wX97UBjC.ttf            12.34 kB
+Building: dist/assets/KaTeX_Caligraphic-Bold-ATXxdsX0.ttf               12.37 kB
+Building: dist/assets/KaTeX_Fraktur-Regular-Dxdc4cR9.woff               13.21 kB
+Building: dist/assets/KaTeX_Fraktur-Bold-BsDP51OF.woff                  13.30 kB
+Building: dist/assets/KaTeX_Typewriter-Regular-CO6r4hn1.woff2           13.57 kB
+Building: dist/assets/KaTeX_SansSerif-Italic-DN2j7dab.woff              14.11 kB
+Building: dist/assets/KaTeX_SansSerif-Bold-DbIhKOiC.woff                14.41 kB
+Building: dist/assets/KaTeX_Typewriter-Regular-C0xS9mPB.woff            16.03 kB
+Building: dist/assets/KaTeX_Math-BoldItalic-CZnvNsCZ.woff2              16.40 kB
+Building: dist/assets/KaTeX_Math-Italic-t53AETM-.woff2                  16.44 kB
+Building: dist/assets/KaTeX_Script-Regular-C5JkGWo-.ttf                 16.65 kB
+Building: dist/assets/KaTeX_Main-BoldItalic-DxDJ3AOS.woff2              16.78 kB
+Building: dist/assets/KaTeX_Main-Italic-NWA7e6Wa.woff2                  16.99 kB
+Building: dist/assets/KaTeX_Math-BoldItalic-iY-2wyZ7.woff               18.67 kB
+Building: dist/assets/KaTeX_Math-Italic-DA0__PXp.woff                   18.75 kB
+Building: dist/assets/KaTeX_Main-BoldItalic-SpSLRI95.woff               19.41 kB
+Building: dist/assets/KaTeX_SansSerif-Regular-BNo7hRIc.ttf              19.44 kB
+Building: dist/assets/KaTeX_Fraktur-Regular-CB_wures.ttf                19.57 kB
+Building: dist/assets/KaTeX_Fraktur-Bold-BdnERNNW.ttf                   19.58 kB
+Building: dist/assets/KaTeX_Main-Italic-BMLOBm91.woff                   19.68 kB
+Building: dist/assets/Assistant-SemiBold-SCI4bEL9.woff2                 20.21 kB
+Building: dist/assets/Assistant-Regular-DVxZuzxb.woff2                  20.23 kB
+Building: dist/assets/Assistant-Medium-DrcxCXg3.woff2                   20.32 kB
+Building: dist/assets/Assistant-Bold-gm-uSS1B.woff2                     20.38 kB
+Building: dist/assets/KaTeX_SansSerif-Italic-YYjJ1zSn.ttf               22.36 kB
+Building: dist/assets/KaTeX_SansSerif-Bold-CFMepnvq.ttf                 24.50 kB
+Building: dist/assets/KaTeX_Main-Bold-Cx986IdX.woff2                    25.32 kB
+Building: dist/assets/KaTeX_Main-Regular-B22Nviop.woff2                 26.27 kB
+Building: dist/assets/KaTeX_Typewriter-Regular-D3Ib7_Hf.ttf             27.56 kB
+Building: dist/assets/KaTeX_AMS-Regular-BQhdFMY1.woff2                  28.08 kB
+Building: dist/assets/KaTeX_Main-Bold-Jm3AIy58.woff                     29.91 kB
+Building: dist/assets/KaTeX_Main-Regular-Dr94JaBh.woff                  30.77 kB
+Building: dist/assets/KaTeX_Math-BoldItalic-B3XSjfu4.ttf                31.20 kB
+Building: dist/assets/KaTeX_Math-Italic-flOr_0UB.ttf                    31.31 kB
+Building: dist/assets/KaTeX_Main-BoldItalic-DzxPMmG6.ttf                32.97 kB
+Building: dist/assets/KaTeX_AMS-Regular-DMm9YOAa.woff                   33.52 kB
+Building: dist/assets/KaTeX_Main-Italic-3WenGoN9.ttf                    33.58 kB
+Building: dist/assets/KaTeX_Main-Bold-waoOVXN0.ttf                      51.34 kB
+Building: dist/assets/KaTeX_Main-Regular-ypZvNtVU.ttf                   53.58 kB
+Building: dist/assets/KaTeX_AMS-Regular-DRggAlZN.ttf                    63.63 kB
+Building: dist/assets/pdf.worker.min-B_fnEKel.mjs                    1,239.05 kB
+Building: dist/assets/SwipeableCard-CYwJxswy.css                         1.66 kB │ gzip:   0.65 kB
+Building: dist/assets/index-Cmp1J4M-.css                                93.40 kB │ gzip:  20.63 kB
+Building: dist/assets/index-LGMIhlcU.css                               144.64 kB │ gzip:  22.92 kB
+Building: dist/assets/clone-DdT8BpLb.js                                  0.09 kB │ gzip:   0.11 kB
+Building: dist/assets/channel-BnWNo6yf.js                                0.11 kB │ gzip:   0.12 kB
+Building: dist/assets/minus-DJw9QDug.js                                  0.12 kB │ gzip:   0.13 kB
+Building: dist/assets/array-DEnAxiAM.js                                  0.12 kB │ gzip:   0.13 kB
+Building: dist/assets/circle-CTJraEoq.js                                 0.13 kB │ gzip:   0.13 kB
+Building: dist/assets/chevron-up-DFzHjiD0.js                             0.13 kB │ gzip:   0.14 kB
+Building: dist/assets/chevron-down-C9dQw1k7.js                           0.13 kB │ gzip:   0.14 kB
+Building: dist/assets/chevron-right-C8ex8AhW.js                          0.13 kB │ gzip:   0.14 kB
+Building: dist/assets/chevron-left-NLxLtqXT.js                           0.13 kB │ gzip:   0.14 kB
+Building: dist/assets/valyu-D9oh0hLT.js                                  0.13 kB │ gzip:   0.12 kB
+Building: dist/assets/plus-xiY-L-NH.js                                   0.15 kB │ gzip:   0.15 kB
+Building: dist/assets/arrow-left-BFZluNC7.js                             0.17 kB │ gzip:   0.16 kB
+Building: dist/assets/trending-up-BTVXGxiW.js                            0.18 kB │ gzip:   0.17 kB
+Building: dist/assets/Tableau10-B-NsZVaP.js                              0.19 kB │ gzip:   0.18 kB
+Building: dist/assets/circle-check-big-nKsNwYn5.js                       0.19 kB │ gzip:   0.18 kB
+Building: dist/assets/play-7GwhL1Jg.js                                   0.19 kB │ gzip:   0.18 kB
+Building: dist/assets/flame-BK8JXduH.js                                  0.20 kB │ gzip:   0.18 kB
+Building: dist/assets/selectAll-ciZVRjUR.js                              0.20 kB │ gzip:   0.17 kB
+Building: dist/assets/info-qGD-tdtr.js                                   0.20 kB │ gzip:   0.18 kB
+Building: dist/assets/rotate-ccw-BxiXHBq4.js                             0.20 kB │ gzip:   0.18 kB
+Building: dist/assets/lock-C8bY5Iw4.js                                   0.20 kB │ gzip:   0.19 kB
+Building: dist/assets/chart-no-axes-column-B5cWhZ2m.js                   0.21 kB │ gzip:   0.18 kB
+Building: dist/assets/code-xml-DuczHtmo.js                               0.21 kB │ gzip:   0.17 kB
+Building: dist/assets/undo-2-Di0Nmfh0.js                                 0.21 kB │ gzip:   0.18 kB
+Building: dist/assets/pause-B_AHa6LZ.js                                  0.21 kB │ gzip:   0.17 kB
+Building: dist/assets/target-C1xjW55X.js                                 0.22 kB │ gzip:   0.16 kB
+Building: dist/assets/git-branch-DCOzeUIU.js                             0.23 kB │ gzip:   0.19 kB
+Building: dist/assets/download-CznDrBGL.js                               0.23 kB │ gzip:   0.19 kB
+Building: dist/assets/message-square-CsG0zA5z.js                         0.23 kB │ gzip:   0.20 kB
+Building: dist/assets/pen-C5ZXLqup.js                                    0.24 kB │ gzip:   0.20 kB
+Building: dist/assets/headphones-CKF9SMco.js                             0.24 kB │ gzip:   0.18 kB
+Building: dist/assets/skip-forward-cSwHm9Gd.js                           0.24 kB │ gzip:   0.20 kB
+Building: dist/assets/globe-ceJ-H4Dd.js                                  0.24 kB │ gzip:   0.19 kB
+Building: dist/assets/settings-2-B53faPuW.js                             0.25 kB │ gzip:   0.19 kB
+Building: dist/assets/circle-alert-BJ9wpzjJ.js                           0.25 kB │ gzip:   0.19 kB
+Building: dist/assets/chart-column-CfDL9iA1.js                           0.25 kB │ gzip:   0.20 kB
+Building: dist/assets/eye-BOdRmRAr.js                                    0.25 kB │ gzip:   0.20 kB
+Building: dist/assets/funnel-RnDrAnqi.js                                 0.25 kB │ gzip:   0.21 kB
+Building: dist/assets/external-link-CYsKVUqT.js                          0.25 kB │ gzip:   0.20 kB
+Building: dist/assets/link-CaFSwfTN.js                                   0.26 kB │ gzip:   0.19 kB
+Building: dist/assets/key-B_SCx6hs.js                                    0.26 kB │ gzip:   0.22 kB
+Building: dist/assets/award-DNM9u7r9.js                                  0.27 kB │ gzip:   0.22 kB
+Building: dist/assets/image-DOMOUpYg.js                                  0.27 kB │ gzip:   0.22 kB
+Building: dist/assets/pencil-CbJyYDB9.js                                 0.28 kB │ gzip:   0.23 kB
+Building: dist/assets/lightbulb-DJlnCNTu.js                              0.28 kB │ gzip:   0.22 kB
+Building: dist/assets/maximize-D47Iyqpe.js                               0.29 kB │ gzip:   0.20 kB
+Building: dist/assets/minimize-ChpQDVLt.js                               0.29 kB │ gzip:   0.20 kB
+Building: dist/assets/loader-circle-QGvcmSFX.js                          0.30 kB │ gzip:   0.23 kB
+Building: dist/assets/flask-conical-aqYKs-xf.js                          0.30 kB │ gzip:   0.23 kB
+Building: dist/assets/languages-AzYgCBbZ.js                              0.32 kB │ gzip:   0.22 kB
+Building: dist/assets/tag-BphhLrB9.js                                    0.32 kB │ gzip:   0.25 kB
+Building: dist/assets/save-Bu9Rkmxb.js                                   0.33 kB │ gzip:   0.23 kB
+Building: dist/assets/scan-line-Bh5EViIg.js                              0.33 kB │ gzip:   0.22 kB
+Building: dist/assets/graduation-cap-DtHgl-Xi.js                         0.33 kB │ gzip:   0.25 kB
+Building: dist/assets/init-Dmth1JHB.js                                   0.38 kB │ gzip:   0.19 kB
+Building: dist/assets/clipboard-paste-BRsgWpTZ.js                        0.38 kB │ gzip:   0.26 kB
+Building: dist/assets/shuffle-B8vLL0e_.js                                0.38 kB │ gzip:   0.25 kB
+Building: dist/assets/useMindMapEdits-DIpo45aI.js                        0.39 kB │ gzip:   0.30 kB
+Building: dist/assets/volume-x-BDNrO5Sb.js                               0.39 kB │ gzip:   0.28 kB
+Building: dist/assets/volume-2-DAjoBfTI.js                               0.39 kB │ gzip:   0.27 kB
+Building: dist/assets/mic-off-DIZuJ4j8.js                                0.39 kB │ gzip:   0.25 kB
+Building: dist/assets/layers-CO_HkGRU.js                                 0.42 kB │ gzip:   0.24 kB
+Building: dist/assets/map-D3cnpsE9.js                                    0.43 kB │ gzip:   0.27 kB
+Building: dist/assets/eye-off-CY5t8DVL.js                                0.43 kB │ gzip:   0.27 kB
+Building: dist/assets/subset-worker.chunk-DIIwg4KC.js                    0.45 kB │ gzip:   0.32 kB
+Building: dist/assets/file-open-7c801643-684qeFg4.js                     0.45 kB │ gzip:   0.32 kB
+Building: dist/assets/pen-tool-DjXfxJdy.js                               0.47 kB │ gzip:   0.30 kB
+Building: dist/assets/sun-rQ_7AnZb.js                                    0.47 kB │ gzip:   0.26 kB
+Building: dist/assets/folder-DYEuPrvi.js                                 0.47 kB │ gzip:   0.29 kB
+Building: dist/assets/calendar-days-C3YHLzYR.js                          0.50 kB │ gzip:   0.27 kB
+Building: dist/assets/microscope-B1u6VQrB.js                             0.50 kB │ gzip:   0.29 kB
+Building: dist/assets/palette-CDFCv4Vj.js                                0.51 kB │ gzip:   0.27 kB
+Building: dist/assets/index-457gnMhk.js                                  0.52 kB │ gzip:   0.36 kB
+Building: dist/assets/log-out-BlymPLMm.js                                0.53 kB │ gzip:   0.31 kB
+Building: dist/assets/calculator-BIIpsIWT.js                             0.53 kB │ gzip:   0.28 kB
+Building: dist/assets/shared-Cc93uvlG.js                                 0.54 kB │ gzip:   0.30 kB
+Building: dist/assets/file-open-002ab408-DIuFHtCF.js                     0.54 kB │ gzip:   0.33 kB
+Building: dist/assets/directory-open-01563666-DWU9wJ6I.js                0.59 kB │ gzip:   0.36 kB
+Building: dist/assets/circle-question-mark-Cr7n91mW.js                   0.63 kB │ gzip:   0.36 kB
+Building: dist/assets/star-DjJqqwIG.js                                   0.67 kB │ gzip:   0.39 kB
+Building: dist/assets/file-save-3189631c-C1wFhQhH.js                     0.71 kB │ gzip:   0.46 kB
+Building: dist/assets/contentRelay-fIOJiGnr.js                           0.77 kB │ gzip:   0.49 kB
+Building: dist/assets/MathRenderer-C8qV9mjs.js                           0.87 kB │ gzip:   0.48 kB
+Building: dist/assets/file-save-745eba88-Bb9F9Kg7.js                     0.87 kB │ gzip:   0.50 kB
+Building: dist/assets/Tooltip-DUcQN4la.js                                0.94 kB │ gzip:   0.60 kB
+Building: dist/assets/flowDiagram-v2-96b9c2cf-BxkxDupT.js                0.94 kB │ gzip:   0.52 kB
+Building: dist/assets/line-AfotLUop.js                                   0.96 kB │ gzip:   0.47 kB
+Building: dist/assets/ordinal-DILIJJjt.js                                1.20 kB │ gzip:   0.58 kB
+Building: dist/assets/fileStore-rifY24oA.js                              1.22 kB │ gzip:   0.55 kB
+Building: dist/assets/quizLog-y8fBZIjv.js                                1.25 kB │ gzip:   0.71 kB
+Building: dist/assets/pie-BSHjHMUI.js                                    1.26 kB │ gzip:   0.58 kB
+Building: dist/assets/wrench-Bl5xwEy7.js                                 1.34 kB │ gzip:   0.62 kB
+Building: dist/assets/svgDrawCommon-08f97a94-DeDFnIah.js                 1.38 kB │ gzip:   0.60 kB
+Building: dist/assets/videoStorage-DGKOvvgt.js                           1.39 kB │ gzip:   0.78 kB
+Building: dist/assets/percentages-BXMCSKIN-DlkxJwlE.js                   1.45 kB │ gzip:   0.80 kB
+Building: dist/assets/band-CquvqAHh.js                                   1.54 kB │ gzip:   0.67 kB
+Building: dist/assets/directory-open-4ed118d0-CunoC1EB.js                1.55 kB │ gzip:   0.79 kB
+Building: dist/assets/ToolErrorBoundary-ZLHSJkd1.js                      1.56 kB │ gzip:   0.79 kB
+Building: dist/assets/ReadAloudButton-BdsdiJnk.js                        1.61 kB │ gzip:   0.88 kB
+Building: dist/assets/exportFormats-OsFq_9aX.js                          2.06 kB │ gzip:   0.97 kB
+Building: dist/assets/path-CXeFd1JH.js                                   2.28 kB │ gzip:   1.00 kB
+Building: dist/assets/shortcuts-BpUZjCZJ.js                              2.28 kB │ gzip:   0.79 kB
+Building: dist/assets/ScreenLassoTool-BJj_BlGP.js                        2.34 kB │ gzip:   1.05 kB
+Building: dist/assets/RSVPMode-CA37NRwn.js                               2.80 kB │ gzip:   1.25 kB
+Building: dist/assets/speechTools-D9q4aozx.js                            2.89 kB │ gzip:   1.31 kB
+Building: dist/assets/roundRect-mAH3dD0p.js                              2.90 kB │ gzip:   1.04 kB
+Building: dist/assets/physicsGradingQueue-ESgOJsZh.js                    3.13 kB │ gzip:   1.48 kB
+Building: dist/assets/spotify-DxEMMjBR.js                                3.23 kB │ gzip:   1.19 kB
+Building: dist/assets/canvasSync-oy2K1jpF.js                             3.42 kB │ gzip:   1.42 kB
+Building: dist/assets/arc-L-_ie7bz.js                                    3.45 kB │ gzip:   1.47 kB
+Building: dist/assets/PreTestMode-Cv90mgzg.js                            3.54 kB │ gzip:   1.28 kB
+Building: dist/assets/RenameTool-DsiHrLlE.js                             3.75 kB │ gzip:   1.65 kB
+Building: dist/assets/PolarChart-j9tHgpMG.js                             3.86 kB │ gzip:   1.72 kB
+Building: dist/assets/ContentRelay-BiDXkce3.js                           4.10 kB │ gzip:   1.66 kB
+Building: dist/assets/ReExplainTool-DEHWWink.js                          4.22 kB │ gzip:   1.89 kB
+Building: dist/assets/AnalogyTool-f2cYCjog.js                            4.28 kB │ gzip:   2.01 kB
+Building: dist/assets/OcrTool-DtXTyExU.js                                4.31 kB │ gzip:   1.99 kB
+Building: dist/assets/DictateTool-B1rGDElj.js                            4.51 kB │ gzip:   1.93 kB
+Building: dist/assets/ImageInputBar-CtinIDG3.js                          4.53 kB │ gzip:   2.05 kB
+Building: dist/assets/sessionStore-DSd8Y4DU.js                           4.55 kB │ gzip:   2.05 kB
+Building: dist/assets/LeechManagerTool-DEpJfLVx.js                       4.56 kB │ gzip:   1.98 kB
+Building: dist/assets/mistralOcrService-DjOm0ax0.js                      4.69 kB │ gzip:   2.26 kB
+Building: dist/assets/stateDiagram-v2-d93cdb3a-D60x-WLv.js               5.04 kB │ gzip:   2.40 kB
+Building: dist/assets/PrerequisiteTool-Dl--Ghp2.js                       5.06 kB │ gzip:   2.12 kB
+Building: dist/assets/classDiagram-v2-f2320105-HlA9s_En.js               5.08 kB │ gzip:   2.29 kB
+Building: dist/assets/axis-B7wLsTzz.js                                   5.20 kB │ gzip:   2.19 kB
+Building: dist/assets/QuizGenTool-Dy6sphRu.js                            5.27 kB │ gzip:   2.27 kB
+Building: dist/assets/TutorTool-CGbeCD4r.js                              5.45 kB │ gzip:   2.28 kB
+Building: dist/assets/quizEngine-Btpe7fDw.js                             5.51 kB │ gzip:   2.39 kB
+Building: dist/assets/PracticeGenTool-D6wdfCMK.js                        5.53 kB │ gzip:   2.35 kB
+Building: dist/assets/CourseGenTool-951b0EqR.js                          5.64 kB │ gzip:   2.52 kB
+Building: dist/assets/events-DQ172AOg.js                                 6.13 kB │ gzip:   2.09 kB
+Building: dist/assets/StudyScheduleTool-Bx0ZzriU.js                      6.17 kB │ gzip:   2.59 kB
+Building: dist/assets/ScreenLasso-44Jn-UH0.js                            6.19 kB │ gzip:   2.58 kB
+Building: dist/assets/AIChatTool-B2VOpdz7.js                             6.51 kB │ gzip:   2.64 kB
+Building: dist/assets/Timer-Bnfy2Dbe.js                                  6.72 kB │ gzip:   2.61 kB
+Building: dist/assets/QuizletImportTool-yUfqaHao.js                      6.91 kB │ gzip:   2.48 kB
+Building: dist/assets/FactCheckTool-CfwgRyUb.js                          7.39 kB │ gzip:   3.29 kB
+Building: dist/assets/BigContentTool-mF13y2io.js                         7.88 kB │ gzip:   3.09 kB
+Building: dist/assets/VideosPage-Bp3UUEgL.js                             8.10 kB │ gzip:   2.62 kB
+Building: dist/assets/si-LK-N5RQ5JYF-D1woHh95.js                         8.66 kB │ gzip:   3.37 kB
+Building: dist/assets/az-AZ-76LH7QW2-D7dkZD2J.js                         8.69 kB │ gzip:   3.59 kB
+Building: dist/assets/infoDiagram-f8f76790-RYLVxkMR.js                   8.77 kB │ gzip:   3.32 kB
+Building: dist/assets/zh-HK-E62DVLB3-BxjqWBOX.js                         9.16 kB │ gzip:   4.10 kB
+Building: dist/assets/AIToolsPage-_cy6tTeu.js                            9.32 kB │ gzip:   3.24 kB
+Building: dist/assets/classDiagram-70f12bd4-BES4FGCI.js                  9.42 kB │ gzip:   2.95 kB
+Building: dist/assets/BiolResults-Bpj6fACW.js                            9.43 kB │ gzip:   3.17 kB
+Building: dist/assets/EvolutionResults-BhsTwT58.js                       9.86 kB │ gzip:   3.30 kB
+Building: dist/assets/styles-c10674c1-2khIn2Kx.js                       10.01 kB │ gzip:   3.68 kB
+Building: dist/assets/BiolStats-Dl-SPvJT.js                             10.05 kB │ gzip:   3.74 kB
+Building: dist/assets/PdfUploaderTool-DjSAuT42.js                       10.20 kB │ gzip:   3.49 kB
+Building: dist/assets/kk-KZ-P5N5QNE5-C2wzRyXP.js                        10.20 kB │ gzip:   4.21 kB
+Building: dist/assets/BiolSession-D_glk4GP.js                           10.22 kB │ gzip:   3.56 kB
+Building: dist/assets/kaa-6HZHGXH3-DtaY9ke5.js                          10.25 kB │ gzip:   4.19 kB
+Building: dist/assets/EvolutionStats-CIheHFLY.js                        10.25 kB │ gzip:   3.82 kB
+Building: dist/assets/stateDiagram-587899a1-C7GcJuAK.js                 10.31 kB │ gzip:   3.58 kB
+Building: dist/assets/EvolutionSession-O0rpJFtb.js                      10.41 kB │ gzip:   3.67 kB
+Building: dist/assets/linear-CXJJJnh6.js                                10.61 kB │ gzip:   4.42 kB
+Building: dist/assets/CartesianGrid-Dux2Da_d.js                         10.75 kB │ gzip:   3.38 kB
+Building: dist/assets/PhysicsResults-DZIEPHun.js                        11.89 kB │ gzip:   3.76 kB
+Building: dist/assets/index-3862675e-BOe_nh3g.js                        12.02 kB │ gzip:   4.14 kB
+Building: dist/assets/MindMapTool-ifft42bS.js                           12.24 kB │ gzip:   4.50 kB
+Building: dist/assets/lt-LT-XHIRWOB4-DZ0_ep1C.js                        12.58 kB │ gzip:   5.37 kB
+Building: dist/assets/BiolQuestionEditor-sqFguIPO.js                    12.83 kB │ gzip:   3.97 kB
+Building: dist/assets/EvolutionQuestionEditor-Bv1JCWxa.js               12.92 kB │ gzip:   4.06 kB
+Building: dist/assets/PhysicsDiagramCanvas-pACgefUP.js                  12.98 kB │ gzip:   3.01 kB
+Building: dist/assets/VideoTool-DAaS4l5a.js                             13.00 kB │ gzip:   4.30 kB
+Building: dist/assets/OmiTool-Bkh_30gq.js                               13.17 kB │ gzip:   4.74 kB
+Building: dist/assets/TesseractOcrTool-DbUNAdsw.js                      13.86 kB │ gzip:   5.65 kB
+Building: dist/assets/vi-VN-M7AON7JQ-CJVsJdSr.js                        13.94 kB │ gzip:   5.80 kB
+Building: dist/assets/pieDiagram-8a3498a8-yxEsikI2.js                   14.03 kB │ gzip:   5.29 kB
+Building: dist/assets/StudyPage-B7CWUg1j.js                             14.11 kB │ gzip:   4.52 kB
+Building: dist/assets/da-DK-5WZEPLOC-Bm83QHWj.js                        14.49 kB │ gzip:   6.07 kB
+Building: dist/assets/FlashcardGenTool-c1ysKgH3.js                      14.71 kB │ gzip:   5.36 kB
+Building: dist/assets/LineChart-C98rDvyM.js                             14.97 kB │ gzip:   4.93 kB
+Building: dist/assets/time-BE4NtznB.js                                  15.14 kB │ gzip:   4.92 kB
+Building: dist/assets/vendor-tesseract-DztFNiry.js                      15.45 kB │ gzip:   6.66 kB
+Building: dist/assets/th-TH-HPSO5L25-1oUy8Dku.js                        15.60 kB │ gzip:   5.21 kB
+Building: dist/assets/nn-NO-6E72VCQL-DMKufNp9.js                        16.03 kB │ gzip:   6.72 kB
+Building: dist/assets/diverging-CM41Z9d1.js                             16.47 kB │ gzip:   5.67 kB
+Building: dist/assets/nl-NL-IS3SIHDZ-CgOSaj78.js                        16.81 kB │ gzip:   6.93 kB
+Building: dist/assets/SwipeableCard-CJmVm_Bt.js                         17.33 kB │ gzip:   6.10 kB
+Building: dist/assets/graph-CPUCZX83.js                                 17.48 kB │ gzip:   6.29 kB
+Building: dist/assets/my-MM-5M5IBNSE-B5Oqrk7F.js                        17.65 kB │ gzip:   5.33 kB
+Building: dist/assets/string-DKZNtlD-.js                                17.95 kB │ gzip:   5.91 kB
+Building: dist/assets/hu-HU-A5ZG7DT2-BNrdo7ml.js                        18.16 kB │ gzip:   7.59 kB
+Building: dist/assets/fi-FI-Z5N7JZ37-BeDWxlF2.js                        18.48 kB │ gzip:   7.53 kB
+Building: dist/assets/kab-KAB-ZGHBKWFO-DqDRetoi.js                      18.86 kB │ gzip:   7.54 kB
+Building: dist/assets/JpStudyTool-CtnO6o0v.js                           19.00 kB │ gzip:   6.04 kB
+Building: dist/assets/zh-TW-RAJ6MFWO-CPHSajoq.js                        19.07 kB │ gzip:   8.88 kB
+Building: dist/assets/zh-CN-LNUGB5OW-DzH9ZmVq.js                        19.13 kB │ gzip:   8.90 kB
+Building: dist/assets/lv-LV-5QDEKY6T-BIedOpy0.js                        19.22 kB │ gzip:   7.79 kB
+Building: dist/assets/DrawPage-BoCsB31U.js                              19.40 kB │ gzip:   5.91 kB
+Building: dist/assets/gl-ES-HMX3MZ6V-BUTiV7rd.js                        19.47 kB │ gzip:   7.75 kB
+Building: dist/assets/tr-TR-DEFEU3FU-C7XCAKJ5.js                        19.59 kB │ gzip:   7.97 kB
+Building: dist/assets/cs-CZ-2BRQDIVT-DRnRopIx.js                        19.60 kB │ gzip:   8.40 kB
+Building: dist/assets/pt-PT-UZXXM6DQ-M9cBWFHk.js                        19.73 kB │ gzip:   7.79 kB
+Building: dist/assets/id-ID-SAP4L64H-Ccyog8WY.js                        19.76 kB │ gzip:   7.69 kB
+Building: dist/assets/ca-ES-6MX7JW3Y-B-owQVGj.js                        19.87 kB │ gzip:   7.90 kB
+Building: dist/assets/oc-FR-POXYY2M6-BxAgUKcN.js                        19.92 kB │ gzip:   7.83 kB
+Building: dist/assets/nb-NO-T6EIAALU-BDq4bRcX.js                        20.18 kB │ gzip:   8.22 kB
+Building: dist/assets/he-IL-6SHJWFNN-CZy7VJKt.js                        20.40 kB │ gzip:   7.58 kB
+Building: dist/assets/ProcedureQuizTool-DFfjL1TR.js                     20.54 kB │ gzip:   6.03 kB
+Building: dist/assets/bg-BG-XCXSNQG7-DXQxKeMO.js                        20.84 kB │ gzip:   7.39 kB
+Building: dist/assets/BiolMindMap-FuN3SRz-.js                           21.10 kB │ gzip:   6.32 kB
+Building: dist/assets/pt-BR-5N22H2LF-CvhdnLuf.js                        21.12 kB │ gzip:   8.21 kB
+Building: dist/assets/sankeyDiagram-04a897e0-DWXpp0vg.js                21.27 kB │ gzip:   7.78 kB
+Building: dist/assets/eu-ES-A7QVB2H4-m6uvo_hs.js                        21.28 kB │ gzip:   8.22 kB
+Building: dist/assets/es-ES-U4NZUMDT-BM4wZfTa.js                        21.43 kB │ gzip:   8.48 kB
+Building: dist/assets/sl-SI-NN7IZMDC-CYvgiHFl.js                        21.44 kB │ gzip:   8.56 kB
+Building: dist/assets/sv-SE-XGPEYMSR-DPSa4MKz.js                        21.59 kB │ gzip:   8.56 kB
+Building: dist/assets/flowDiagram-66a62f08-B3MRMKkq.js                  21.83 kB │ gzip:   7.19 kB
+Building: dist/assets/journeyDiagram-49397b02-BCYccOe7.js               21.83 kB │ gzip:   7.71 kB
+Building: dist/assets/it-IT-JPQ66NNP-BUoTuY16.js                        22.14 kB │ gzip:   8.58 kB
+Building: dist/assets/VideoPlayer-CipHZq9U.js                           22.36 kB │ gzip:   6.02 kB
+Building: dist/assets/sk-SK-C5VTKIMK-CFzw1YZE.js                        22.39 kB │ gzip:   9.10 kB
+Building: dist/assets/pl-PL-T2D74RX3-CnZS__8L.js                        22.56 kB │ gzip:   9.22 kB
+Building: dist/assets/FileToolsKit-BrSh7FA2.js                          22.59 kB │ gzip:   6.71 kB
+Building: dist/assets/timeline-definition-85554ec2-BJE0kUPd.js          22.79 kB │ gzip:   7.97 kB
+Building: dist/assets/ro-RO-JPDTUUEW-sm1O2M9n.js                        23.23 kB │ gzip:   8.94 kB
+Building: dist/assets/de-DE-XR44H4JA-Cy5TynjU.js                        23.42 kB │ gzip:   8.98 kB
+Building: dist/assets/ja-JP-DBVTYXUO-B4NKdCOU.js                        23.48 kB │ gzip:   8.83 kB
+Building: dist/assets/fr-FR-RHASNOE6-CYxvCNwg.js                        23.52 kB │ gzip:   8.89 kB
+Building: dist/assets/bn-BD-2XOGV67Q-CvCJPw0l.js                        23.68 kB │ gzip:   6.72 kB
+Building: dist/assets/ko-KR-MTYHY66A-vhdCSSkU.js                        23.96 kB │ gzip:   9.19 kB
+Building: dist/assets/testData-78GtVuZZ.js                              24.12 kB │ gzip:   7.96 kB
+Building: dist/assets/EvolutionMindMap-CwphuRoA.js                      24.26 kB │ gzip:   7.20 kB
+Building: dist/assets/fa-IR-HGAKTJCU-DgRJSB2g.js                        24.32 kB │ gzip:   8.48 kB
+Building: dist/assets/requirementDiagram-deff3bca-DA3lT0QK.js           24.80 kB │ gzip:   8.54 kB
+Building: dist/assets/LearnPage-Bu2z13rx.js                             25.34 kB │ gzip:   8.49 kB
+Building: dist/assets/PhysicsQuizTab-BgG5D9BM.js                        25.62 kB │ gzip:   8.25 kB
+Building: dist/assets/ar-SA-G6X2FPQ2-7Rsle5J9.js                        25.75 kB │ gzip:   9.15 kB
+Building: dist/assets/PhysicsSimTool-iVrVq45c.js                        26.22 kB │ gzip:   8.59 kB
+Building: dist/assets/styles-6aaf32cf-CKvW2qd_.js                       26.41 kB │ gzip:   8.44 kB
+Building: dist/assets/index-CuLUM8bR.js                                 26.94 kB │ gzip:   6.97 kB
+Building: dist/assets/CalendarPage-EVPXjy9O.js                          27.11 kB │ gzip:   8.73 kB
+Building: dist/assets/pa-IN-N4M65BXN-DpVsfxPp.js                        28.06 kB │ gzip:   8.00 kB
+Building: dist/assets/layout-DdZfB_Lo.js                                28.85 kB │ gzip:  10.49 kB
+Building: dist/assets/ku-TR-6OUDTVRD-Ck2Wu1d2.js                        29.40 kB │ gzip:   9.29 kB
+Building: dist/assets/quadrantDiagram-120e2f19-CG8_vAWO.js              29.59 kB │ gzip:   8.41 kB
+Building: dist/assets/el-GR-BZB4AONW-49xLwEXE.js                        29.75 kB │ gzip:   9.63 kB
+Building: dist/assets/ru-RU-B4JR7IUQ-DvfuS2Nw.js                        30.82 kB │ gzip:   9.92 kB
+Building: dist/assets/erDiagram-9861fffd-B62cQPdb.js                    30.99 kB │ gzip:  10.07 kB
+Building: dist/assets/uk-UA-QMV73CPH-CEqy2whK.js                        31.72 kB │ gzip:  10.14 kB
+Building: dist/assets/pica-xapbsNHk.js                                  32.43 kB │ gzip:  12.86 kB
+Building: dist/assets/hi-IN-IWLTKZ5I-Texq6qxn.js                        32.43 kB │ gzip:   9.18 kB
+Building: dist/assets/edges-e0da2a9e-CAWOZYzh.js                        34.34 kB │ gzip:   8.92 kB
+Building: dist/assets/ta-IN-2NMHFXQM-CBr8jWO1.js                        35.35 kB │ gzip:   8.58 kB
+Building: dist/assets/index.esm-DNLpqXh8.js                             35.51 kB │ gzip:  11.50 kB
+Building: dist/assets/xychartDiagram-e933f94c-CXN22juM.js               36.21 kB │ gzip:  10.03 kB
+Building: dist/assets/transform-D-mhXS69.js                             36.38 kB │ gzip:  10.23 kB
+Building: dist/assets/km-KH-HSX4SM5Z-CH8GE-DP.js                        36.73 kB │ gzip:   9.32 kB
+Building: dist/assets/blockDiagram-38ab4fdb-GFbKIrHB.js                 37.35 kB │ gzip:  12.02 kB
+Building: dist/assets/PhysMindMap-BAa9dBfv.js                           37.55 kB │ gzip:  12.42 kB
+Building: dist/assets/styles-9a916d00-CLjyJ5Nt.js                       37.90 kB │ gzip:  12.61 kB
+Building: (!) Some chunks are larger than 500 kB after minification. Consider:
+Building: - Using dynamic import() to code-split the application
+Building: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+Building: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+Building: dist/assets/gitGraphDiagram-72cf32ee-T9yryuJj.js              38.91 kB │ gzip:  11.65 kB
+Building: dist/assets/PhysicsQuestionEditor-BQJ1AScB.js                 39.39 kB │ gzip:   9.08 kB
+Building: dist/assets/ganttDiagram-c361ad54-D3E9xLl8.js                 40.76 kB │ gzip:  14.03 kB
+Building: dist/assets/UnifiedLearnPage-CZxiwvJq.js                      40.80 kB │ gzip:  12.07 kB
+Building: dist/assets/PhysicsStats-Bonv93t6.js                          41.12 kB │ gzip:  11.95 kB
+Building: dist/assets/mr-IN-CRQNXWMA-CWFi2sul.js                        42.33 kB │ gzip:  10.72 kB
+Building: dist/assets/ToolsPage-Del91gOv.js                             44.93 kB │ gzip:  12.47 kB
+Building: dist/assets/image-blob-reduce.esm-BLtmMM_J.js                 45.80 kB │ gzip:  16.70 kB
+Building: dist/assets/JpMindMap-DjZZO7Hh.js                             46.13 kB │ gzip:  15.92 kB
+Building: dist/assets/flowDb-956e92f1-DqPbtsM4.js                       46.77 kB │ gzip:  15.29 kB
+Building: dist/assets/AnkiImportTool-B5Va4J2M.js                        47.82 kB │ gzip:  17.26 kB
+Building: dist/assets/vendor-react-C5sP-0E5.js                          49.75 kB │ gzip:  17.60 kB
+Building: dist/assets/createText-2e5e7dd3-D5iVsMJX.js                   60.19 kB │ gzip:  17.88 kB
+Building: dist/assets/RichTextEditor-B1dHijRO.js                        65.50 kB │ gzip:  20.57 kB
+Building: dist/assets/PhysicsSession-DAgDuybp.js                        66.30 kB │ gzip:  17.44 kB
+Building: dist/assets/c4Diagram-3d4e48cf-7Dq-o5uF.js                    68.60 kB │ gzip:  19.25 kB
+Building: dist/assets/LibraryPage-DJ_Seel8.js                           78.68 kB │ gzip:  19.26 kB
+Building: dist/assets/StudyModesPage-DSB_JRvH.js                        80.49 kB │ gzip:  18.31 kB
+Building: dist/assets/sequenceDiagram-704730f1-DxYuBVtD.js              84.30 kB │ gzip:  24.29 kB
+Building: dist/assets/index-D332ik7l.js                                 87.18 kB │ gzip:  27.68 kB
+Building: dist/assets/Flashcards-E0to4bpi.js                            89.30 kB │ gzip:  23.71 kB
+Building: dist/assets/jszip.min-Dp3lfxT0.js                             96.59 kB │ gzip:  29.79 kB
+Building: dist/assets/Quizzes-BJhhHFqc.js                               97.40 kB │ gzip:  23.93 kB
+Building: dist/assets/EvolutionPractiumTab-BywafHEH.js                 109.40 kB │ gzip:  32.96 kB
+Building: dist/assets/ConnectMode-DZOGn8iU.js                          113.04 kB │ gzip:  29.15 kB
+Building: dist/assets/StudyAnnotationSidecar-DVvFMyDK.js               143.31 kB │ gzip:  47.43 kB
+Building: dist/assets/Dashboard-Die5Z3JD.js                            149.98 kB │ gzip:  38.88 kB
+Building: dist/assets/SettingsPage-BP3E_6k-.js                         162.92 kB │ gzip:  43.45 kB
+Building: dist/assets/JpQuizTab-Brt0Fqc7.js                            164.69 kB │ gzip:  44.97 kB
+Building: dist/assets/BiolPractiumTab-MhvsGxS0.js                      188.37 kB │ gzip:  49.29 kB
+Building: dist/assets/index-Cf2YXMAw.js                                229.47 kB │ gzip:  65.51 kB
+Building: dist/assets/vendor-katex-iVPqcnmf.js                         259.00 kB │ gzip:  76.92 kB
+Building: dist/assets/BarChart-DAujV-vV.js                             288.38 kB │ gzip:  84.82 kB
+Building: dist/assets/pdf-C_7zF4kU.js                                  404.67 kB │ gzip: 119.87 kB
+Building: dist/assets/CoursePage-yz_RtfWo.js                           417.17 kB │ gzip: 111.03 kB
+Building: dist/assets/vendor-tiptap-BIOhzkxG.js                        455.47 kB │ gzip: 145.04 kB
+Building: dist/assets/vendor-firebase-a8FDos46.js                      516.92 kB │ gzip: 155.40 kB
+Building: dist/assets/index-g-DQyaH4.js                                526.65 kB │ gzip: 163.47 kB
+Building: dist/assets/mindmap-definition-fc14e90a-BBca4Ujj.js          541.98 kB │ gzip: 169.48 kB
+Building: dist/assets/vendor-filetools-z6ugYmVi.js                     575.01 kB │ gzip: 228.90 kB
+Building: dist/assets/vendor-excalidraw-DtuzH5ZC.js                  1,134.36 kB │ gzip: 371.75 kB
+Building: dist/assets/flowchart-elk-definition-4a651766-NocxqisB.js  1,451.65 kB │ gzip: 444.22 kB
+Building: dist/assets/subset-shared.chunk-D4uWqMXM.js                1,820.58 kB │ gzip: 735.75 kB
+Building: ✓ built in 22.82s
+Building: PWA v1.2.0
+Building: mode      generateSW
+Building: precache  13 entries (1095.93 KiB)
+Building: files generated
+Building: dist/sw.js
+Building: dist/workbox-ab6a9e21.js
+Building: Using TypeScript 5.9.3 (local user-provided)
+Building: Using TypeScript 5.9.3 (local user-provided)
+Building: Using TypeScript 5.9.3 (local user-provided)
+Building: Using TypeScript 5.9.3 (local user-provided)
+Building: Using TypeScript 5.9.3 (local user-provided)
+Building: Build Completed in /vercel/output [35s]
+Building: Deploying outputs...
+[2K[1A[2K[GProduction: https://nousai-cgsr0fap4-totallyjohnny7s-projects.vercel.app [1m]
+Completing...
+Aliased: https://nousai-app.vercel.app [1m]
+DEPLOY_SUCCESS  

@@ -161,7 +161,9 @@ export default defineConfig({
           // Math rendering
           'vendor-katex': ['katex'],
           // OCR (very large, lazy load)
-          'vendor-tesseract': ['tesseract.js']
+          'vendor-tesseract': ['tesseract.js'],
+          // File tools (only loaded when File Tools tab is opened)
+          'vendor-filetools': ['pdf-lib', 'browser-image-compression']
         }
       }
     }

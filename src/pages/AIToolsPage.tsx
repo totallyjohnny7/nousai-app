@@ -8,7 +8,7 @@ import {
   ScanLine, Mic, Lightbulb, GitBranch, BookOpen,
   Edit3, CheckCircle, Atom, Headphones, Languages, MessageSquare,
   Layers, HelpCircle, GraduationCap, RefreshCw, Dumbbell, GitMerge, CalendarDays,
-  AlertCircle, Download, FileText, ScanSearch,
+  AlertCircle, Download, FileText, ScanSearch, Wrench,
 } from 'lucide-react';
 import { useStore } from '../store';
 import { isAIConfigured } from '../utils/ai';
@@ -19,7 +19,8 @@ type AITool =
   | 'flashcardgen' | 'quizgen' | 'tutor' | 'reexplain' | 'practice' | 'prerequisites' | 'schedule'
   | 'ankiimport'
   | 'quizletimport'
-  | 'pdfocr';
+  | 'pdfocr'
+  | 'filetools';
 
 interface ToolDef {
   id: AITool;
@@ -49,6 +50,7 @@ const TOOLS: ToolDef[] = [
   { id: 'ankiimport',    icon: Download,    label: 'Anki Import' },
   { id: 'quizletimport', icon: FileText,    label: 'Quizlet Import' },
   { id: 'pdfocr',        icon: ScanSearch,  label: 'PDF → Cards' },
+  { id: 'filetools',     icon: Wrench,      label: 'File Tools' },
 ];
 
 const OcrTool            = lazyWithRetry(() => import('../components/aitools/OcrTool'));
@@ -72,6 +74,7 @@ const StudyScheduleTool  = lazyWithRetry(() => import('../components/aitools/Stu
 const AnkiImportTool       = lazyWithRetry(() => import('../components/aitools/AnkiImportTool'));
 const QuizletImportTool    = lazyWithRetry(() => import('../components/aitools/QuizletImportTool'));
 const PdfUploaderTool      = lazyWithRetry(() => import('../components/aitools/PdfUploaderTool'));
+const FileToolsKit         = lazyWithRetry(() => import('../components/aitools/FileToolsKit'));
 
 function ToolFallback() {
   return (
@@ -184,6 +187,7 @@ export default function AIToolsPage() {
           {activeTool === 'ankiimport'      && <AnkiImportTool />}
           {activeTool === 'quizletimport'   && <QuizletImportTool />}
           {activeTool === 'pdfocr'          && <PdfUploaderTool />}
+          {activeTool === 'filetools'       && <FileToolsKit />}
         </div>
       </Suspense>
     </div>

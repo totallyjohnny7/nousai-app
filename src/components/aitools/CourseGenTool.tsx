@@ -223,13 +223,13 @@ function ModuleCard({ module, index }: { module: CourseModule; index: number }) 
       </button>
       {expanded && (
         <div style={{ marginTop: 12 }}>
-          {module.topics.map((t, ti) => (
+          {(module.topics || []).map((t, ti) => (
             <div key={t.id} style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
                 {ti + 1}. {t.name}
               </div>
               <div style={{ paddingLeft: 16 }}>
-                {t.subtopics.map((s, si) => (
+                {(t.subtopics || []).map((s, si) => (
                   <div key={si} className="text-xs text-muted" style={{ lineHeight: 2 }}>
                     {ti + 1}.{si + 1} {s}
                   </div>

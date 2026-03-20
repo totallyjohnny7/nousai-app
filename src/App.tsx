@@ -1,7 +1,7 @@
 import { Routes, Route, NavLink, useLocation, useParams, Navigate, useNavigate } from 'react-router-dom'
 import type { CourseSpace } from './types'
 import { Suspense, Component, useEffect, useMemo, useRef, useState, type ReactNode, type ErrorInfo } from 'react'
-import { Home, Trophy, BookOpen, Clock, Calendar, Settings, Upload, Brain, Sparkles, Library, Mic, RefreshCw, AlertTriangle, Search, PanelLeftClose, PanelLeftOpen, Keyboard, X, MoreHorizontal, Menu } from 'lucide-react'
+import { Home, Trophy, BookOpen, Clock, Calendar, Settings, Upload, Brain, Sparkles, Library, Mic, RefreshCw, AlertTriangle, Search, PanelLeftClose, PanelLeftOpen, Keyboard, X, MoreHorizontal, Menu, Film } from 'lucide-react'
 import { lazyWithRetry, markAppLoaded, isChunkLoadError, clearCachesAndReload } from './utils/lazyWithRetry'
 import { useStore } from './store'
 import { resetDailyIfNeeded, getLevel, getLevelProgress, getTitle } from './utils/gamification'
@@ -17,7 +17,11 @@ import {
 } from './utils/transcribeStore'
 import { getDueCount } from './utils/getDueCount'
 import { initFsrsCache } from './utils/fsrsStorage'
+import { detectDeviceProfile } from './utils/deviceDetection'
+import { useAuthUser } from './hooks/useAuthUser'
 import './App.css'
+
+const ContentRelay = lazyWithRetry(() => import('./components/ContentRelay'))
 
 /* ── Error Boundary to prevent blank page crashes ──── */
 interface EBProps { children: ReactNode }
@@ -97,9 +101,11 @@ const CalendarPage = lazyWithRetry(() => import('./pages/CalendarPage'))
 const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage'))
 const ToolsPage = lazyWithRetry(() => import('./pages/ToolsPage'))
 const LearnPage = lazyWithRetry(() => import('./pages/LearnPage'))
+const UnifiedLearnPage = lazyWithRetry(() => import('./pages/UnifiedLearnPage'))
 const LibraryPage = lazyWithRetry(() => import('./pages/LibraryPage'))
 const AIToolsPage = lazyWithRetry(() => import('./pages/AIToolsPage'))
 const CoursePage = lazyWithRetry(() => import('./pages/CoursePage'))
+const VideosPage = lazyWithRetry(() => import('./pages/VideosPage'))
 
 
 /* ── Navigation ───── */
@@ -110,12 +116,11 @@ const NAV = [
   { to: '/learn', icon: BookOpen, label: 'LEARN' },
   { to: '/flashcards', icon: Brain, label: 'CARDS' },
   { to: '/library', icon: Library, label: 'LIBRARY' },
-  { to: '/ai', icon: Sparkles, label: 'AI' },
 ]
 const MORE_NAV = [
+  { to: '/videos', icon: Film, label: 'VIDEOS' },
   { to: '/timer', icon: Clock, label: 'TIMER' },
   { to: '/calendar', icon: Calendar, label: 'CALENDAR' },
-  { to: '/tools', icon: Mic, label: 'TOOLS' },
   { to: '/settings', icon: Settings, label: 'SETTINGS' },
 ]
 
@@ -125,11 +130,10 @@ const SIDEBAR_NAV = [
   { to: '/quiz', icon: Trophy, label: 'QUIZ' },
   { to: '/learn', icon: BookOpen, label: 'LEARN' },
   { to: '/library', icon: Library, label: 'LIBRARY' },
-  { to: '/ai', icon: Sparkles, label: 'AI' },
   { to: '/flashcards', icon: Brain, label: 'CARDS' },
+  { to: '/videos', icon: Film, label: 'VIDEOS' },
   { to: '/timer', icon: Clock, label: 'TIMER' },
   { to: '/calendar', icon: Calendar, label: 'CALENDAR' },
-  { to: '/tools', icon: Mic, label: 'TOOLS' },
   { to: '/settings', icon: Settings, label: 'SETTINGS' },
 ]
 
@@ -137,13 +141,11 @@ const SIDEBAR_NAV = [
 const PRELOAD_MAP: Record<string, () => Promise<unknown>> = {
   '/': () => import('./pages/Dashboard'),
   '/quiz': () => import('./pages/Quizzes'),
-  '/learn': () => import('./pages/LearnPage'),
+  '/learn': () => import('./pages/UnifiedLearnPage'),
   '/library': () => import('./pages/LibraryPage'),
-  '/ai': () => import('./pages/AIToolsPage'),
   '/flashcards': () => import('./pages/Flashcards'),
   '/timer': () => import('./pages/Timer'),
   '/calendar': () => import('./pages/CalendarPage'),
-  '/tools': () => import('./pages/ToolsPage'),
   '/settings': () => import('./pages/SettingsPage'),
 }
 function preloadRoute(to: string) {
@@ -274,7 +276,8 @@ function FloatingTranscribeIndicator() {
 }
 
 export default function App() {
-  const { loaded, data, setData, srData, updatePluginData, syncStatus, lastSyncAt, remoteUpdateAvailable, loadRemoteData, dismissRemoteBanner, betaMode, backupNow, courses } = useStore()
+  const { loaded, data, setData, srData, updatePluginData, syncStatus, lastSyncAt, remoteUpdateAvailable, loadRemoteData, dismissRemoteBanner, betaMode, backupNow, courses, setEinkMode } = useStore()
+  const { uid } = useAuthUser()
   const location = useLocation()
   const initRef = useRef(false)
   const [omniSearchOpen, setOmniSearchOpen] = useState(false)
@@ -321,6 +324,12 @@ export default function App() {
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Auto-enable e-ink mode on Boox devices
+  useEffect(() => {
+    const profile = detectDeviceProfile();
+    if (profile === 'boox') setEinkMode(true);
+  }, [setEinkMode])
 
   // Mark app as successfully loaded (clears chunk-reload flag for future attempts)
   useEffect(() => { markAppLoaded(); }, [])
@@ -652,19 +661,20 @@ export default function App() {
             <Route path="/study" element={<StudyPage />} />
             <Route path="/quiz" element={<Quizzes />} />
             <Route path="/quizzes" element={<Navigate to="/quiz" replace />} />
-            <Route path="/learn" element={<LearnPage />} />
+            <Route path="/learn" element={<UnifiedLearnPage />} />
             <Route path="/flashcards" element={<Flashcards />} />
             <Route path="/timer" element={<Timer />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/notes" element={<Navigate to="/library?tab=notes" replace />} />
             <Route path="/draw" element={<Navigate to="/library?tab=drawings" replace />} />
-            <Route path="/ai" element={<AIToolsPage />} />
-            <Route path="/tools" element={<ToolsPage />} />
+            <Route path="/ai" element={<Navigate to="/learn" replace />} />
+            <Route path="/tools" element={<Navigate to="/learn" replace />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/study-modes" element={<Navigate to="/library?tab=study" replace />} />
             <Route path="/course" element={<CoursePage />} />
             <Route path="/course/:id" element={<CourseRedirect />} />
+            <Route path="/videos" element={<VideosPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
@@ -676,6 +686,13 @@ export default function App() {
 
       {/* Floating mic indicator — shows on any page while Transcribe is recording */}
       <FloatingTranscribeIndicator />
+
+      {/* Cross-device content relay — only rendered when signed in */}
+      {uid && (
+        <Suspense fallback={null}>
+          <ContentRelay uid={uid} />
+        </Suspense>
+      )}
 
       {/* Omni Search palette — triggered by Cmd+F / Ctrl+F */}
       {omniSearchOpen && (

@@ -46,8 +46,8 @@ import { getLevel } from '../utils/gamification';
 
 const JpQuizTab = lazyWithRetry(() => import('../components/jpquiz/JpQuizTab'));
 const PhysicsQuizTab = lazyWithRetry(() => import('../components/physquiz/PhysicsQuizTab'));
-const BiolExam2Tab = lazyWithRetry(() => import('../components/biolquiz/BiolExam2Tab'));
-const EvolutionExam2Tab = lazyWithRetry(() => import('../components/evolutionquiz/EvolutionExam2Tab'));
+const BiolPractiumTab = lazyWithRetry(() => import('../components/biolquiz/BiolPractiumTab'));
+const EvolutionPractiumTab = lazyWithRetry(() => import('../components/evolutionquiz/EvolutionPractiumTab'));
 
 // ─── Types ─────────────────────────────────────────────
 
@@ -555,9 +555,9 @@ function ModePanel({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
           </div>
         );
         return (
-          <ToolErrorBoundary toolName="BIOL Exam 2">
+          <ToolErrorBoundary toolName="BIOL3020 Practium">
             <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading...</div>}>
-              <BiolExam2Tab course={course} />
+              <BiolPractiumTab course={course} />
             </Suspense>
           </ToolErrorBoundary>
         );
@@ -574,9 +574,9 @@ function ModePanel({ mode, onClose }: { mode: ModeId; onClose: () => void }) {
           </div>
         );
         return (
-          <ToolErrorBoundary toolName="Evolution Exam 2">
+          <ToolErrorBoundary toolName="Evolution Practium">
             <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading...</div>}>
-              <EvolutionExam2Tab course={course} />
+              <EvolutionPractiumTab course={course} />
             </Suspense>
           </ToolErrorBoundary>
         );

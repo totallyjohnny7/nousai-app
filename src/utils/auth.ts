@@ -48,7 +48,9 @@ let firebaseApp: any = null;
 let firebaseAuth: any = null;
 let firebaseDb: any = null;
 let firebaseStorage: any = null;
-let firebaseLoaded = false;
+// Promise-based guard: all concurrent callers share the same in-flight Promise,
+// eliminating the race window where firebaseLoaded=true but firebaseApp is still null.
+let firebaseLoadPromise: Promise<boolean> | null = null;
 
 // Module-scoped Firebase functions — NOT exposed on window (prevents XSS exploitation)
 let fbFns: {
@@ -72,12 +74,11 @@ let fbFns: {
   getDownloadURL: any;
   getBytes: any;
   getBlob: any;
+  uploadBytesResumable: any;
+  deleteObject: any;
 } | null = null;
 
-async function loadFirebase(): Promise<boolean> {
-  if (firebaseLoaded) return !!firebaseApp;
-  firebaseLoaded = true;
-
+async function _doLoadFirebase(): Promise<boolean> {
   if (!FIREBASE_CONFIG.apiKey) {
     console.log('NousAI: No Firebase config found, running in local mode');
     return false;
@@ -94,7 +95,7 @@ async function loadFirebase(): Promise<boolean> {
     const { initializeApp } = appMod;
     const { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } = authMod;
     const { getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch, deleteDoc, deleteField, onSnapshot } = storeMod;
-    const { getStorage, ref: storageRefFn, uploadString, getDownloadURL, getBytes, getBlob } = storageMod;
+    const { getStorage, ref: storageRefFn, uploadString, getDownloadURL, getBytes, getBlob, uploadBytesResumable, deleteObject } = storageMod;
 
     firebaseApp = initializeApp(FIREBASE_CONFIG);
     firebaseAuth = getAuth(firebaseApp);
@@ -123,13 +124,47 @@ async function loadFirebase(): Promise<boolean> {
       getDownloadURL,
       getBytes,
       getBlob,
+      uploadBytesResumable,
+      deleteObject,
     };
 
     return true;
   } catch (e) {
     console.warn('NousAI: Firebase failed to load, using local mode', e);
+    // Reset promise so callers can retry (e.g. network was down temporarily)
+    firebaseLoadPromise = null;
     return false;
   }
+}
+
+/** Lazily load Firebase SDK. All concurrent callers share the same in-flight Promise. */
+async function loadFirebase(): Promise<boolean> {
+  if (!firebaseLoadPromise) {
+    firebaseLoadPromise = _doLoadFirebase();
+  }
+  return firebaseLoadPromise;
+}
+
+// ─── Storage helpers (for videoStorage.ts) ───────────────
+
+/** Ensures Firebase is loaded and returns storage ref helpers. Throws if Firebase unavailable. */
+export async function getFirebaseStorageFns(): Promise<{
+  storage: typeof firebaseStorage;
+  storageRef: (path: string) => unknown;
+  uploadBytesResumable: typeof fbFns extends null ? never : any;
+  getDownloadURL: typeof fbFns extends null ? never : any;
+  deleteObject: typeof fbFns extends null ? never : any;
+}> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns || !firebaseStorage) throw new Error('Firebase Storage not available');
+  const storage = firebaseStorage;
+  return {
+    storage,
+    storageRef: (path: string) => fbFns!.storageRef(storage, path),
+    uploadBytesResumable: fbFns.uploadBytesResumable,
+    getDownloadURL: fbFns.getDownloadURL,
+    deleteObject: fbFns.deleteObject,
+  };
 }
 
 // ─── Auth Functions ─────────────────────────────────────
@@ -380,6 +415,22 @@ function trimForSync(data: any): any {
     d.localData = trimmedLocal;
   }
 
+  // 6a. Strip cardQualityCache — ephemeral, regenerated on demand, never sync to Firestore
+  if (pd.cardQualityCache) {
+    delete pd.cardQualityCache;
+  }
+
+  // 6. Video metadata: strip downloadUrl + thumbnailBase64 (regenerated on demand), cap at 50
+  if (Array.isArray(pd.savedVideos)) {
+    pd.savedVideos = pd.savedVideos
+      .sort((a: any, b: any) => (a.createdAt > b.createdAt ? -1 : 1))
+      .slice(0, 50)
+      .map((v: any) => {
+        const { downloadUrl: _du, thumbnailBase64: _tb, ...rest } = v;
+        return rest;
+      });
+  }
+
   d.pluginData = pd;
   return d;
 }
@@ -618,6 +669,89 @@ export async function subscribeToMetadataChanges(
   }) as () => void
 }
 
+// ─── Omi Integration Helpers ─────────────────────────────
+
+/** Subscribe to the live Omi inbox feed for a user. Returns unsubscribe fn. */
+export async function subscribeOmiInbox(
+  uid: string,
+  onChange: (docs: Record<string, unknown>[]) => void,
+  limitN = 30,
+): Promise<() => void> {
+  const loaded = await loadFirebase()
+  if (!loaded || !fbFns) return () => {}
+  const fb = fbFns
+  const col = fb.collection(firebaseDb, 'users', uid, 'omi-inbox')
+  return fb.onSnapshot(col, (snap: any) => {
+    const docs: Record<string, unknown>[] = snap.docs
+      ? snap.docs
+          .map((d: any) => ({ id: d.id, ...d.data() }))
+          .sort((a: any, b: any) =>
+            String(b.receivedAt || '').localeCompare(String(a.receivedAt || '')),
+          )
+          .slice(0, limitN)
+      : []
+    onChange(docs)
+  }) as () => void
+}
+
+/** Subscribe to today's Omi study time document. Returns unsubscribe fn. */
+export async function subscribeOmiTime(
+  uid: string,
+  date: string,
+  onChange: (data: Record<string, unknown> | null) => void,
+): Promise<() => void> {
+  const loaded = await loadFirebase()
+  if (!loaded || !fbFns) return () => {}
+  const fb = fbFns
+  const ref = fb.doc(firebaseDb, 'users', uid, 'omi-time', date)
+  return fb.onSnapshot(ref, (snap: any) => {
+    onChange(snap.exists() ? snap.data() : null)
+  }) as () => void
+}
+
+/** Subscribe to unsynced Omi flashcards. Returns unsubscribe fn. */
+export async function subscribeOmiFlashcards(
+  uid: string,
+  onNew: (cards: { id: string; q: string; a: string; topic: string; omiMemoryId: string }[]) => void,
+): Promise<() => void> {
+  const loaded = await loadFirebase()
+  if (!loaded || !fbFns) return () => {}
+  const fb = fbFns
+  const col = fb.collection(firebaseDb, 'users', uid, 'omi-flashcards')
+  return fb.onSnapshot(col, (snap: any) => {
+    if (!snap.docs) return
+    const unsynced = snap.docs
+      .filter((d: any) => d.data().addedToFSRS === false)
+      .map((d: any) => ({ id: d.id, ...d.data() }))
+    if (unsynced.length > 0) onNew(unsynced)
+  }) as () => void
+}
+
+/** Mark an Omi flashcard as added to FSRS (prevents duplicate syncing). */
+export async function markOmiFlashcardSynced(uid: string, docId: string): Promise<void> {
+  const loaded = await loadFirebase()
+  if (!loaded || !fbFns) return
+  const fb = fbFns
+  const ref = fb.doc(firebaseDb, 'users', uid, 'omi-flashcards', docId)
+  await fb.setDoc(ref, { addedToFSRS: true }, { merge: true })
+}
+
+/** Save Omi auto-settings + AI key + speech profile to Firestore so webhook can read them. */
+export async function saveOmiConfig(
+  uid: string,
+  config: {
+    omiAutoSettings?: Record<string, boolean>
+    omiAiKey?: string
+    omiSpeechProfile?: Record<string, unknown>
+  },
+): Promise<void> {
+  const loaded = await loadFirebase()
+  if (!loaded || !fbFns) return
+  const fb = fbFns
+  const ref = fb.doc(firebaseDb, 'users', uid)
+  await fb.setDoc(ref, config, { merge: true })
+}
+
 // ─── Email Verification ─────────────────────────────────
 
 export async function sendVerificationEmail(): Promise<void> {
@@ -742,6 +876,79 @@ export function hasLocalPin(): boolean {
 
 export function removeLocalPin(): void {
   localStorage.removeItem('nousai-pin');
+}
+
+// ─── Cross-Device Content Relay ─────────────────────────────────────────────
+// Ephemeral Firestore doc at users/{uid}/relay/clipRelay.
+// NOT part of the main sync pipeline — no gzip, no trimForSync, no BroadcastChannel.
+
+/**
+ * Write a relay payload to Firestore for pickup by another device.
+ * Overwrites any previous relay doc — "last sent wins" clipboard model.
+ */
+export async function writeRelayDoc(uid: string, data: unknown): Promise<void> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns) return;
+  const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'clipRelay');
+  await fbFns.setDoc(ref, data);
+}
+
+/**
+ * Subscribe to relay doc updates for this user.
+ * Returns an unsubscribe function — call it on component unmount.
+ */
+export function watchRelayDoc(uid: string, cb: (data: unknown) => void): () => void {
+  // loadFirebase is async; we start the subscribe once Firebase is ready.
+  let unsub: (() => void) | null = null;
+  let cancelled = false;
+
+  loadFirebase().then((loaded) => {
+    if (cancelled || !loaded || !fbFns) return;
+    const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'clipRelay');
+    unsub = fbFns.onSnapshot(ref, (snap: any) => {
+      if (snap.exists()) cb(snap.data());
+    });
+  });
+
+  return () => {
+    cancelled = true;
+    unsub?.();
+  };
+}
+
+/**
+ * Delete the relay doc after it has been received (keeps Firestore clean).
+ */
+export async function deleteRelayDoc(uid: string): Promise<void> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns) return;
+  const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'clipRelay');
+  try { await fbFns.deleteDoc(ref); } catch { /* non-fatal */ }
+}
+
+/**
+ * Upload large relay content to Firebase Storage.
+ * Used when payload exceeds ~100KB to avoid Firestore 1MB doc limit.
+ * Path: relay/{uid}/large-payload (overwritten each send — clipboard model)
+ * Returns a download URL for the receiver to fetch.
+ */
+export async function uploadRelayContent(uid: string, content: string): Promise<string> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns || !firebaseStorage) throw new Error('Firebase Storage not available');
+  const path = `relay/${uid}/large-payload`;
+  const ref = fbFns.storageRef(firebaseStorage, path);
+  await fbFns.uploadString(ref, content, 'raw');
+  return fbFns.getDownloadURL(ref);
+}
+
+/**
+ * Download large relay content from a Firebase Storage URL.
+ * Called by the receiver when `contentRef` is present in the relay doc.
+ */
+export async function downloadRelayContent(url: string): Promise<string> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Relay content download failed: HTTP ${response.status}`);
+  return response.text();
 }
 
 // ─── Safety Net Backup ───────────────────────────────────────────────────────
