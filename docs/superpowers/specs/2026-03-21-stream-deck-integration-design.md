@@ -89,7 +89,7 @@ Memory performance after just one hour of spaced repetition can hold up to four 
 - **Cognitive Load Theory:** Sweller, J. (1988). "Cognitive Load During Problem Solving: Effects on Learning." *Cognitive Science*, 12(2), 257-285. Finding: extraneous cognitive load (navigating tools) competes directly with germane load (learning content).
 - **Circadian Effects on Memory:** May, C. P., Hasher, L., & Stoltzfus, E. R. (1993). "Optimal Time of Day and the Magnitude of Age Differences in Memory." *Psychological Science*, 4(5), 326-330. Finding: morning favors encoding for most adults; afternoon/evening favors retrieval.
 - **Confirmation Bias:** Nickerson, R. S. (1998). "Confirmation Bias: A Ubiquitous Phenomenon in Many Guises." *Review of General Psychology*, 2(2), 175-220.
-- **Concrete Examples:** Rawson, K. A., Thomas, R. C., & Jacoby, L. L. (2015). "The Power of Examples: Effects of Example Generation on Learning." *Memory & Cognition*, 43, 1-14.
+- **Concrete Examples:** Weinstein, Y., Madan, C. R., & Sumeracki, M. A. (2018). "Teaching the Science of Learning." *Cognitive Research: Principles and Implications*, 3(2), 1-17. Finding: concrete examples are one of six strategies with strong evidence; anchoring abstract concepts to specific instances improves retrieval. Note: concrete examples are not in Dunlosky's (2013) taxonomy but are well-supported in subsequent learning science literature.
 - **Variable Practice:** Shea, J. B., & Morgan, R. L. (1979). "Contextual Interference Effects on the Acquisition, Retention, and Transfer of a Motor Skill." *Journal of Experimental Psychology: Human Learning and Memory*, 5(2), 179-187.
 - **Attention Cost:** Mark, G., Gudith, D., & Klocke, U. (2008). "The Cost of Interrupted Work: More Speed and Stress." *Proceedings of CHI 2008*, 107-110. Finding: it takes an average of 23 minutes to return to a task after interruption.
 
@@ -374,7 +374,8 @@ MIN 55-60: REPORT
 │  [❌ AGAIN]  [😰 HARD]  [✅ GOOD]  [🚀 EASY] [⏭️ SKIP] │
 │                                                       │
 │  INFOBAR: [phase] Eff: 94% | 47/120 | 23:14 | 🔥 Day 8 │
-│  DIAL: Pomodoro ↕ / RSVP speed (context-dependent)   │
+│  (Stream Deck+ only) DIAL: Pomodoro ↕ / RSVP speed   │
+│  (MK.2: use dedicated timer buttons instead)          │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -432,7 +433,7 @@ MIN 55-60: REPORT
 
 **Feature #3: Concrete Examples**
 - **What:** Press mid-card → AI generates 2 real-world examples of the concept.
-- **Why:** Dunlosky et al. (2013) — concrete examples rated "moderate-to-high" utility. Abstract concepts anchored to specific instances are 30-50% more retrievable.
+- **Why:** Weinstein, Madan & Sumeracki (2018) — concrete examples are one of six strategies with strong evidence. Abstract concepts anchored to specific instances are more retrievable because they create additional retrieval cues. Note: not in Dunlosky's (2013) taxonomy but independently well-supported.
 - **How:** `src/features/concreteExamples.ts` — calls LLM with concept + "generate 2 real-world analogies a non-expert would understand."
 - **UUID:** `com.nousai.feature.examples`
 - **Failure mode:** If examples use domain jargon despite prompt, regenerate with stricter "explain to a 10-year-old" constraint. If both examples are too similar, force diversity via "give one physical-world and one everyday analogy" prompt.
@@ -473,17 +474,18 @@ MIN 55-60: REPORT
 - **Verify:** Enter Feynman mode. Type explanation with jargon. Score should penalize. Type simple analogy. Score should reward.
 
 **Feature #8: Adaptive Pomodoro**
-- **What:** Dial controls Pomodoro timer — but it adapts to your performance, not just clock time.
+- **What:** Controls Pomodoro timer — adapts to your performance, not just clock time. On Stream Deck+: use the physical dial. On MK.2: use dedicated [⏱️+] and [⏱️-] buttons (mapped to Row 1 slots).
 - **Why:** Fixed-interval timers ignore cognitive state. Adaptive timing aligns breaks with actual fatigue signals (Danziger et al., 2011 — decision quality degrades over time but resets after breaks).
 - **How:** `src/features/adaptivePomodoro.ts` — monitors retention rate in real-time:
   - Retention >90%: auto-extend session by 5 min (you're in flow state)
   - Retention drops below 70%: break session early (cognitive overload detected)
   - 90+ minutes continuous: force 20-min break (memory consolidation window)
-  - Dial: clockwise = +5 min, counter = -5 min, press = pause/resume, hold = end session + report
+  - Stream Deck+: dial clockwise = +5 min, counter = -5 min, press = pause/resume, hold = end session + report
+  - MK.2: dedicated buttons [⏱️+5] and [⏱️-5] for time adjustment, long-press any timer button = end session
 - **WS:** `{ action: 'POMODORO_CONTROL', payload: { cmd: 'pause' | 'resume' | 'extend' | 'end' } }`
 - **UUID:** `com.nousai.feature.pomodoro`
 - **Files:** `src/features/adaptivePomodoro.ts`
-- **Failure mode:** If retention data insufficient (<10 cards graded), fall back to fixed 25-min Pomodoro. Manual override always available via dial.
+- **Failure mode:** If retention data insufficient (<10 cards graded), fall back to fixed 25-min Pomodoro. Manual override always available via buttons (MK.2) or dial (SD+).
 - **Verify:** Study with high accuracy → timer should auto-extend. Study with low accuracy → should suggest break early.
 
 **Feature #9: Elaborative Interrogation (Why? Chain)**
@@ -592,7 +594,7 @@ The worst outcome is a user spending 10 minutes navigating features instead of s
 | **Power User** (advanced, unlocks Day 30) | Visualize (#21), Simulate (#22), Mental Models (#24), First Principles (#25), Compress (#27), Bridge (#29), Shuffle (#30), Palace (#31) | Deep engagement | 8 |
 | **Layout/Infra** (not user-facing features) | Knowledge Graph (#10), Interleave Scheduler (#18), Grade Without Looking (#6), RSVP | Built into system | 4 |
 
-**Total: 31 features + 6 passive subsystems = 37 functional units. Of these, 16 (43%) require ZERO active navigation.** The user presses [⚡ OMNI] and studies. The system applies the right technique at the right time automatically. The user presses [⚡ OMNI] and studies. The system applies the right technique at the right time automatically. The user never thinks "should I use interleaving now?" — the Omni Protocol decides for them based on the phase.
+**Total: 31 numbered features + 4 infrastructure items + 7 fully passive subsystems running in background. Of these, 16 functional units (43%) require ZERO active navigation.** The user presses [⚡ OMNI] and studies. The system applies the right technique at the right time automatically. The user presses [⚡ OMNI] and studies. The system applies the right technique at the right time automatically. The user never thinks "should I use interleaving now?" — the Omni Protocol decides for them based on the phase.
 
 ### Learning Curve: Time to Proficiency
 
@@ -663,30 +665,34 @@ The system handles: which mode to be in, when to switch, which technique to appl
 - BroadcastChannel API: rejected — same-device only, cannot reach Stream Deck plugin (separate process)
 - WebSocket: chosen — <100ms round-trip, bidirectional, plugin is a Node.js process that natively supports WS
 
-**Implementation in Nous:**
-- Dev: standalone WebSocket server started alongside Vite on port 8765 (via `vite-plugin-ws` or a simple `ws` server in `vite.config.ts` `configureServer` hook)
-- Production: The Stream Deck plugin only works when the Nous web app is open in a browser tab. The WS server runs in the browser tab's main thread (not Service Worker — SW cannot maintain persistent WS connections). When the tab closes, the plugin detects disconnect and shows "Nous not running" on buttons.
-- Security: localhost-only binding, origin validation (`origin === 'localhost'`), no remote connections
-- Fallback: if WS unavailable (e.g., Safari), fall back to BroadcastChannel for same-device virtual panel
-- Port: default 8765, configurable in Nous Settings. If port in use, try 8766-8770 sequentially.
+**Implementation — who hosts the WebSocket server:**
+- The **Stream Deck plugin** (Node.js process) hosts the WS server on `ws://localhost:8765`. Browsers cannot run WS servers — they can only be WS clients.
+- The **Nous web app** (browser tab) connects as a WS client: `new WebSocket('ws://localhost:8765')`.
+- The plugin must be running for the connection to work. When the plugin is not running, Nous shows "Stream Deck not detected" in Settings.
+- When Nous tab closes, the plugin detects the client disconnect and shows "Nous not running" on buttons.
+- Port: default 8765, configurable in plugin settings file. If port in use, plugin tries 8766-8770 sequentially.
+- Security: localhost-only binding, the plugin rejects connections from non-localhost origins.
+- Fallback: if WS unavailable (e.g., plugin not installed), fall back to BroadcastChannel for same-device virtual panel only.
 
 **Reconnection strategy:**
-- Plugin → Nous: exponential backoff (1s, 2s, 4s, 8s, max 30s) with jitter
-- Heartbeat: plugin sends `{ type: 'PING' }` every 5s, Nous responds `{ type: 'PONG' }`. 3 missed pongs = disconnect + reconnect cycle.
-- On reconnect: Nous sends full `STATE_UPDATE` immediately so plugin resyncs all button states.
-- Tab refresh: WS server restarts, plugin auto-reconnects within 1-5s.
-- Plugin starts before app: plugin retries connection every 5s. Shows "Waiting for Nous..." on buttons until connected.
+- Nous → Plugin: exponential backoff (1s, 2s, 4s, 8s, max 30s) with jitter. Nous attempts to reconnect on each backoff interval.
+- Heartbeat: Nous sends `{ type: 'PING' }` every 5s, plugin responds `{ type: 'PONG' }`. 3 missed pongs = disconnect + reconnect cycle.
+- On reconnect: Nous sends its current state immediately so plugin resyncs all button displays.
+- Tab refresh: Nous reconnects to the already-running plugin server within 1-5s.
+- Plugin starts after app: Nous retries connection every 5s. Shows "Connecting to Stream Deck..." in Settings until connected.
 
 **Message protocol:**
 ```typescript
 // Stream Deck → Nous (actions)
 interface DeckAction {
+  version: 1                        // protocol version — increment on breaking changes
   action: string                    // e.g., 'GRADE_GOOD', 'OMNI_START'
   payload?: Record<string, unknown> // optional parameters
 }
 
 // Nous → Stream Deck (state, every 1 second)
 interface NousState {
+  version: 1                   // protocol version — must match DeckAction.version
   type: 'STATE_UPDATE'
   phase: string                // current Omni Protocol phase
   phaseTimeRemaining: number   // seconds
@@ -893,6 +899,8 @@ service firebase.storage {
 - Service pattern: singleton class with `.subscribe()` for reactive state updates
 - File naming: camelCase for utils (`streamDeckService.ts`), PascalCase for components (`VirtualStreamDeck.tsx`)
 - Feature files: `src/features/{featureName}.ts` — one file per feature, exports a single function or class
+- Linting: ESLint with `@typescript-eslint` (already configured in repo). Plugin subdirectory should extend root ESLint config.
+- Formatting: Prettier (if configured) — otherwise follow existing codebase conventions. No tabs, 2-space indent.
 
 ### Testing Instructions
 - **WebHID:** Chrome only, requires HTTPS or localhost. Physical device needed for full test.
