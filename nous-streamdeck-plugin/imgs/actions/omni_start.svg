@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgb(245,166,35)" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="rgb(165,86,0)" stop-opacity="0.95"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Background -->
+  <rect width="144" height="144" rx="16" fill="url(#bg)"/>
+  <!-- Subtle inner border -->
+  <rect x="2" y="2" width="140" height="140" rx="14" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+  <!-- Emoji icon -->
+  <text x="72" y="62" text-anchor="middle" dominant-baseline="central" font-size="52" filter="url(#shadow)">⚡</text>
+  <!-- Label -->
+  <text x="72" y="118" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="bold" fill="white" letter-spacing="1.5" filter="url(#shadow)">OMNI</text>
+  <!-- Bottom accent line -->
+  <rect x="32" y="134" width="80" height="2" rx="1" fill="rgba(255,255,255,0.3)"/>
+</svg>

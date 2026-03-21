@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@elgato/streamdeck": "^1.2.0",
+    "sharp": "^0.34.5",
     "ws": "^8.18.0"
   },
   "devDependencies": {
