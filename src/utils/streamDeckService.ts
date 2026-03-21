@@ -13,6 +13,7 @@
  * - getStreamDecks() silently reconnects previously authorized devices (no popup).
  * - device.on('down', keyIndex) / device.on('up', keyIndex) for key events.
  * - device.fillKeyColor(keyIndex, r, g, b) fills an LCD key with a solid color.
+ * - device.fillKeyCanvas(keyIndex, canvas) renders a 72×72 canvas on a key (icons + text).
  * - device.setBrightness(percent) controls overall brightness.
  * - No startData() call needed — device is ready immediately after open.
  */
@@ -20,6 +21,7 @@
 import { setStreamDeckConnected } from './deviceDetection';
 import { writeQKAction, saveQKConfig, loadQKConfig } from './auth';
 import { getDeviceFingerprint } from './contentRelay';
+import { renderKeyIcon, renderEmptyKey } from './streamDeckIcons';
 
 export type StreamDeckMode = 'flashcard' | 'quiz' | 'drawing' | 'navigation' | 'notes';
 
@@ -49,105 +51,157 @@ const MODE_COLORS: Record<StreamDeckMode, [number, number, number]> = {
   quiz: [239, 68, 68],        // red
 };
 
+// DEFAULT_CONFIGS — Science-backed Stream Deck layouts (5 modes × 15 buttons, 3 rows × 5 cols)
+//
+// Design principles applied:
+//   Row 3 (buttons 10-14) is ALWAYS the grading row (Again/Hard/Good/Easy + utility) across all
+//   modes — Fitts's Law muscle memory, no visual search needed for the most frequent action.
+//   Relay (relay_send) and Lasso (screen_lasso) appear in every mode — Windows↔BOOX content
+//   relay is a universal workflow, always reachable without mode-switching.
+//   Drawing tools (Pen/Highlight/Erase) appear in both drawing AND notes modes — students
+//   annotate everywhere, not just in the dedicated drawing canvas.
+//   TTS Read (notes_speak) appears in flashcard, navigation, and notes — auditory encoding
+//   (dual coding theory, Paivio 1986) reinforces retrieval across all primary study modes.
+//   Retrieval practice row (Row 1) is the primary action row — spacing and active recall
+//   (Roediger & Karpicke 2006) are the highest-leverage study strategies.
 const DEFAULT_CONFIGS: Record<StreamDeckMode, StreamDeckModeConfig> = {
+  // Mode 1: Flashcard — Active Recall Engine (amber)
+  // Row 1: core card controls (flip, navigate, speed tools)
+  // Row 2: advanced modes + cross-device utilities
+  // Row 3: FSRS grading row (muscle memory anchor) + Learn Modes nav
   flashcard: {
     mode: 'flashcard',
     buttons: [
-      { actionId: 'fc_flip', label: 'FLIP' },
-      { actionId: 'fc_type_recall', label: 'RECALL' },
-      { actionId: 'fc_next', label: 'NEXT' },
-      { actionId: 'fc_prev', label: 'PREV' },
-      { actionId: 'fc_conf1', label: 'AGAIN' },
-      { actionId: 'fc_conf2', label: 'HARD' },
-      { actionId: 'fc_conf3', label: 'GOOD' },
-      { actionId: 'fc_conf4', label: 'EASY' },
-      { actionId: 'fc_zen', label: 'ZEN' },
-      { actionId: 'fc_cram', label: 'CRAM' },
-      { actionId: 'fc_rsvp', label: 'RSVP' },
-      { actionId: 'nav_home', label: 'HOME' },
-      { actionId: 'nav_quiz', label: 'QUIZ' },
-      { actionId: 'nav_cards', label: 'CARDS' },
-      { actionId: 'nav_settings', label: 'SETT' },
+      // Row 1 — Primary card controls
+      { actionId: 'fc_flip',        label: 'Flip Card' },
+      { actionId: 'fc_next',        label: 'Next Card' },
+      { actionId: 'fc_prev',        label: 'Prev Card' },
+      { actionId: 'fc_rsvp',        label: 'Speed Preview' },
+      { actionId: 'fc_cram',        label: 'Cram Mode' },
+      // Row 2 — Advanced study modes + utilities
+      { actionId: 'fc_type_recall', label: 'Type-Recall' },
+      { actionId: 'fc_zen',         label: 'Zen Mode' },
+      { actionId: 'relay_send',     label: 'Relay' },
+      { actionId: 'screen_lasso',   label: 'Lasso' },
+      { actionId: 'notes_speak',    label: 'TTS Read' },
+      // Row 3 — FSRS grading (muscle memory row, constant across all modes)
+      { actionId: 'fc_conf1',       label: 'Again' },
+      { actionId: 'fc_conf2',       label: 'Hard' },
+      { actionId: 'fc_conf3',       label: 'Good' },
+      { actionId: 'fc_conf4',       label: 'Easy' },
+      { actionId: 'nav_learn',      label: 'Learn Modes' },
     ],
   },
+
+  // Mode 2: Quiz — Answer Selection Engine (red)
+  // Row 1: answer options A-D + hint
+  // Row 2: submit/continue flow + utilities
+  // Row 3: grading row (consistent muscle memory) + Learn Modes nav
   quiz: {
     mode: 'quiz',
     buttons: [
-      { actionId: 'qz_opt1', label: 'OPT 1' },
-      { actionId: 'qz_opt2', label: 'OPT 2' },
-      { actionId: 'qz_opt3', label: 'OPT 3' },
-      { actionId: 'qz_opt4', label: 'OPT 4' },
-      { actionId: 'qz_submit', label: 'SUBMIT' },
-      { actionId: 'qz_continue', label: 'NEXT' },
-      { actionId: 'qz_hint', label: 'HINT' },
-      { actionId: 'fc_flip', label: 'FLIP' },
-      { actionId: 'fc_next', label: 'NEXT FC' },
-      { actionId: 'fc_prev', label: 'PREV FC' },
-      { actionId: 'fc_zen', label: 'ZEN' },
-      { actionId: 'nav_home', label: 'HOME' },
-      { actionId: 'nav_cards', label: 'CARDS' },
-      { actionId: 'nav_timer', label: 'TIMER' },
-      { actionId: 'nav_settings', label: 'SETT' },
+      // Row 1 — Answer options
+      { actionId: 'qz_opt1',      label: 'Option A' },
+      { actionId: 'qz_opt2',      label: 'Option B' },
+      { actionId: 'qz_opt3',      label: 'Option C' },
+      { actionId: 'qz_opt4',      label: 'Option D' },
+      { actionId: 'qz_hint',      label: 'Hint' },
+      // Row 2 — Submit/continue flow + utilities
+      { actionId: 'qz_submit',    label: 'Submit' },
+      { actionId: 'qz_continue',  label: 'Next Q' },
+      { actionId: 'relay_send',   label: 'Relay' },
+      { actionId: 'screen_lasso', label: 'Lasso' },
+      { actionId: 'notes_speak',  label: 'TTS Read' },
+      // Row 3 — Grading row (muscle memory)
+      { actionId: 'fc_conf1',     label: 'Again' },
+      { actionId: 'fc_conf2',     label: 'Hard' },
+      { actionId: 'fc_conf3',     label: 'Good' },
+      { actionId: 'fc_conf4',     label: 'Easy' },
+      { actionId: 'nav_learn',    label: 'Learn Modes' },
     ],
   },
+
+  // Mode 3: Drawing — Annotation Engine (green)
+  // Row 1: tool selection (pen, highlight, erase, color, clear)
+  // Row 2: history + save + utilities
+  // Row 3: grading row + Learn Modes nav
   drawing: {
     mode: 'drawing',
     buttons: [
-      { actionId: 'draw_undo', label: 'UNDO' },
-      { actionId: 'draw_redo', label: 'REDO' },
-      { actionId: 'draw_pen', label: 'PEN' },
-      { actionId: 'draw_highlight', label: 'HILITE' },
-      { actionId: 'draw_erase', label: 'ERASE' },
-      { actionId: 'draw_color', label: 'COLOR' },
-      { actionId: 'draw_clear', label: 'CLEAR' },
-      { actionId: 'draw_save', label: 'SAVE' },
-      { actionId: 'nav_home', label: 'HOME' },
-      { actionId: 'nav_quiz', label: 'QUIZ' },
-      { actionId: 'nav_cards', label: 'CARDS' },
-      { actionId: 'nav_notes', label: 'NOTES' },
-      { actionId: 'nav_timer', label: 'TIMER' },
-      { actionId: 'nav_learn', label: 'LEARN' },
-      { actionId: 'nav_settings', label: 'SETT' },
+      // Row 1 — Drawing tools
+      { actionId: 'draw_pen',       label: 'Pen' },
+      { actionId: 'draw_highlight', label: 'Highlight' },
+      { actionId: 'draw_erase',     label: 'Erase' },
+      { actionId: 'draw_color',     label: 'Color' },
+      { actionId: 'draw_clear',     label: 'Clear' },
+      // Row 2 — History, save, and utilities
+      { actionId: 'draw_undo',      label: 'Undo' },
+      { actionId: 'draw_redo',      label: 'Redo' },
+      { actionId: 'draw_save',      label: 'Save' },
+      { actionId: 'screen_lasso',   label: 'Lasso' },
+      { actionId: 'relay_send',     label: 'Relay' },
+      // Row 3 — Grading row (muscle memory)
+      { actionId: 'fc_conf1',       label: 'Again' },
+      { actionId: 'fc_conf2',       label: 'Hard' },
+      { actionId: 'fc_conf3',       label: 'Good' },
+      { actionId: 'fc_conf4',       label: 'Easy' },
+      { actionId: 'nav_learn',      label: 'Learn Modes' },
     ],
   },
+
+  // Mode 4: Navigation — App Launchpad (blue)
+  // Row 1: primary destinations (home, cards, quiz, learn, library)
+  // Row 2: tools + utilities
+  // Row 3: grading row + TTS Read
   navigation: {
     mode: 'navigation',
     buttons: [
-      { actionId: 'nav_home', label: 'HOME' },
-      { actionId: 'nav_quiz', label: 'QUIZ' },
-      { actionId: 'nav_cards', label: 'CARDS' },
-      { actionId: 'nav_notes', label: 'NOTES' },
-      { actionId: 'nav_timer', label: 'TIMER' },
-      { actionId: 'nav_calendar', label: 'CAL' },
-      { actionId: 'nav_learn', label: 'LEARN' },
-      { actionId: 'nav_settings', label: 'SETT' },
-      { actionId: 'fc_flip', label: 'FLIP' },
-      { actionId: 'fc_next', label: 'NEXT FC' },
-      { actionId: 'fc_prev', label: 'PREV FC' },
-      { actionId: 'fc_conf3', label: 'GOOD' },
-      { actionId: 'notes_new', label: 'NEW' },
-      { actionId: 'notes_search', label: 'SEARCH' },
-      { actionId: 'relay_send', label: 'RELAY' },
+      // Row 1 — Primary app destinations
+      { actionId: 'nav_home',       label: 'Home' },
+      { actionId: 'nav_cards',      label: 'Flashcards' },
+      { actionId: 'nav_quiz',       label: 'Quiz' },
+      { actionId: 'nav_learn',      label: 'Learn' },
+      { actionId: 'nav_notes',      label: 'Library' },
+      // Row 2 — Productivity tools + utilities
+      { actionId: 'nav_timer',      label: 'Timer' },
+      { actionId: 'nav_calendar',   label: 'Calendar' },
+      { actionId: 'nav_settings',   label: 'Settings' },
+      { actionId: 'relay_send',     label: 'Relay' },
+      { actionId: 'screen_lasso',   label: 'Lasso' },
+      // Row 3 — Grading row (muscle memory)
+      { actionId: 'fc_conf1',       label: 'Again' },
+      { actionId: 'fc_conf2',       label: 'Hard' },
+      { actionId: 'fc_conf3',       label: 'Good' },
+      { actionId: 'fc_conf4',       label: 'Easy' },
+      { actionId: 'notes_speak',    label: 'TTS Read' },
     ],
   },
+
+  // Mode 5: Notes — Knowledge Capture Engine (purple)
+  // Row 1: note management + text formatting
+  // Row 2: annotation tools + utilities (drawing tools here too — students annotate everywhere)
+  // Row 3: grading row + TTS Read
   notes: {
     mode: 'notes',
     buttons: [
-      { actionId: 'notes_new', label: 'NEW' },
-      { actionId: 'notes_search', label: 'SEARCH' },
-      { actionId: 'relay_send', label: 'RELAY' },
-      { actionId: 'screen_lasso', label: 'LASSO' },
-      { actionId: 'notes_bold', label: 'BOLD' },
-      { actionId: 'notes_italic', label: 'ITALIC' },
-      { actionId: 'notes_save', label: 'SAVE' },
-      { actionId: 'notes_speak', label: 'SPEAK' },
-      { actionId: 'draw_undo', label: 'UNDO' },
-      { actionId: 'draw_redo', label: 'REDO' },
-      { actionId: 'nav_home', label: 'HOME' },
-      { actionId: 'nav_cards', label: 'CARDS' },
-      { actionId: 'nav_learn', label: 'LEARN' },
-      { actionId: 'nav_timer', label: 'TIMER' },
-      { actionId: 'nav_settings', label: 'SETT' },
+      // Row 1 — Note management + formatting
+      { actionId: 'notes_new',      label: 'New Note' },
+      { actionId: 'notes_search',   label: 'Search' },
+      { actionId: 'notes_bold',     label: 'Bold' },
+      { actionId: 'notes_italic',   label: 'Italic' },
+      { actionId: 'notes_save',     label: 'Save' },
+      // Row 2 — Annotation tools + utilities
+      { actionId: 'draw_pen',       label: 'Pen' },
+      { actionId: 'draw_highlight', label: 'Highlight' },
+      { actionId: 'draw_erase',     label: 'Erase' },
+      { actionId: 'screen_lasso',   label: 'Lasso' },
+      { actionId: 'relay_send',     label: 'Relay' },
+      // Row 3 — Grading row (muscle memory)
+      { actionId: 'fc_conf1',       label: 'Again' },
+      { actionId: 'fc_conf2',       label: 'Hard' },
+      { actionId: 'fc_conf3',       label: 'Good' },
+      { actionId: 'fc_conf4',       label: 'Easy' },
+      { actionId: 'notes_speak',    label: 'TTS Read' },
     ],
   },
 };
@@ -472,27 +526,47 @@ export class StreamDeckService {
   }
 
   /**
-   * Color the LCD keys on the physical Stream Deck to indicate the active mode.
-   * Assigned keys get the mode accent color; unused keys get dark.
+   * Render rich icons on the physical Stream Deck LCD keys.
+   * Each key shows: emoji icon + label + mode-colored gradient background.
+   * Uses fillKeyCanvas() for 72×72 pixel canvas rendering.
+   * Falls back to fillKeyColor() if canvas rendering is unavailable.
+   *
+   * Science: Dual coding (Paivio 1986) — icon + text = two retrieval pathways.
+   * Fitts's Law — distinct icons reduce visual search time vs solid colors.
    */
   private async updateKeyColors(): Promise<void> {
     if (!this.device || !this._connected) return;
     const dev = this.device;
     const modeConfig = this.config.modes[this.config.currentMode];
-    const [r, g, b] = MODE_COLORS[this.config.currentMode];
+    const modeColor = MODE_COLORS[this.config.currentMode];
+
+    const hasFillKeyCanvas = typeof dev.fillKeyCanvas === 'function';
 
     for (let i = 0; i < 15; i++) {
       try {
-        if (i < modeConfig.buttons.length && modeConfig.buttons[i].actionId) {
-          await dev.fillKeyColor?.(i, r, g, b);
+        const btn = i < modeConfig.buttons.length ? modeConfig.buttons[i] : null;
+        const hasAction = btn && btn.actionId;
+
+        if (hasFillKeyCanvas) {
+          // Rich icon rendering (72×72 canvas with emoji + label + gradient)
+          const canvas = hasAction
+            ? renderKeyIcon(btn.actionId, modeColor)
+            : renderEmptyKey();
+          await dev.fillKeyCanvas(i, canvas);
         } else {
-          await dev.fillKeyColor?.(i, 20, 20, 20); // dim unassigned
+          // Fallback: solid color only (older library versions)
+          const [r, g, b] = modeColor;
+          if (hasAction) {
+            await dev.fillKeyColor?.(i, r, g, b);
+          } else {
+            await dev.fillKeyColor?.(i, 20, 20, 20);
+          }
         }
       } catch (e) {
-        console.warn(`[StreamDeck] fillKeyColor(${i}) failed:`, e);
+        console.warn(`[StreamDeck] key render(${i}) failed:`, e);
       }
     }
-    console.log(`[StreamDeck] Key colors synced for mode: ${this.config.currentMode}`);
+    console.log(`[StreamDeck] Icons rendered for mode: ${this.config.currentMode}`);
   }
 
   private loadConfig(): StreamDeckConfig {

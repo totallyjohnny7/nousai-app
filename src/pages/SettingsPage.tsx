@@ -3907,33 +3907,146 @@ export default function SettingsPage() {
                     ))}
                   </div>
 
-                  {/* Button mapping grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 12 }}>
-                    {sdConfig.modes[sdActiveMode].buttons.map((btn, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent)', minWidth: 18 }}>Btn {i + 1}</span>
-                        <select
-                          style={{ flex: 1, fontSize: 11, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 4px' }}
-                          value={btn.actionId}
-                          onChange={e => {
-                            const action = ALL_STREAM_DECK_ACTIONS.find(a => a.id === e.target.value)
-                            if (!action) return
-                            const newConfig = { ...sdConfig }
-                            newConfig.modes = { ...newConfig.modes }
-                            newConfig.modes[sdActiveMode] = { ...newConfig.modes[sdActiveMode] }
-                            newConfig.modes[sdActiveMode].buttons = [...newConfig.modes[sdActiveMode].buttons]
-                            newConfig.modes[sdActiveMode].buttons[i] = { actionId: action.id, label: action.label.slice(0, 8).toUpperCase() }
-                            streamDeckService.saveConfig(newConfig)
-                            setSdConfig(newConfig)
-                          }}
-                        >
-                          {ALL_STREAM_DECK_ACTIONS.map(a => (
-                            <option key={a.id} value={a.id}>{a.label}</option>
+                  {/* Button mapping grid — Stream Deck MK.2 physical layout: 5 cols × 3 rows */}
+                  {(() => {
+                    const SD_EMOJI: Record<string, string> = {
+                      fc_flip: '🔄', fc_type_recall: '⌨️', fc_next: '▶️', fc_prev: '◀️',
+                      fc_conf1: '❌', fc_conf2: '😓', fc_conf3: '✅', fc_conf4: '⭐',
+                      fc_zen: '🧘', fc_cram: '⚡', fc_rsvp: '👁️',
+                      qz_opt1: '1️⃣', qz_opt2: '2️⃣', qz_opt3: '3️⃣', qz_opt4: '4️⃣',
+                      qz_submit: '📤', qz_continue: '➡️', qz_hint: '💡',
+                      draw_undo: '↩️', draw_redo: '↪️', draw_pen: '✏️', draw_highlight: '🖊️',
+                      draw_erase: '🧹', draw_color: '🎨', draw_clear: '🗑️', draw_save: '💾',
+                      nav_home: '🏠', nav_quiz: '📝', nav_cards: '🃏', nav_notes: '📚',
+                      nav_timer: '⏱️', nav_calendar: '📅', nav_learn: '🎓', nav_settings: '⚙️',
+                      notes_new: '📄', notes_search: '🔍', relay_send: '📡', screen_lasso: '🪄',
+                      notes_bold: '𝐁', notes_italic: '𝐼', notes_save: '💾', notes_speak: '🔊',
+                    }
+                    const ROW_LABELS = ['Row 1: Mode Actions', 'Row 2: Tools & Relay', 'Row 3: Grading (muscle memory)']
+                    const buttons = sdConfig.modes[sdActiveMode].buttons
+                    return (
+                      <div style={{
+                        background: '#1a1a1a',
+                        borderRadius: 16,
+                        padding: 16,
+                        border: '2px solid #333',
+                        maxWidth: 500,
+                        marginBottom: 12,
+                      }}>
+                        {/* Row labels */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, marginBottom: 6 }}>
+                          {ROW_LABELS.map((label, rowIdx) => (
+                            <div
+                              key={rowIdx}
+                              style={{
+                                gridColumn: `${rowIdx * 5 + 1} / span 5`,
+                                fontSize: 10,
+                                color: '#888',
+                                fontWeight: 600,
+                                letterSpacing: '0.04em',
+                                textTransform: 'uppercase',
+                                paddingBottom: 2,
+                                borderBottom: '1px solid #2a2a2a',
+                                marginBottom: 4,
+                              }}
+                            >
+                              {label}
+                            </div>
                           ))}
-                        </select>
+                        </div>
+                        {/* 5×3 button grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+                          {buttons.map((btn, i) => {
+                            const rowIdx = Math.floor(i / 5)
+                            const emoji = SD_EMOJI[btn.actionId] ?? '🔲'
+                            const action = ALL_STREAM_DECK_ACTIONS.find(a => a.id === btn.actionId)
+                            const shortLabel = action ? action.label.slice(0, 10) : btn.label
+                            return (
+                              <div
+                                key={i}
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: 3,
+                                  padding: '8px 4px 6px',
+                                  background: '#252525',
+                                  borderRadius: 8,
+                                  border: '1px solid #3a3a3a',
+                                  cursor: 'pointer',
+                                  position: 'relative',
+                                  minHeight: 72,
+                                  // Subtle row tint
+                                  boxShadow: rowIdx === 2 ? 'inset 0 0 0 1px rgba(245,166,35,0.18)' : undefined,
+                                }}
+                              >
+                                {/* Button index badge */}
+                                <span style={{
+                                  position: 'absolute',
+                                  top: 3,
+                                  left: 5,
+                                  fontSize: 9,
+                                  fontWeight: 700,
+                                  color: 'var(--color-accent)',
+                                  opacity: 0.7,
+                                  fontFamily: 'DM Mono, monospace',
+                                }}>
+                                  {i + 1}
+                                </span>
+                                {/* Emoji icon */}
+                                <span style={{ fontSize: 20, lineHeight: 1, marginTop: 6 }}>{emoji}</span>
+                                {/* Short label */}
+                                <span style={{
+                                  fontSize: 9,
+                                  color: '#ccc',
+                                  textAlign: 'center',
+                                  lineHeight: 1.2,
+                                  maxWidth: '100%',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  padding: '0 2px',
+                                }}>
+                                  {shortLabel}
+                                </span>
+                                {/* Action dropdown */}
+                                <select
+                                  style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    opacity: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    cursor: 'pointer',
+                                  }}
+                                  value={btn.actionId}
+                                  title={`Button ${i + 1}: ${action?.label ?? btn.actionId}`}
+                                  onChange={e => {
+                                    const newAction = ALL_STREAM_DECK_ACTIONS.find(a => a.id === e.target.value)
+                                    if (!newAction) return
+                                    const newConfig = { ...sdConfig }
+                                    newConfig.modes = { ...newConfig.modes }
+                                    newConfig.modes[sdActiveMode] = { ...newConfig.modes[sdActiveMode] }
+                                    newConfig.modes[sdActiveMode].buttons = [...newConfig.modes[sdActiveMode].buttons]
+                                    newConfig.modes[sdActiveMode].buttons[i] = { actionId: newAction.id, label: newAction.label.slice(0, 8).toUpperCase() }
+                                    streamDeckService.saveConfig(newConfig)
+                                    setSdConfig(newConfig)
+                                  }}
+                                >
+                                  {ALL_STREAM_DECK_ACTIONS.map(a => (
+                                    <option key={a.id} value={a.id}>{a.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        <p style={{ fontSize: 10, color: '#666', margin: '10px 0 0', textAlign: 'center' }}>
+                          Click any button to change its action
+                        </p>
                       </div>
-                    ))}
-                  </div>
+                    )
+                  })()}
 
                   {/* Last pressed indicator */}
                   {qkLastPressed && (

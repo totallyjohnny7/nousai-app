@@ -15,6 +15,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { streamDeckService } from '../utils/streamDeckService';
 import type { StreamDeckMode, StreamDeckModeConfig } from '../utils/streamDeckService';
+import { getActionIcon } from '../utils/streamDeckIcons';
 import { watchQKAction } from '../utils/auth';
 import type { QKActionPayload } from '../utils/auth';
 import { getDeviceFingerprint } from '../utils/contentRelay';
@@ -165,18 +166,33 @@ export default function VirtualStreamDeck({ uid }: VirtualStreamDeckProps): Reac
                   color: flashedBtn === i ? '#000' : '#e5e7eb',
                   border: `1px solid ${flashedBtn === i ? accentColor : '#333'}`,
                   borderRadius: 8,
-                  padding: '10px 6px',
-                  fontSize: 11,
+                  padding: '6px 4px',
+                  fontSize: 10,
                   fontWeight: 600,
                   cursor: 'pointer',
                   textAlign: 'center',
                   transition: 'background .15s, color .15s',
                   userSelect: 'none',
                   WebkitUserSelect: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 2,
+                  minHeight: 52,
+                  justifyContent: 'center',
                 }}
               >
-                <span style={{ display: 'block', color: '#555', fontSize: 10, marginBottom: 2 }}>{i + 1}</span>
-                {btn.label}
+                {(() => {
+                  const icon = getActionIcon(btn.actionId);
+                  return icon ? (
+                    <>
+                      <span style={{ fontSize: 18, lineHeight: 1 }}>{icon.emoji}</span>
+                      <span style={{ fontSize: 9, opacity: 0.8, letterSpacing: 0.5 }}>{icon.label}</span>
+                    </>
+                  ) : (
+                    <span>{btn.label}</span>
+                  );
+                })()}
               </button>
             ))}
           </div>
