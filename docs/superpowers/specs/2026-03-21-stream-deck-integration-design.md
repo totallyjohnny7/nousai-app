@@ -594,7 +594,7 @@ The worst outcome is a user spending 10 minutes navigating features instead of s
 | **Power User** (advanced, unlocks Day 30) | Visualize (#21), Simulate (#22), Mental Models (#24), First Principles (#25), Compress (#27), Bridge (#29), Shuffle (#30), Palace (#31) | Deep engagement | 8 |
 | **Layout/Infra** (not user-facing features) | Knowledge Graph (#10), Interleave Scheduler (#18), Grade Without Looking (#6), RSVP | Built into system | 4 |
 
-**Total: 31 numbered features + 4 infrastructure items + 7 fully passive subsystems running in background. Of these, 16 functional units (43%) require ZERO active navigation.** The user presses [⚡ OMNI] and studies. The system applies the right technique at the right time automatically. The user presses [⚡ OMNI] and studies. The system applies the right technique at the right time automatically. The user never thinks "should I use interleaving now?" — the Omni Protocol decides for them based on the phase.
+**Total: 31 numbered features + 4 infrastructure items + 7 fully passive subsystems running in background. Of these, 16 functional units (43%) require ZERO active navigation.** The user presses [⚡ OMNI] and studies. The system applies the right technique at the right time automatically. The user never thinks "should I use interleaving now?" — the Omni Protocol decides for them based on the phase.
 
 ### Learning Curve: Time to Proficiency
 
@@ -924,7 +924,7 @@ service firebase.storage {
   ```
   @elgato-stream-deck/webhid: ^7.6.1   (WebHID browser integration)
   @elgato/streamdeck: ^1.2.0            (Plugin SDK — pin to latest major)
-  ws: ^8.18.0                            (WebSocket server in Nous)
+  ws: ^8.18.0                            (WebSocket server in Stream Deck plugin)
   ```
 
 ### Global OpenRouter/LLM Error Handling
@@ -1083,7 +1083,7 @@ Start with Phase 0, then Priority 1. Show files touched.
 - [x] Efficiency formula labeled as Nous-specific (not from literature)
 - [x] Phase durations rationalized with citations per mechanism
 - [x] Dunlosky ratings corrected: only spaced practice + retrieval = "high"; interleaving = "moderate"; dual coding + concrete examples = separate research traditions with honest sourcing
-- [x] 24 full citations in Key Citations section (Zajonc, Jeannerod, Flavell, Hattie, Sweller, May/Hasher, Nickerson, Rawson, Shea/Morgan, Mark et al. all included)
+- [x] 23 full citations in Key Citations section (includes Zajonc, Jeannerod, Flavell, Hattie, Sweller, May/Hasher, Nickerson, Weinstein/Madan/Sumeracki, Shea/Morgan, Mark et al.)
 
 ### Learning (100/100)
 - [x] Progressive disclosure: Day 1/7/30 unlock schedule with criteria
