@@ -46,22 +46,24 @@ npx streamdeck pack      # Create distributable .streamDeckPlugin
 
 ---
 
-## 2. The Science Stack — 6 Highest-Evidence Learning Strategies
+## 2. The Science Stack — 6 Core Learning Strategies
 
 Memory performance after just one hour of spaced repetition can hold up to four months of massed instruction. That is the foundation. Every feature below is engineered around that fact.
 
-### The 6 strategies rated "high utility" by Dunlosky et al. (2013)
+### The 6 strategies powering the Omni System
 
-> Source: Dunlosky, J., Rawson, K. A., Marsh, E. J., Nathan, M. J., & Willingham, D. T. (2013). "Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology." *Psychological Science in the Public Interest*, 14(1), 4-58.
+> Primary source: Dunlosky, J., Rawson, K. A., Marsh, E. J., Nathan, M. J., & Willingham, D. T. (2013). "Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology." *Psychological Science in the Public Interest*, 14(1), 4-58.
 
-| # | Strategy | Evidence Rating | Nous Status | Stream Deck Feature |
-|---|----------|----------------|-------------|---------------------|
-| 1 | **Spaced Practice** | High | ✅ FSRS algorithm | Adaptive Session Length (Feature #20) |
-| 2 | **Retrieval Practice** | High | ✅ Active Recall mode | Pre-Test + Grade Buttons (Features #13, #6) |
-| 3 | **Interleaving** | High | 🔴 NOT BUILT | Interleave Mode (Feature #1) |
-| 4 | **Elaborative Interrogation** | Moderate | ✅ Feynman mode partial | Feynman Mode + Why? chain (Features #7, #9) |
-| 5 | **Dual Coding** | High (Paivio) | 🔴 NOT BUILT | Dual Coding Button (Feature #2) |
-| 6 | **Concrete Examples** | High | 🔴 NOT BUILT | Example Button (Feature #3) |
+| # | Strategy | Evidence Rating | Source | Nous Status | Stream Deck Feature |
+|---|----------|----------------|--------|-------------|---------------------|
+| 1 | **Spaced Practice** | High | Dunlosky (2013) | ✅ FSRS algorithm | Adaptive Session Length (Feature #20) |
+| 2 | **Retrieval Practice** | High | Dunlosky (2013) | ✅ Active Recall mode | Pre-Test + Grade Buttons (Features #13, #6) |
+| 3 | **Interleaving** | Moderate | Dunlosky (2013); High per Taylor & Rohrer (2010) | 🔴 NOT BUILT | Interleave Mode (Feature #1) |
+| 4 | **Elaborative Interrogation** | Moderate | Dunlosky (2013) | ✅ Feynman mode partial | Feynman Mode + Why? chain (Features #7, #9) |
+| 5 | **Dual Coding** | High | Paivio (1986); not in Dunlosky's taxonomy | 🔴 NOT BUILT | Dual Coding Button (Feature #2) |
+| 6 | **Concrete Examples** | High | Rawson et al. (2015); not in Dunlosky's taxonomy | 🔴 NOT BUILT | Example Button (Feature #3) |
+
+**Note:** Dunlosky's meta-analysis rated only practice testing and distributed practice as "high utility." Interleaving received "moderate." Dual Coding and Concrete Examples are from separate research traditions (Paivio 1986, Rawson et al. 2015) but have strong independent evidence bases. We include all 6 because each targets a distinct encoding mechanism.
 
 **The gap:** Nous has 3 of 6. Features #1, #2, #3 below build the missing half.
 
@@ -80,6 +82,16 @@ Memory performance after just one hour of spaced repetition can hold up to four 
 - **BDNF + Exercise:** Cotman, C. W., & Berchtold, N. C. (2002). "Exercise: A Behavioral Intervention to Enhance Brain Health and Plasticity." *Trends in Neurosciences*, 25(6), 295-301. Finding: exercise increases BDNF (brain-derived neurotrophic factor) which promotes synaptic plasticity and memory consolidation.
 - **Motor Learning:** Fitts, P. M., & Posner, M. I. (1967). *Human Performance*. Brooks/Cole. Finding: consistent spatial mapping eliminates visual search — hands learn button positions after ~50 repetitions.
 - **Keystroke-Level Model:** Card, S. K., Moran, T. P., & Newell, A. (1983). *The Psychology of Human-Computer Interaction*. Lawrence Erlbaum.
+- **Mere Exposure:** Zajonc, R. B. (1968). "Attitudinal Effects of Mere Exposure." *Journal of Personality and Social Psychology*, 9(2), 1-27. Finding: repeated brief exposure to stimuli increases familiarity and positive affect — basis for RSVP Preview phase.
+- **Mental Simulation:** Jeannerod, M. (2001). "Neural Simulation of Action: A Unifying Mechanism for Motor Cognition." *NeuroImage*, 14(1), S103-S109. Finding: mental rehearsal activates same neural pathways as physical execution.
+- **Metacognitive Monitoring:** Flavell, J. H. (1979). "Metacognition and Cognitive Monitoring: A New Area of Cognitive-Developmental Inquiry." *American Psychologist*, 34(10), 906-911. Finding: awareness of one's own cognitive processes improves learning strategy selection.
+- **Feedback in Education:** Hattie, J., & Timperley, H. (2007). "The Power of Feedback." *Review of Educational Research*, 77(1), 81-112. Finding: immediate, specific feedback is among the most powerful influences on learning (effect size d=0.73).
+- **Cognitive Load Theory:** Sweller, J. (1988). "Cognitive Load During Problem Solving: Effects on Learning." *Cognitive Science*, 12(2), 257-285. Finding: extraneous cognitive load (navigating tools) competes directly with germane load (learning content).
+- **Circadian Effects on Memory:** May, C. P., Hasher, L., & Stoltzfus, E. R. (1993). "Optimal Time of Day and the Magnitude of Age Differences in Memory." *Psychological Science*, 4(5), 326-330. Finding: morning favors encoding for most adults; afternoon/evening favors retrieval.
+- **Confirmation Bias:** Nickerson, R. S. (1998). "Confirmation Bias: A Ubiquitous Phenomenon in Many Guises." *Review of General Psychology*, 2(2), 175-220.
+- **Concrete Examples:** Rawson, K. A., Thomas, R. C., & Jacoby, L. L. (2015). "The Power of Examples: Effects of Example Generation on Learning." *Memory & Cognition*, 43, 1-14.
+- **Variable Practice:** Shea, J. B., & Morgan, R. L. (1979). "Contextual Interference Effects on the Acquisition, Retention, and Transfer of a Motor Skill." *Journal of Experimental Psychology: Human Learning and Memory*, 5(2), 179-187.
+- **Attention Cost:** Mark, G., Gudith, D., & Klocke, U. (2008). "The Cost of Interrupted Work: More Speed and Stress." *Proceedings of CHI 2008*, 107-110. Finding: it takes an average of 23 minutes to return to a task after interruption.
 
 ### The 60-Minute Protocol
 
@@ -97,9 +109,9 @@ Based on synthesis of the above research. Phase durations are recommended interv
 
 ---
 
-## 3. The Genius Stack — 10 Scientists, 10 Techniques, 10 Features
+## 3. The Genius Stack — 11 Techniques from 9 Scientists
 
-Each technique is attributed to the scientist who exemplified it, grounded in cognitive science, and mapped to a specific Stream Deck button and Nous feature.
+Each technique is attributed to the scientist who exemplified it, grounded in cognitive science, and mapped to a specific Stream Deck button and Nous feature. Tesla appears twice (Mental Simulation + Memory Palace) because he demonstrated both at extraordinary levels.
 
 ### 3.1 Einstein — Gedankenexperiment (Visualization)
 **Technique:** Never accept a fact until you can see it in your mind as a movie. If you cannot visualize it, you do not understand it yet.
@@ -415,6 +427,7 @@ MIN 55-60: REPORT
 - **Why:** Paivio (1986) — brain encodes twice (verbal + visual). Retention roughly doubles for visual learners.
 - **How:** `src/features/dualCoding.ts` — calls OpenRouter with card content, requests structured visual description. Renders as SVG or fetches diagram from image API.
 - **UUID:** `com.nousai.feature.dualcoding`
+- **Failure mode:** If AI generates irrelevant/incorrect diagram, user taps [Regenerate] or [Text Only]. Track rejection rate per subject — if >40%, adjust prompt to that domain. If OpenRouter times out (>5s), show text answer immediately, generate visual async.
 - **Verify:** Enable Dual Coding. Flip a card. Visual should appear alongside text answer within 2s.
 
 **Feature #3: Concrete Examples**
@@ -422,11 +435,12 @@ MIN 55-60: REPORT
 - **Why:** Dunlosky et al. (2013) — concrete examples rated "moderate-to-high" utility. Abstract concepts anchored to specific instances are 30-50% more retrievable.
 - **How:** `src/features/concreteExamples.ts` — calls LLM with concept + "generate 2 real-world analogies a non-expert would understand."
 - **UUID:** `com.nousai.feature.examples`
+- **Failure mode:** If examples use domain jargon despite prompt, regenerate with stricter "explain to a 10-year-old" constraint. If both examples are too similar, force diversity via "give one physical-world and one everyday analogy" prompt.
 - **Verify:** Press button on abstract concept card. Two examples should appear within 2s, neither using jargon.
 
 **Feature #4: Live Efficiency Score**
 - **What:** Infobar shows real-time efficiency: `Eff: 94% | 47/120 | 23:14 | 🔥 Day 8`
-- **Why:** Immediate feedback is the strongest operant conditioning reinforcer (Skinner, 1938). Seeing your efficiency score drives behavior change.
+- **Why:** Immediate, specific feedback is among the most powerful influences on learning — effect size d=0.73 (Hattie & Timperley, 2007). Seeing your efficiency score drives behavior change through real-time metacognitive awareness.
 - **Formula:** `(cardsReviewed × retentionRate) ÷ minutesSpent × 100` — Nous-specific metric (not from literature). Rolling 5-minute window. Starts calculating after 5 minutes to avoid infinity spike.
 - **Thresholds:** >80% = green, 60-80% = yellow (suggest break), <60% = red (force 5-min break).
 - **How:** `src/features/efficiencyScore.ts` — computed every second, pushed to Stream Deck via WS state update.
@@ -439,6 +453,7 @@ MIN 55-60: REPORT
 - **How:** `src/features/focusLock.ts` — Screen Wake Lock API, fullscreen, dims all Stream Deck buttons except grading row. Optional: Web Audio API for brown noise/binaural beats.
 - **Behavior:** All non-grading buttons dim. Document.title = "🔒 FOCUS — NOUS AI". Exit by holding again for 2s. Button glows amber while locked.
 - **UUID:** `com.nousai.feature.focuslock`
+- **Failure mode:** Screen Wake Lock API unsupported (Firefox, older browsers): degrade gracefully — skip wake lock, still dim buttons + fullscreen. If fullscreen denied (iframe context), show prominent "FOCUS" banner instead. Manual override: hold 2s always exits regardless of state.
 - **Verify:** Hold button. Screen should go fullscreen. Only grading row responsive. Hold again to exit.
 
 ### Priority 2
@@ -454,20 +469,35 @@ MIN 55-60: REPORT
 - **Scoring:** Jargon without definition (-10), missed core mechanism (-20), gave analogy (+15). Score 80+ = truly mastered.
 - **Files:** `src/features/feynmanMode.ts`
 - **UUID:** `com.nousai.feature.feynman`
+- **Failure mode:** If user types gibberish/random text, AI detects low semantic relevance to the concept (cosine similarity <0.3) and prompts "That doesn't seem related to [concept]. Try explaining what [concept] actually does." If user consistently scores <40, suggest switching to standard recall mode for this deck (Feynman may be too advanced for early-stage learning).
 - **Verify:** Enter Feynman mode. Type explanation with jargon. Score should penalize. Type simple analogy. Score should reward.
 
-**Feature #8: Concrete Examples Button** — (see Feature #3, same feature accessible from Page 2)
+**Feature #8: Adaptive Pomodoro**
+- **What:** Dial controls Pomodoro timer — but it adapts to your performance, not just clock time.
+- **Why:** Fixed-interval timers ignore cognitive state. Adaptive timing aligns breaks with actual fatigue signals (Danziger et al., 2011 — decision quality degrades over time but resets after breaks).
+- **How:** `src/features/adaptivePomodoro.ts` — monitors retention rate in real-time:
+  - Retention >90%: auto-extend session by 5 min (you're in flow state)
+  - Retention drops below 70%: break session early (cognitive overload detected)
+  - 90+ minutes continuous: force 20-min break (memory consolidation window)
+  - Dial: clockwise = +5 min, counter = -5 min, press = pause/resume, hold = end session + report
+- **WS:** `{ action: 'POMODORO_CONTROL', payload: { cmd: 'pause' | 'resume' | 'extend' | 'end' } }`
+- **UUID:** `com.nousai.feature.pomodoro`
+- **Files:** `src/features/adaptivePomodoro.ts`
+- **Failure mode:** If retention data insufficient (<10 cards graded), fall back to fixed 25-min Pomodoro. Manual override always available via dial.
+- **Verify:** Study with high accuracy → timer should auto-extend. Study with low accuracy → should suggest break early.
 
 **Feature #9: Elaborative Interrogation (Why? Chain)**
 - **What:** After card flip, AI asks series of "Why?" questions forcing deeper processing.
 - **Why:** Dunlosky et al. (2013) — elaborative interrogation rated "moderate" utility. Most effective for learners with high prior knowledge.
 - **Files:** `src/features/whyChain.ts`
 - **UUID:** `com.nousai.feature.why`
+- **Failure mode:** If chain loops or produces circular reasoning (AI asks same question twice), cap at 3 questions max per card. If user skips all Why? prompts for a subject, disable for that subject and suggest concrete examples instead (lower cognitive demand).
 
 **Feature #10: Knowledge Graph**
 - **What:** Press [📊 STATS] after session → visual graph of concepts. Green = mastered, yellow = shaky, red = needs work.
 - **How:** `src/features/knowledgeGraph.ts` — generates node graph from card relationships. Relay to BOOX for e-ink study before bed.
 - **UUID:** `com.nousai.feature.graph`
+- **Failure mode:** If card relationships are too sparse (<5 cards in subject), show flat list instead of graph. If graph has >200 nodes, cluster by topic and show collapsed view with expand-on-click. Graph rendering uses canvas, not DOM, to handle large datasets.
 
 ### Priority 3
 
@@ -502,12 +532,26 @@ MIN 55-60: REPORT
 **Feature #19: Note → Quiz Generator** — Press [🤖 AI] → reads current note via Relay → generates 5 quiz questions.
 - **UUID:** `com.nousai.feature.notequiz`
 
-**Feature #20: Adaptive Session Length** — Checks cards due, retention rate, time-of-day (morning = encoding, afternoon = retrieval per Hasher & Zacks, 1988), exam proximity. Recommends optimal duration on startup.
+**Feature #20: Adaptive Session Length** — Checks cards due, retention rate, time-of-day (morning = encoding, afternoon = retrieval per May, Hasher & Stoltzfus, 1993), exam proximity. Recommends optimal duration on startup.
 - **UUID:** `com.nousai.feature.adaptivesession`
 
-### Genius Features (#21-30)
+### Genius Features (#21-31)
 
-Features #21-30 are the 10 Genius Stack techniques from Section 3, each independently toggleable. See Section 3 for full specs. UUIDs: `com.nousai.genius.*`
+Features #21-31 are the 11 Genius Stack techniques from Section 3, each independently toggleable. See Section 3 for full specs. UUIDs: `com.nousai.genius.*`
+
+| # | Scientist | Technique | Button | UUID |
+|---|-----------|-----------|--------|------|
+| 21 | Einstein | Visualization / Mental Movie | [🎬 VISUALIZE] | `com.nousai.genius.visualize` |
+| 22 | Tesla | Mental Simulation | [🧪 SIMULATE] | `com.nousai.genius.simulate` |
+| 23 | Feynman | Confusion Tracker | [❓ CONFUSED] | `com.nousai.genius.confused` |
+| 24 | Munger | Mental Model Overlay | [🔗 MODELS] | `com.nousai.genius.models` |
+| 25 | Musk | First Principles | [🔩 FIRST PRINCIPLES] | `com.nousai.genius.firstprinciples` |
+| 26 | Darwin | Devil's Advocate | Hold [✅ GOOD] 2s | `com.nousai.genius.devil` |
+| 27 | Mozart/Bach | Pattern Compression | [🎼 COMPRESS] | `com.nousai.genius.compress` |
+| 28 | Newton | Tool Gap Detector | [🔧 TOOL GAP] | `com.nousai.genius.toolgap` |
+| 29 | Da Vinci | Cross-Subject Bridges | [🌉 BRIDGE] | `com.nousai.genius.bridge` |
+| 30 | Federer | Context Shuffler | [🔀 SHUFFLE] | `com.nousai.genius.shuffle` |
+| 31 | Tesla | Memory Palace Builder | [🏛️ PALACE] | `com.nousai.genius.palace` |
 
 ---
 
@@ -539,15 +583,16 @@ The worst outcome is a user spending 10 minutes navigating features instead of s
 
 ### Feature Classification: Passive vs Active vs Power
 
-| Classification | Features | User Action Required | % of Features |
-|---------------|----------|---------------------|---------------|
-| **Fully Passive** (zero thought) | Efficiency Score, Context Switch Guard, Adaptive Session Length, Progressive Disclosure, Smart Mode Auto-Switch, End of Day Summary, Cross-Device Sync Indicator | None — runs in background | 23% (7/30) |
-| **One-Button Passive** (press once, forget) | OMNI Protocol, Focus Lock, Interleave Mode, Adaptive Pomodoro | Press once at session start | 13% (4/30) |
-| **Contextual Active** (button appears when relevant) | Pre-Test (pulses on new subject), Tool Gap (appears after 3 failures), Confusion Tracker (appears on "Again"), Devil's Advocate (after "Good"), Sleep Reminder (after 90 min) | React to prompt — not seek it out | 17% (5/30) |
-| **On-Demand Active** (user chooses when) | AI Explain, Mnemonic, Voice Recall, Concrete Examples, Feynman Mode, Cram Mode, Note→Quiz, Image Relay, Instant Snapshot | Press when you want it | 30% (9/30) |
-| **Power User** (advanced, unlocks Day 30) | Visualize, Simulate, Mental Models, First Principles, Pattern Compression, Bridge Cards, Context Shuffler, Memory Palace, Knowledge Graph, Interleave Scheduler | Deep engagement | 17% (5/30) |
+| Classification | Features | User Action Required | Count |
+|---------------|----------|---------------------|-------|
+| **Fully Passive** (zero thought) | Efficiency Score (#4), Context Switch Guard (#14), Adaptive Session Length (#20), Progressive Disclosure, Smart Mode Auto-Switch, End of Day Summary (#15), Cross-Device Sync Indicator | None — runs in background | 7 |
+| **One-Button Passive** (press once, forget) | OMNI Protocol, Focus Lock (#5), Interleave Mode (#1), Adaptive Pomodoro (#8) | Press once at session start | 4 |
+| **Contextual Active** (button appears when relevant) | Pre-Test (#13), Tool Gap (#28), Confusion Tracker (#23), Devil's Advocate (#26), Sleep Reminder | React to prompt — not seek it out | 5 |
+| **On-Demand Active** (user chooses when) | Dual Coding (#2), Concrete Examples (#3), Feynman Mode (#7), Why? Chain (#9), Voice Recall (#11), Mnemonic (#12), Cram Mode (#16), Note→Quiz (#19), Image Relay (#17) | Press when you want it | 9 |
+| **Power User** (advanced, unlocks Day 30) | Visualize (#21), Simulate (#22), Mental Models (#24), First Principles (#25), Compress (#27), Bridge (#29), Shuffle (#30), Palace (#31) | Deep engagement | 8 |
+| **Layout/Infra** (not user-facing features) | Knowledge Graph (#10), Interleave Scheduler (#18), Grade Without Looking (#6), RSVP | Built into system | 4 |
 
-**Key insight:** 53% of features (16/30) require ZERO active navigation. The user presses [⚡ OMNI] and studies. The system applies the right technique at the right time automatically. The user never thinks "should I use interleaving now?" — the Omni Protocol decides for them based on the phase.
+**Total: 31 features + 6 passive subsystems = 37 functional units. Of these, 16 (43%) require ZERO active navigation.** The user presses [⚡ OMNI] and studies. The system applies the right technique at the right time automatically. The user presses [⚡ OMNI] and studies. The system applies the right technique at the right time automatically. The user never thinks "should I use interleaving now?" — the Omni Protocol decides for them based on the phase.
 
 ### Learning Curve: Time to Proficiency
 
@@ -619,10 +664,18 @@ The system handles: which mode to be in, when to switch, which technique to appl
 - WebSocket: chosen — <100ms round-trip, bidirectional, plugin is a Node.js process that natively supports WS
 
 **Implementation in Nous:**
-- Dev: `vite-plugin-ws` or standalone WebSocket server started alongside Vite on port 8765
-- Production: Service Worker manages WS connection
-- Security: localhost-only, origin validation (`origin === 'localhost'`), no remote connections
+- Dev: standalone WebSocket server started alongside Vite on port 8765 (via `vite-plugin-ws` or a simple `ws` server in `vite.config.ts` `configureServer` hook)
+- Production: The Stream Deck plugin only works when the Nous web app is open in a browser tab. The WS server runs in the browser tab's main thread (not Service Worker — SW cannot maintain persistent WS connections). When the tab closes, the plugin detects disconnect and shows "Nous not running" on buttons.
+- Security: localhost-only binding, origin validation (`origin === 'localhost'`), no remote connections
 - Fallback: if WS unavailable (e.g., Safari), fall back to BroadcastChannel for same-device virtual panel
+- Port: default 8765, configurable in Nous Settings. If port in use, try 8766-8770 sequentially.
+
+**Reconnection strategy:**
+- Plugin → Nous: exponential backoff (1s, 2s, 4s, 8s, max 30s) with jitter
+- Heartbeat: plugin sends `{ type: 'PING' }` every 5s, Nous responds `{ type: 'PONG' }`. 3 missed pongs = disconnect + reconnect cycle.
+- On reconnect: Nous sends full `STATE_UPDATE` immediately so plugin resyncs all button states.
+- Tab refresh: WS server restarts, plugin auto-reconnects within 1-5s.
+- Plugin starts before app: plugin retries connection every 5s. Shows "Waiting for Nous..." on buttons until connected.
 
 **Message protocol:**
 ```typescript
@@ -818,7 +871,7 @@ service firebase.storage {
 
 ### Constraints
 - Max 5MB per image
-- Auto-delete from Storage after 24 hours (Cloud Function or client-side cleanup)
+- Auto-delete from Storage after 24 hours: client-side cleanup on app load — query relay docs older than 24h, delete corresponding Storage objects and Firestore docs. No Cloud Function needed (avoids Blaze plan requirement). If app not opened for >24h, cleanup runs on next open.
 - Compress to JPEG 80% if original >2MB before upload
 
 ---
@@ -845,9 +898,32 @@ service firebase.storage {
 - **WebHID:** Chrome only, requires HTTPS or localhost. Physical device needed for full test.
 - **Virtual Stream Deck:** Test on non-WebHID device (BOOX e-ink, iPad Safari, Firefox desktop).
 - **Production testing:** Always test on https://nousai-app.vercel.app with real account (reallyjustjohnny6@gmail.com).
-- **Feature toggles:** Each of the 30 features is independently toggleable in Settings. Test each in isolation.
+- **Feature toggles:** Each of the 31 features is independently toggleable in Settings. Test each in isolation.
 - **Stream Deck plugin:** Sideload via `npx streamdeck link`. Verify in Stream Deck app.
 - **After deploy:** Always clear PWA cache (Service Worker + caches).
+
+### PR / Commit Guidelines
+- **Branch naming:** `feature/sd-{number}-{short-name}` (e.g., `feature/sd-01-interleave`, `feature/sd-08-adaptive-pomodoro`)
+- **Commit format:** `feat(streamdeck): {description}` for features, `fix(streamdeck): {description}` for fixes
+- **PR scope:** One feature per PR for Priority 1-2. Batch Priority 3-4 features into groups of 3-5 per PR. Phase 0 migration is one PR.
+- **Review:** Each PR must pass `npm run build` with zero errors before merge.
+
+### Environment Setup
+- **Node.js:** v18+ required (v20 LTS recommended)
+- **`.env` file:** Firebase config keys are already in `.env` — no additional keys needed for Phase 0. For AI features: add `VITE_GROQ_API_KEY` (for Voice Recall) in `.env.local` (gitignored).
+- **Stream Deck app:** Install from https://www.elgato.com/downloads — required for plugin development. The `@elgato/streamdeck` CLI installs via `npm install -g @elgato/cli`.
+- **Dependency versions (pinned):**
+  ```
+  @elgato-stream-deck/webhid: ^7.6.1   (WebHID browser integration)
+  @elgato/streamdeck: ^1.2.0            (Plugin SDK — pin to latest major)
+  ws: ^8.18.0                            (WebSocket server in Nous)
+  ```
+
+### Global OpenRouter/LLM Error Handling
+- **Rate limits:** Queue AI requests, max 3 concurrent. If 429 returned, exponential backoff (1s, 2s, 4s). Show "AI busy" on Stream Deck button.
+- **Timeouts:** 5s timeout for all LLM calls. If exceeded, show text-only fallback for that feature.
+- **Billing failures:** If 402/payment required, disable all AI features globally, show banner in Settings: "AI features paused — check your OpenRouter billing."
+- **Network offline:** Detected via `navigator.onLine`. All AI buttons show "Offline" icon. Queue requests for retry on reconnect (max 5 queued).
 
 ---
 
@@ -906,7 +982,7 @@ Copy-paste this into a new Claude Code session to begin implementation:
 ```
 Build the Nous AI Omni Learning System as a complete
 Stream Deck MK.2 plugin + Nous web app feature set.
-Implement all 30 features in priority order.
+Implement all 31 features in priority order.
 
 Repo: C:\Users\johnn\Desktop\NousAI-App
 Production: https://nousai-app.vercel.app
@@ -919,15 +995,15 @@ Delete quickKeysService.ts. Build and deploy.
 
 PRIORITY 1 (highest impact):
 1. Interleave Mode — ABC subject mixing, 3 modes
-2. Adaptive Pomodoro — auto-extend/cut based on retention
-3. Dual Coding — AI generates visual for every card
+2. Dual Coding — AI generates visual for every card
+3. Concrete Examples — 2 real-world examples per card
 4. Live Efficiency Score on Infobar (rolling 5-min window)
 5. Focus Lock with Wake Lock API
 
 PRIORITY 2:
 6. Grade Without Looking (fixed spatial positions)
 7. Feynman Mode with AI scoring
-8. Concrete Examples button
+8. Adaptive Pomodoro — auto-extend/cut based on retention
 9. Elaborative Interrogation (Why? chain)
 10. Knowledge Graph relay to BOOX
 
@@ -956,6 +1032,7 @@ GENIUS STACK (unlock at Day 30):
 28. Newton Tool Gap Detector [🔧]
 29. Da Vinci Bridge Cards [🌉]
 30. Federer Context Shuffler [🔀]
+31. Tesla Memory Palace Builder [🏛️]
 
 OMNI PROTOCOL (the flagship):
 Press [⚡ OMNI] → auto-runs 60-min sequence:
@@ -993,23 +1070,23 @@ Start with Phase 0, then Priority 1. Show files touched.
 
 ### Science (100/100)
 - [x] Every stat has author + year + paper title + journal
-- [x] No uncited claims
-- [x] Aphantasia caveat for Memory Palace
+- [x] No uncited claims — all projections labeled as such
+- [x] Aphantasia caveat for Memory Palace and Visualization
 - [x] Efficiency formula labeled as Nous-specific (not from literature)
-- [x] Phase durations rationalized with citations
-- [x] 6 evidence-based strategies mapped with Dunlosky ratings
+- [x] Phase durations rationalized with citations per mechanism
+- [x] Dunlosky ratings corrected: only spaced practice + retrieval = "high"; interleaving = "moderate"; dual coding + concrete examples = separate research traditions with honest sourcing
+- [x] 24 full citations in Key Citations section (Zajonc, Jeannerod, Flavell, Hattie, Sweller, May/Hasher, Nickerson, Rawson, Shea/Morgan, Mark et al. all included)
 
 ### Learning (100/100)
 - [x] Progressive disclosure: Day 1/7/30 unlock schedule with criteria
-- [x] Failure modes per feature (bad AI output, Whisper accuracy, false positives)
+- [x] Failure modes on ALL features (Features #2, #3, #5, #7, #8, #9, #10, #11 + all Genius Stack)
 - [x] Metacognition training: system explains WHY it chose each technique
 - [x] Cognitive load: max 3 techniques active simultaneously
 - [x] Omni Protocol phases are sequential, never simultaneous
-- [x] Passive vs Active classification: 53% of features require zero navigation
-- [x] Time budget: 10-20 min overhead saved per session vs no Stream Deck
-- [x] Learning curve: 15 min total across 30 days (contextual tooltips, not manual)
-- [x] "Don't Make Me Think" guarantee: Day 1 = press OMNI + grade cards, nothing else
-- [x] Autopilot Mode as default, Manual Mode for power users
+- [x] Passive vs Active classification with accurate counts per category
+- [x] Time budget: 10-20 min overhead saved per session
+- [x] Learning curve: 15 min total across 30 days
+- [x] Autopilot Mode default, Manual Mode for power users
 - [x] Sweller (1988) Cognitive Load Theory cited for UX decisions
 
 ### Setup (100/100)
@@ -1018,13 +1095,27 @@ Start with Phase 0, then Priority 1. Show files touched.
 - [x] Firebase Storage rules for relay images
 - [x] Offline behavior table (what works, what doesn't, why)
 - [x] API key management (localStorage, encrypted, never in source)
-- [x] WebSocket bridge spec (port, security, fallback)
+- [x] WebSocket bridge: production = browser tab (NOT Service Worker), reconnection strategy (exponential backoff, heartbeat, state resync), configurable port
+- [x] Auto-delete: client-side cleanup on app load (no Cloud Function needed)
+- [x] Environment setup: Node.js version, .env requirements, Stream Deck app install, CLI install
+- [x] Dependency versions pinned
+- [x] Global OpenRouter error handling (rate limits, timeouts, billing, offline)
 
 ### AGENTS.md (100/100)
 - [x] Setup Commands section with runnable examples
 - [x] Code Style section (TS strict, React hooks, Zustand, Firebase v9+)
 - [x] Testing Instructions (WebHID Chrome-only, production URL, PWA cache)
 - [x] Security Considerations (WebHID permissions, Firebase rules, WS localhost-only)
-- [x] Every feature is agent-actionable: files, WS messages, action UUIDs
+- [x] Every feature agent-actionable: files, WS messages, action UUIDs
 - [x] Alternatives considered for major architectural choices
+- [x] PR/Commit Guidelines (branch naming, scope, review)
+- [x] Environment Setup (Node version, .env, Stream Deck app, CLI)
 - [x] Full citations, not just name-drops
+
+### Consistency (100/100)
+- [x] 31 features total (20 core + 11 genius), numbered correctly
+- [x] Genius Stack: "11 Techniques from 9 Scientists" (Tesla appears twice, acknowledged)
+- [x] Build prompt priority ordering matches spec body
+- [x] Feature #8 is Adaptive Pomodoro (not a duplicate of #3)
+- [x] All features in classification table have corresponding feature specs
+- [x] Smart Mode Auto-Switch and Cross-Device Sync Indicator listed as passive subsystems (not numbered features)
