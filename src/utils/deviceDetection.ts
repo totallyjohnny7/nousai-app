@@ -11,7 +11,7 @@ export interface DeviceCapabilities {
   isEink: boolean;
   hasPressure: boolean;           // true on Windows/iPad with stylus
   hasApplePencil: boolean;        // iPad Safari with PencilKit-style touch force
-  hasQuickKeys: boolean;          // set to true by quickKeysService after connect
+  hasQuickKeys: boolean;          // set to true by streamDeckService after connect (legacy field name)
   prefersPalmRejection: boolean;  // true on iPad; also user-configurable in Settings
   pixelRatio: number;             // window.devicePixelRatio
   supportsWebHID: boolean;        // 'hid' in navigator (Chrome/Edge desktop only)
@@ -59,7 +59,7 @@ export function getDeviceCapabilities(): DeviceCapabilities {
     isEink,
     hasPressure: profile === 'windows' || profile === 'macos' || profile === 'ipad',
     hasApplePencil: profile === 'ipad',
-    hasQuickKeys: false, // updated by quickKeysService on connect
+    hasQuickKeys: false, // updated by streamDeckService on connect
     prefersPalmRejection: profile === 'ipad',
     pixelRatio: window.devicePixelRatio ?? 1,
     supportsWebHID: 'hid' in navigator,
@@ -69,9 +69,14 @@ export function getDeviceCapabilities(): DeviceCapabilities {
   return _caps;
 }
 
-/** Called by quickKeysService after a device connects/disconnects */
+/** Called by streamDeckService after a device connects/disconnects */
 export function setQuickKeysConnected(connected: boolean): void {
   if (_caps) _caps.hasQuickKeys = connected;
+}
+
+/** Alias for streamDeckService — same underlying flag */
+export function setStreamDeckConnected(connected: boolean): void {
+  setQuickKeysConnected(connected);
 }
 
 /**

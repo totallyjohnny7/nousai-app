@@ -15,10 +15,12 @@ const TEST_PASSWORD = process.env.TEST_PASSWORD || '';
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function waitForAppLoad(page: Page) {
-  // Wait for the React app to hydrate (spinner disappears or main nav renders)
-  await page.waitForSelector('nav, .bottom-nav, [data-testid="app-loaded"]', {
-    timeout: 15_000,
-  });
+  // Wait for the React app to hydrate — handles both onboarding (fresh session)
+  // and normal app shell (returning user with data).
+  await page.waitForSelector(
+    'nav, .bottom-nav, [data-testid="app-loaded"], input[type="email"], button:has-text("Start Fresh"), button:has-text("Continue as Guest")',
+    { timeout: 20_000 }
+  );
 }
 
 async function loginIfRequired(page: Page) {
@@ -36,19 +38,23 @@ async function loginIfRequired(page: Page) {
 
 test.describe('App load & navigation', () => {
   test('1. App loads without crash', async ({ page }) => {
-    await page.goto('/');
-    await waitForAppLoad(page);
-
-    // No unhandled errors in console
+    // Attach console error listener BEFORE navigation
     const errors: string[] = [];
     page.on('console', msg => {
       if (msg.type() === 'error') errors.push(msg.text());
     });
+    page.on('pageerror', err => errors.push(err.message));
 
+    await page.goto('/');
+    await waitForAppLoad(page);
     await page.waitForTimeout(2_000);
-    // Filter known benign Firebase loading messages
+
+    // Filter known benign messages
     const realErrors = errors.filter(e =>
-      !e.includes('Firebase') && !e.includes('favicon') && !e.includes('sw.js')
+      !e.includes('Firebase') &&
+      !e.includes('favicon') &&
+      !e.includes('sw.js') &&
+      !e.includes('apple-mobile-web-app-capable')
     );
     expect(realErrors, `Console errors: ${realErrors.join('\n')}`).toHaveLength(0);
   });

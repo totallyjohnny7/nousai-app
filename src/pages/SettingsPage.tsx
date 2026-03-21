@@ -7,7 +7,8 @@ import {
   AlertTriangle, Settings, Shield, Clock, Minus, Plus, ExternalLink, FolderPlus,
   Bell, Mic, Sun, Clipboard, HardDrive, FileText, Wifi, Headphones, Keyboard
 } from 'lucide-react'
-import { quickKeysService, QuickKeysService, ALL_QUICK_KEY_ACTIONS, type QuickKeysMode } from '../utils/quickKeysService'
+import { streamDeckService, StreamDeckService, ALL_STREAM_DECK_ACTIONS, type StreamDeckMode } from '../utils/streamDeckService'
+import { gamepadService, GamepadService, GAMEPAD_BUTTON_LABELS, type GamepadConfig, type GamepadModeConfig } from '../utils/gamepadService'
 import { useStore, normalizeData, forceWriteToIDB, clearPWACache, saveBackupHandle, loadBackupHandle, clearBackupHandle } from '../store'
 import { checkForUpdates, getAppVersion, getStoredUpdate, dismissUpdate, getPlatform } from '../utils/updater'
 import { signUp, signIn, logOut, onAuthChange, syncToCloud, syncFromCloud, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, saveOmiConfig, type AuthUser } from '../utils/auth'
@@ -475,12 +476,18 @@ export default function SettingsPage() {
   const [toast, setToast] = useState<string | null>(null)
   const [updateInfo, setUpdateInfo] = useState(getStoredUpdate())
 
-  // Quick Keys state
-  const [qkConnected, setQkConnected] = useState(quickKeysService.connected)
-  const [qkConfig, setQkConfig] = useState(() => quickKeysService.getConfig())
-  const [qkActiveMode, setQkActiveMode] = useState<QuickKeysMode>('flashcard')
+  // Stream Deck state
+  const [sdConnected, setSdConnected] = useState(streamDeckService.connected)
+  const [sdConfig, setSdConfig] = useState(() => streamDeckService.getConfig())
+  const [sdActiveMode, setSdActiveMode] = useState<StreamDeckMode>('flashcard')
   const [qkConnecting, setQkConnecting] = useState(false)
   const [qkLastPressed, setQkLastPressed] = useState<{ btn: number; action: string } | null>(null)
+
+  // Gamepad state
+  const [gpConnected, setGpConnected] = useState(gamepadService.connected)
+  const [gpDeviceName, setGpDeviceName] = useState<string | null>(gamepadService.connectedDeviceName)
+  const [gpConfig, setGpConfig] = useState<GamepadConfig>(() => gamepadService.getConfig())
+  const [gpActiveMode, setGpActiveMode] = useState<StreamDeckMode>('flashcard')
   const [checking, setChecking] = useState(false)
   // Update URL is now hardcoded in updater.ts for security
   const platform = getPlatform()
@@ -725,11 +732,21 @@ export default function SettingsPage() {
     saveDisplayPrefs(displayPrefs)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Quick Keys subscription
+  // Stream Deck subscription
   useEffect(() => {
-    const unsub = quickKeysService.subscribe(() => {
-      setQkConnected(quickKeysService.connected)
-      setQkConfig(quickKeysService.getConfig())
+    const unsub = streamDeckService.subscribe(() => {
+      setSdConnected(streamDeckService.connected)
+      setSdConfig(streamDeckService.getConfig())
+    })
+    return unsub
+  }, [])
+
+  // Gamepad subscription
+  useEffect(() => {
+    const unsub = gamepadService.subscribe(() => {
+      setGpConnected(gamepadService.connected)
+      setGpDeviceName(gamepadService.connectedDeviceName)
+      setGpConfig(gamepadService.getConfig())
     })
     return unsub
   }, [])
@@ -3674,105 +3691,271 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* ──────────── Input Devices (Quick Keys) ──────────── */}
+      {/* ──────────── Input Devices ──────────── */}
       <div className="settings-section">
-        <SectionHeader id="inputdevices" icon={<Keyboard size={16} />} title="Input Devices" subtitle="Xencelabs Quick Keys, hardware shortcuts" />
+        <SectionHeader id="inputdevices" icon={<Keyboard size={16} />} title="Input Devices" subtitle="Gamepad, Stream Deck, hardware shortcuts" />
         {expanded.inputdevices && (
-          <div style={{ padding: '12px 0' }}>
-            {!QuickKeysService.isSupported() ? (
-              <div style={{ padding: '16px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
-                  WebHID not available. Use <strong>Chrome or Edge</strong> on Windows or macOS.<br />
-                  Not supported on iPad, Boox, Firefox, Safari, or mobile browsers.
-                </p>
+          <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* ── Gamepad / Controller ── */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>🎮 Gamepad / Controller</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '2px 7px', borderRadius: 20 }}>
+                  Works everywhere · no permissions
+                </span>
               </div>
-            ) : (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: qkConnected ? '#22c55e' : 'var(--text-muted)' }} />
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{qkConnected ? 'Connected' : 'Disconnected'}</span>
+
+              {!GamepadService.isSupported() ? (
+                <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
+                  Gamepad API not available in this browser.
+                </div>
+              ) : (
+                <div>
+                  {/* Status row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '10px 12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: gpConnected ? '#22c55e' : 'var(--text-muted)', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{gpConnected ? 'Controller Connected' : 'No Controller Detected'}</div>
+                      {gpConnected && gpDeviceName && (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
+                          {gpDeviceName}
+                        </div>
+                      )}
+                      {!gpConnected && (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                          Plug in any USB gamepad or press a button on a Bluetooth controller
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <button
-                    className="btn btn-sm"
-                    style={{ marginLeft: 'auto' }}
-                    disabled={qkConnecting}
-                    onClick={async () => {
-                      if (qkConnected) {
-                        await quickKeysService.disconnect()
-                      } else {
-                        setQkConnecting(true)
-                        try { await quickKeysService.connect() }
-                        catch (e) { showToast('Could not connect — check device and browser permission') }
-                        finally { setQkConnecting(false) }
-                      }
-                    }}
-                  >
-                    {qkConnecting ? 'Connecting…' : qkConnected ? 'Disconnect' : 'Connect Quick Keys'}
-                  </button>
-                </div>
 
-                {/* Mode tabs */}
-                <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-                  {(['flashcard', 'quiz', 'drawing', 'navigation', 'notes'] as QuickKeysMode[]).map(m => (
-                    <button
-                      key={m}
-                      className={`btn btn-sm${qkActiveMode === m ? '' : ' btn-ghost'}`}
-                      style={{ textTransform: 'capitalize', fontSize: 11 }}
-                      onClick={() => setQkActiveMode(m)}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
+                  {/* Recommended devices callout */}
+                  {!gpConnected && (
+                    <div style={{ padding: '10px 12px', background: 'rgba(245,166,35,0.07)', borderRadius: 'var(--radius)', border: '1px solid rgba(245,166,35,0.25)', marginBottom: 12, fontSize: 12, lineHeight: 1.6 }}>
+                      <div style={{ fontWeight: 700, color: 'var(--color-accent)', marginBottom: 4 }}>⚡ Recommended: Same shape as Stream Deck</div>
+                      <div style={{ color: 'var(--text-secondary)' }}>
+                        <strong>8BitDo Zero 2</strong> — $20, palm-sized, 8 buttons + d-pad, USB-C / Bluetooth<br />
+                        <strong>8BitDo Macro 3 Pad</strong> — dedicated macro pad, 12 buttons, compact<br />
+                        <strong>Xbox / PS5 controller</strong> — any standard gamepad works
+                      </div>
+                    </div>
+                  )}
 
-                {/* Button mapping grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-                  {qkConfig.modes[qkActiveMode].buttons.map((btn, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent)', minWidth: 18 }}>Btn {i + 1}</span>
-                      <select
-                        style={{ flex: 1, fontSize: 11, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 4px' }}
-                        value={btn.actionId}
-                        onChange={e => {
-                          const action = ALL_QUICK_KEY_ACTIONS.find(a => a.id === e.target.value)
-                          if (!action) return
-                          const newConfig = { ...qkConfig }
-                          newConfig.modes = { ...newConfig.modes }
-                          newConfig.modes[qkActiveMode] = { ...newConfig.modes[qkActiveMode] }
-                          newConfig.modes[qkActiveMode].buttons = [...newConfig.modes[qkActiveMode].buttons]
-                          newConfig.modes[qkActiveMode].buttons[i] = { actionId: action.id, label: action.label.slice(0, 8).toUpperCase() }
-                          quickKeysService.saveConfig(newConfig)
-                          setQkConfig(newConfig)
+                  {/* Mode tabs */}
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
+                    {(['flashcard', 'quiz', 'drawing', 'navigation', 'notes'] as StreamDeckMode[]).map(m => (
+                      <button
+                        key={m}
+                        className={`btn btn-sm${gpActiveMode === m ? '' : ' btn-ghost'}`}
+                        style={{ textTransform: 'capitalize', fontSize: 11 }}
+                        onClick={() => {
+                          setGpActiveMode(m)
+                          gamepadService.setMode(m)
+                          setGpConfig(gamepadService.getConfig())
                         }}
                       >
-                        {ALL_QUICK_KEY_ACTIONS.map(a => (
-                          <option key={a.id} value={a.id}>{a.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Last pressed indicator */}
-                {qkLastPressed && (
-                  <div style={{ fontSize: 12, color: 'var(--color-accent)', padding: '6px 10px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', marginBottom: 8 }}>
-                    Button {qkLastPressed.btn + 1} pressed → {qkLastPressed.action}
+                        {m}
+                      </button>
+                    ))}
                   </div>
-                )}
 
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    const defaultCfg = { modes: quickKeysService['DEFAULT_CONFIGS' as keyof typeof quickKeysService] ?? qkConfig.modes, currentMode: qkConfig.currentMode }
-                    quickKeysService.saveConfig(qkConfig)
-                    showToast('Reset to defaults')
-                  }}
-                >
-                  Reset to Defaults
-                </button>
+                  {/* Button mapping grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 10 }}>
+                    {gpConfig.modes[gpActiveMode].buttons.map((mapping, i) => (
+                      <div key={i} style={{ padding: '8px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-accent)' }}>Slot {i + 1}</span>
+                          <select
+                            style={{ flex: 1, fontSize: 10, background: 'var(--bg-input)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 3, padding: '1px 3px' }}
+                            value={mapping.gamepadIndex}
+                            onChange={e => {
+                              const newConfig = { ...gpConfig, modes: { ...gpConfig.modes } }
+                              newConfig.modes[gpActiveMode] = { ...newConfig.modes[gpActiveMode], buttons: [...newConfig.modes[gpActiveMode].buttons] }
+                              newConfig.modes[gpActiveMode].buttons[i] = { ...mapping, gamepadIndex: Number(e.target.value) }
+                              gamepadService.saveConfig(newConfig)
+                              setGpConfig(newConfig)
+                            }}
+                          >
+                            {Object.entries(GAMEPAD_BUTTON_LABELS).map(([idx, label]) => (
+                              <option key={idx} value={idx}>{label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <select
+                          style={{ width: '100%', fontSize: 10, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 3, padding: '2px 4px' }}
+                          value={mapping.actionId}
+                          onChange={e => {
+                            const action = ALL_STREAM_DECK_ACTIONS.find(a => a.id === e.target.value)
+                            if (!action) return
+                            const newConfig = { ...gpConfig, modes: { ...gpConfig.modes } }
+                            newConfig.modes[gpActiveMode] = { ...newConfig.modes[gpActiveMode], buttons: [...newConfig.modes[gpActiveMode].buttons] }
+                            newConfig.modes[gpActiveMode].buttons[i] = { ...mapping, actionId: action.id }
+                            gamepadService.saveConfig(newConfig)
+                            setGpConfig(newConfig)
+                          }}
+                        >
+                          {ALL_STREAM_DECK_ACTIONS.map(a => (
+                            <option key={a.id} value={a.id}>{a.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Dial axis selector */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '8px 10px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Dial / scroll axis:</span>
+                    <select
+                      style={{ flex: 1, fontSize: 11, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 6px' }}
+                      value={gpConfig.modes[gpActiveMode].dialAxis}
+                      onChange={e => {
+                        const newConfig = { ...gpConfig, modes: { ...gpConfig.modes } }
+                        newConfig.modes[gpActiveMode] = { ...newConfig.modes[gpActiveMode], dialAxis: Number(e.target.value) }
+                        gamepadService.saveConfig(newConfig)
+                        setGpConfig(newConfig)
+                      }}
+                    >
+                      <option value={0}>Left Stick Horizontal</option>
+                      <option value={1}>Left Stick Vertical</option>
+                      <option value={2}>Right Stick Horizontal</option>
+                      <option value={3}>Right Stick Vertical</option>
+                      <option value={4}>Left Trigger (L2)</option>
+                      <option value={5}>Right Trigger (R2)</option>
+                    </select>
+                  </div>
+
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                      gamepadService.resetToDefaults()
+                      setGpConfig(gamepadService.getConfig())
+                      showToast('Gamepad reset to defaults')
+                    }}
+                  >
+                    Reset Gamepad to Defaults
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ── Divider ── */}
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+
+            {/* ── Elgato Stream Deck (WebHID) ── */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>⌨️ Elgato Stream Deck</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '2px 7px', borderRadius: 20 }}>
+                  Chrome/Edge on Windows/macOS only
+                </span>
               </div>
-            )}
+
+              {!StreamDeckService.isSupported() ? (
+                <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
+                  WebHID not available. Use <strong>Chrome or Edge</strong> on Windows or macOS.<br />
+                  Not supported on iPad, Boox, Firefox, Safari, or mobile.
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: sdConnected ? '#22c55e' : 'var(--text-muted)' }} />
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>{sdConnected ? 'Connected' : 'Disconnected'}</span>
+                    </div>
+                    <button
+                      className="btn btn-sm"
+                      style={{ marginLeft: 'auto' }}
+                      disabled={qkConnecting}
+                      onClick={async () => {
+                        if (sdConnected) {
+                          await streamDeckService.disconnect()
+                          setSdConnected(false)
+                        } else {
+                          setQkConnecting(true)
+                          try {
+                            await streamDeckService.connect()
+                            setSdConnected(streamDeckService.connected)
+                          }
+                          catch (e: any) {
+                            console.error('[StreamDeck] connect failed:', e)
+                            showToast(e?.message || 'Could not connect — check device and browser permission')
+                          }
+                          finally { setQkConnecting(false) }
+                        }
+                      }}
+                    >
+                      {qkConnecting ? 'Connecting…' : sdConnected ? 'Disconnect' : 'Connect Stream Deck'}
+                    </button>
+                  </div>
+
+                  {/* Mode tabs */}
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 12 }}>
+                    {(['flashcard', 'quiz', 'drawing', 'navigation', 'notes'] as StreamDeckMode[]).map(m => (
+                      <button
+                        key={m}
+                        className={`btn btn-sm${sdActiveMode === m ? '' : ' btn-ghost'}`}
+                        style={{ textTransform: 'capitalize', fontSize: 11 }}
+                        onClick={() => {
+                          setSdActiveMode(m)
+                          streamDeckService.setMode(m)
+                          setSdConfig(streamDeckService.getConfig())
+                        }}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Button mapping grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 12 }}>
+                    {sdConfig.modes[sdActiveMode].buttons.map((btn, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent)', minWidth: 18 }}>Btn {i + 1}</span>
+                        <select
+                          style={{ flex: 1, fontSize: 11, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 4px' }}
+                          value={btn.actionId}
+                          onChange={e => {
+                            const action = ALL_STREAM_DECK_ACTIONS.find(a => a.id === e.target.value)
+                            if (!action) return
+                            const newConfig = { ...sdConfig }
+                            newConfig.modes = { ...newConfig.modes }
+                            newConfig.modes[sdActiveMode] = { ...newConfig.modes[sdActiveMode] }
+                            newConfig.modes[sdActiveMode].buttons = [...newConfig.modes[sdActiveMode].buttons]
+                            newConfig.modes[sdActiveMode].buttons[i] = { actionId: action.id, label: action.label.slice(0, 8).toUpperCase() }
+                            streamDeckService.saveConfig(newConfig)
+                            setSdConfig(newConfig)
+                          }}
+                        >
+                          {ALL_STREAM_DECK_ACTIONS.map(a => (
+                            <option key={a.id} value={a.id}>{a.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Last pressed indicator */}
+                  {qkLastPressed && (
+                    <div style={{ fontSize: 12, color: 'var(--color-accent)', padding: '6px 10px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', marginBottom: 8 }}>
+                      Button {qkLastPressed.btn + 1} pressed → {qkLastPressed.action}
+                    </div>
+                  )}
+
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                      streamDeckService.resetToDefaults()
+                      setSdConfig(streamDeckService.getConfig())
+                      showToast('Reset to defaults')
+                    }}
+                  >
+                    Reset to Defaults
+                  </button>
+                </div>
+              )}
+            </div>
+
           </div>
         )}
       </div>
@@ -3834,25 +4017,25 @@ interface GuideEntry {
 const GUIDE_ENTRIES: GuideEntry[] = [
   {
     id: 'quickkeys',
-    title: 'Xencelabs Quick Keys — Setup & Modes',
-    tldr: 'A one-handed controller with hardware buttons + OLED display for every NousAI action.',
-    content: `Requirements: Chrome or Edge on Windows or macOS, Quick Keys connected via USB or Bluetooth.
+    title: 'Elgato Stream Deck — Setup & Modes',
+    tldr: 'A 15-button LCD controller for every NousAI action, one-handed control of the whole app.',
+    content: `Requirements: Chrome or Edge on Windows or macOS, Stream Deck MK.2 connected via USB.
 
 Setup (3 steps):
 1. Open Settings → Input Devices
-2. Click "Connect Quick Keys" → browser asks for USB permission → allow
-3. The OLED display updates with labels for the current mode
+2. Click "Connect Stream Deck" → browser asks for USB permission → allow
+3. The LCD keys update with labels for the current mode
 
 Modes (auto-switch by page):
-• Flashcard Mode — on /flashcards: Dial = pre-select confidence (1-4) before flipping. Btn 1=FLIP, 2=RECALL, 3=NEXT, 4=PREV, 5=AGAIN, 6=HARD, 7=GOOD, 8=EASY
+• Flashcard Mode — on /flashcards: Btn 1=FLIP, 2=RECALL, 3=NEXT, 4=PREV, 5=AGAIN, 6=HARD, 7=GOOD, 8=EASY, 9-15 configurable
 • Quiz Mode — on /quiz: Btn 1-4 = select options, Btn 5=SUBMIT, Btn 6=NEXT
-• Drawing Mode — on /draw: Btn 1=UNDO, Btn 2=REDO, Dial = brush size
-• Navigation Mode — all other pages: Btn 1-8 = jump to Home/Quiz/Cards/Notes/Timer/Cal/Learn/Settings
+• Drawing Mode — on /draw: Btn 1=UNDO, Btn 2=REDO
+• Navigation Mode — all other pages: Btn 1-15 = jump to any NousAI page
 • Notes Mode — on /library or /learn: Btn 3=RELAY, Btn 4=LASSO
 
 Remapping: Settings → Input Devices → choose mode → click any button → select new action
 
-⚡ Pro Tip: The dial in flashcard mode pre-selects your confidence rating. Dial to 3 (Good), then press FLIP — faster than reaching for keyboard 1-4.`,
+⚡ Pro Tip: Use the 15 LCD buttons to map your most-used actions per mode — the labels update live on the device display.`,
   },
   {
     id: 'cloze',
@@ -3906,7 +4089,7 @@ Speed Settings:
 300 WPM — Fast, good for vocabulary you mostly know
 500 WPM — Very fast, good for warm-up on familiar decks
 
-Controls: Space = pause · → = skip card · Quick Keys dial = adjust WPM live
+Controls: Space = pause · → = skip card · Stream Deck buttons = adjust WPM live
 
 When to Use:
 ✓ Before starting a new deck (reduces first-review overwhelm)
@@ -3962,7 +4145,7 @@ Daily Cap: 50 cards per course per day (configurable in Settings). This prevents
     title: 'Content Relay — Step-by-Step Cross-Device',
     tldr: 'Send text, notes, or URLs from any device to any other device instantly via Firebase.',
     content: `Method 1 — Screen Lasso (Windows → Boox):
-1. Quick Keys Notes Btn 4, OR: Learn → Screen Lasso tool
+1. Stream Deck Notes Btn 4, OR: Learn → Screen Lasso tool
 2. Select your screen (browser permission asked once)
 3. Draw a polygon around the text you want
 4. AI extracts the text (OCR)

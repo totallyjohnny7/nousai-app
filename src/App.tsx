@@ -19,6 +19,9 @@ import { getDueCount } from './utils/getDueCount'
 import { initFsrsCache } from './utils/fsrsStorage'
 import { detectDeviceProfile } from './utils/deviceDetection'
 import { useAuthUser } from './hooks/useAuthUser'
+import { streamDeckService, StreamDeckService } from './utils/streamDeckService'
+import { watchQKAction } from './utils/auth'
+import { getDeviceFingerprint } from './utils/contentRelay'
 import './App.css'
 
 const ContentRelay = lazyWithRetry(() => import('./components/ContentRelay'))
@@ -280,6 +283,26 @@ export default function App() {
   const { uid } = useAuthUser()
   const location = useLocation()
   const initRef = useRef(false)
+
+  // Auto-connect Quick Keys silently on load (no popup — uses already-granted devices).
+  // Sets uid on service so button presses relay to other devices via Firestore.
+  // Also subscribes to the relay listener so actions from Boox/other devices fire here.
+  useEffect(() => {
+    streamDeckService.setUid(uid ?? null)
+    if (uid && StreamDeckService.isSupported() && !streamDeckService.connected) {
+      streamDeckService.autoConnect().catch(() => {})
+    }
+    if (!uid) return
+    const myFingerprint = getDeviceFingerprint()
+    const unsub = watchQKAction(uid, (payload) => {
+      // Ignore actions originating from this device (prevents relay loops)
+      if (payload.fromDevice === myFingerprint) return
+      // Ignore stale events older than 5 seconds
+      if (Date.now() - payload.ts > 5000) return
+      streamDeckService.dispatchActionFromRelay(payload.actionId)
+    })
+    return unsub
+  }, [uid])
   const [omniSearchOpen, setOmniSearchOpen] = useState(false)
   const [shortcutOverlayOpen, setShortcutOverlayOpen] = useState(false)
   const [focusMode, setFocusMode] = useState(false)

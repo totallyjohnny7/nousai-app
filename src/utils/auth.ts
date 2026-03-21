@@ -951,6 +951,66 @@ export async function downloadRelayContent(url: string): Promise<string> {
   return response.text();
 }
 
+// ─── Quick Keys Action Relay ──────────────────────────────────────────────────
+//
+// Ephemeral Firestore doc at users/{uid}/relay/qkAction.
+// Physical Quick Keys on Windows → Firestore → Boox fires same action.
+// Each action has a unique id to prevent duplicate firing on re-renders.
+
+export interface QKActionPayload {
+  actionId: string;
+  fromDevice: string;
+  ts: number; // epoch ms — receiver ignores events >5s old
+}
+
+export async function writeQKAction(uid: string, payload: QKActionPayload): Promise<void> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns) return;
+  const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'qkAction');
+  await fbFns.setDoc(ref, payload);
+}
+
+export function watchQKAction(uid: string, cb: (payload: QKActionPayload) => void): () => void {
+  let unsub: (() => void) | null = null;
+  let cancelled = false;
+  loadFirebase().then((loaded) => {
+    if (!loaded || !fbFns || cancelled) return;
+    const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'qkAction');
+    unsub = fbFns.onSnapshot(ref, (snap: { exists: () => boolean; data: () => unknown }) => {
+      if (!snap.exists()) return;
+      cb(snap.data() as QKActionPayload);
+    });
+  });
+  return () => { cancelled = true; unsub?.(); };
+}
+
+// ─── Quick Keys Config Sync ───────────────────────────────────────────────────
+//
+// Persists the QK button-mapping config to users/{uid}/relay/qkConfig.
+// Kept in the relay subcollection (separate from the 1MB main data doc).
+// Written when the user remaps buttons; loaded on sign-in to restore mappings.
+
+export async function saveQKConfig(uid: string, config: object): Promise<void> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns) return;
+  const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'qkConfig');
+  await fbFns.setDoc(ref, { config: JSON.stringify(config), updatedAt: Date.now() });
+}
+
+export async function loadQKConfig(uid: string): Promise<object | null> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns) return null;
+  const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'qkConfig');
+  const snap = await fbFns.getDoc(ref);
+  if (!snap.exists()) return null;
+  try {
+    const raw = (snap.data() as { config: string }).config;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 // ─── Safety Net Backup ───────────────────────────────────────────────────────
 //
 // On conflict detection, auto-exports a JSON snapshot to Firestore
