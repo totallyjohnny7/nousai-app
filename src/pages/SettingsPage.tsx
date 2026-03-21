@@ -3889,182 +3889,144 @@ export default function SettingsPage() {
                     </button>
                   </div>
 
-                  {/* Mode tabs */}
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 12 }}>
-                    {(['flashcard', 'quiz', 'drawing', 'navigation', 'notes'] as StreamDeckMode[]).map(m => (
-                      <button
-                        key={m}
-                        className={`btn btn-sm${sdActiveMode === m ? '' : ' btn-ghost'}`}
-                        style={{ textTransform: 'capitalize', fontSize: 11 }}
-                        onClick={() => {
-                          setSdActiveMode(m)
-                          streamDeckService.setMode(m)
-                          setSdConfig(streamDeckService.getConfig())
-                        }}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Button mapping grid — Stream Deck MK.2 physical layout: 5 cols × 3 rows */}
+                  {/* ── 3-Page Stream Deck Layout ── */}
                   {(() => {
-                    const SD_EMOJI: Record<string, string> = {
-                      fc_flip: '🔄', fc_type_recall: '⌨️', fc_next: '▶️', fc_prev: '◀️',
-                      fc_conf1: '❌', fc_conf2: '😓', fc_conf3: '✅', fc_conf4: '⭐',
-                      fc_zen: '🧘', fc_cram: '⚡', fc_rsvp: '👁️',
-                      qz_opt1: '1️⃣', qz_opt2: '2️⃣', qz_opt3: '3️⃣', qz_opt4: '4️⃣',
-                      qz_submit: '📤', qz_continue: '➡️', qz_hint: '💡',
-                      draw_undo: '↩️', draw_redo: '↪️', draw_pen: '✏️', draw_highlight: '🖊️',
-                      draw_erase: '🧹', draw_color: '🎨', draw_clear: '🗑️', draw_save: '💾',
-                      nav_home: '🏠', nav_quiz: '📝', nav_cards: '🃏', nav_notes: '📚',
-                      nav_timer: '⏱️', nav_calendar: '📅', nav_learn: '🎓', nav_settings: '⚙️',
-                      notes_new: '📄', notes_search: '🔍', relay_send: '📡', screen_lasso: '🪄',
-                      notes_bold: '𝐁', notes_italic: '𝐼', notes_save: '💾', notes_speak: '🔊',
+                    const SD_ICON: Record<string, { emoji: string; label: string }> = {
+                      fc_flip: { emoji: '🔄', label: 'FLIP' }, fc_next: { emoji: '➡️', label: 'NEXT' },
+                      fc_prev: { emoji: '⬅️', label: 'PREV' }, fc_rsvp: { emoji: '⏩', label: 'RSVP' },
+                      fc_cram: { emoji: '⚡', label: 'CRAM' }, fc_type_recall: { emoji: '✍️', label: 'TYPE' },
+                      fc_zen: { emoji: '🧘', label: 'ZEN' }, relay_send: { emoji: '📤', label: 'RELAY' },
+                      screen_lasso: { emoji: '✂️', label: 'LASSO' }, notes_speak: { emoji: '🔊', label: 'TTS' },
+                      fc_conf1: { emoji: '❌', label: 'AGAIN' }, fc_conf2: { emoji: '😰', label: 'HARD' },
+                      fc_conf3: { emoji: '✅', label: 'GOOD' }, fc_conf4: { emoji: '🚀', label: 'EASY' },
+                      nav_next: { emoji: '▶', label: 'NEXT→' }, nav_prev: { emoji: '◀', label: '←PREV' },
+                      draw_pen: { emoji: '🖊️', label: 'PEN' }, draw_highlight: { emoji: '🖍️', label: 'HILITE' },
+                      draw_erase: { emoji: '🧽', label: 'ERASE' }, draw_color: { emoji: '🎨', label: 'COLOR' },
+                      draw_clear: { emoji: '🗑️', label: 'CLEAR' }, draw_undo: { emoji: '↩️', label: 'UNDO' },
+                      draw_redo: { emoji: '↪️', label: 'REDO' }, draw_save: { emoji: '💾', label: 'SAVE' },
+                      notes_bold: { emoji: '𝐁', label: 'BOLD' }, notes_italic: { emoji: '𝐼', label: 'ITALIC' },
+                      omni_start: { emoji: '⚡', label: 'OMNI' }, focus_lock: { emoji: '🔒', label: 'FOCUS' },
+                      interleave: { emoji: '🔀', label: 'MIX' }, phase_encode: { emoji: '🧠', label: 'ENCODE' },
+                      phase_test: { emoji: '🔍', label: 'TEST' }, nav_home: { emoji: '🏠', label: 'HOME' },
+                      nav_cards: { emoji: '🃏', label: 'CARDS' }, nav_quiz: { emoji: '📝', label: 'QUIZ' },
+                      nav_learn: { emoji: '🧠', label: 'LEARN' }, nav_settings: { emoji: '⚙️', label: 'SETTINGS' },
+                      nav_timer: { emoji: '⏱️', label: 'TIMER' }, nav_calendar: { emoji: '📅', label: 'CALENDAR' },
+                      nav_notes: { emoji: '📚', label: 'LIBRARY' }, notes_save: { emoji: '💾', label: 'SAVE' },
                     }
-                    const ROW_LABELS = ['Row 1: Mode Actions', 'Row 2: Tools & Relay', 'Row 3: Grading (muscle memory)']
-                    const buttons = sdConfig.modes[sdActiveMode].buttons
+
+                    // 3 fixed pages — no repeats except ←/→ nav arrows
+                    const PAGES = [
+                      {
+                        name: 'Page 1 — Study Mode',
+                        color: '#F5A623',
+                        keys: [
+                          'fc_flip', 'fc_next', 'fc_prev', 'fc_rsvp', 'fc_cram',
+                          'fc_type_recall', 'fc_zen', 'relay_send', 'screen_lasso', 'notes_speak',
+                          'fc_conf1', 'fc_conf2', 'fc_conf3', 'fc_conf4', 'nav_next',
+                        ],
+                      },
+                      {
+                        name: 'Page 2 — Tools',
+                        color: '#22C55E',
+                        keys: [
+                          'draw_pen', 'draw_highlight', 'draw_erase', 'draw_color', 'draw_clear',
+                          'draw_undo', 'draw_redo', 'draw_save', 'notes_bold', 'notes_italic',
+                          'nav_prev', 'fc_conf1', 'fc_conf2', 'fc_conf3', 'nav_next',
+                        ],
+                      },
+                      {
+                        name: 'Page 3 — Navigation + Omni',
+                        color: '#3B82F6',
+                        keys: [
+                          'omni_start', 'focus_lock', 'interleave', 'phase_encode', 'phase_test',
+                          'nav_home', 'nav_cards', 'nav_quiz', 'nav_learn', 'nav_settings',
+                          'nav_prev', 'nav_timer', 'nav_calendar', 'nav_notes', 'notes_save',
+                        ],
+                      },
+                    ]
+
+                    const [sdPage, setSdPage] = useState(0)
+                    const page = PAGES[sdPage]
+
                     return (
-                      <div style={{
-                        background: '#1a1a1a',
-                        borderRadius: 16,
-                        padding: 16,
-                        border: '2px solid #333',
-                        maxWidth: 500,
-                        marginBottom: 12,
-                      }}>
-                        {/* Row labels */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, marginBottom: 6 }}>
-                          {ROW_LABELS.map((label, rowIdx) => (
-                            <div
-                              key={rowIdx}
+                      <div style={{ marginBottom: 12 }}>
+                        {/* Page tabs */}
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                          {PAGES.map((p, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setSdPage(idx)}
                               style={{
-                                gridColumn: `${rowIdx * 5 + 1} / span 5`,
-                                fontSize: 10,
-                                color: '#888',
-                                fontWeight: 600,
-                                letterSpacing: '0.04em',
-                                textTransform: 'uppercase',
-                                paddingBottom: 2,
-                                borderBottom: '1px solid #2a2a2a',
-                                marginBottom: 4,
+                                flex: 1,
+                                padding: '8px 4px',
+                                fontSize: 11,
+                                fontWeight: sdPage === idx ? 700 : 500,
+                                color: sdPage === idx ? '#fff' : '#888',
+                                background: sdPage === idx ? `${p.color}22` : 'transparent',
+                                border: sdPage === idx ? `2px solid ${p.color}` : '2px solid #333',
+                                borderRadius: 8,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
                               }}
                             >
-                              {label}
-                            </div>
+                              {p.name}
+                            </button>
                           ))}
                         </div>
-                        {/* 5×3 button grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
-                          {buttons.map((btn, i) => {
-                            const rowIdx = Math.floor(i / 5)
-                            const emoji = SD_EMOJI[btn.actionId] ?? '🔲'
-                            const action = ALL_STREAM_DECK_ACTIONS.find(a => a.id === btn.actionId)
-                            const shortLabel = action ? action.label.slice(0, 10) : btn.label
-                            return (
-                              <div
-                                key={i}
-                                style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  gap: 3,
-                                  padding: '8px 4px 6px',
-                                  background: '#252525',
-                                  borderRadius: 8,
-                                  border: '1px solid #3a3a3a',
-                                  cursor: 'pointer',
-                                  position: 'relative',
-                                  minHeight: 72,
-                                  // Subtle row tint
-                                  boxShadow: rowIdx === 2 ? 'inset 0 0 0 1px rgba(245,166,35,0.18)' : undefined,
-                                }}
-                              >
-                                {/* Button index badge */}
-                                <span style={{
-                                  position: 'absolute',
-                                  top: 3,
-                                  left: 5,
-                                  fontSize: 9,
-                                  fontWeight: 700,
-                                  color: 'var(--color-accent)',
-                                  opacity: 0.7,
-                                  fontFamily: 'DM Mono, monospace',
-                                }}>
-                                  {i + 1}
-                                </span>
-                                {/* Emoji icon */}
-                                <span style={{ fontSize: 20, lineHeight: 1, marginTop: 6 }}>{emoji}</span>
-                                {/* Short label */}
-                                <span style={{
-                                  fontSize: 9,
-                                  color: '#ccc',
-                                  textAlign: 'center',
-                                  lineHeight: 1.2,
-                                  maxWidth: '100%',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  padding: '0 2px',
-                                }}>
-                                  {shortLabel}
-                                </span>
-                                {/* Action dropdown */}
-                                <select
+
+                        {/* Device body */}
+                        <div style={{
+                          background: '#111',
+                          borderRadius: 20,
+                          padding: 16,
+                          border: `2px solid ${page.color}40`,
+                          maxWidth: 480,
+                          boxShadow: `0 0 20px ${page.color}10`,
+                        }}>
+                          {/* 5×3 button grid */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                            {page.keys.map((actionId, i) => {
+                              const icon = SD_ICON[actionId] ?? { emoji: '🔲', label: actionId }
+                              const isNav = actionId === 'nav_next' || actionId === 'nav_prev'
+                              const isGrade = actionId.startsWith('fc_conf')
+                              return (
+                                <div
+                                  key={`${sdPage}-${i}`}
                                   style={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    opacity: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    cursor: 'pointer',
-                                  }}
-                                  value={btn.actionId}
-                                  title={`Button ${i + 1}: ${action?.label ?? btn.actionId}`}
-                                  onChange={e => {
-                                    const newAction = ALL_STREAM_DECK_ACTIONS.find(a => a.id === e.target.value)
-                                    if (!newAction) return
-                                    const newConfig = { ...sdConfig }
-                                    newConfig.modes = { ...newConfig.modes }
-                                    newConfig.modes[sdActiveMode] = { ...newConfig.modes[sdActiveMode] }
-                                    newConfig.modes[sdActiveMode].buttons = [...newConfig.modes[sdActiveMode].buttons]
-                                    newConfig.modes[sdActiveMode].buttons[i] = { actionId: newAction.id, label: newAction.label.slice(0, 8).toUpperCase() }
-                                    streamDeckService.saveConfig(newConfig)
-                                    setSdConfig(newConfig)
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 4,
+                                    padding: '10px 4px 8px',
+                                    background: isNav ? '#333' : isGrade
+                                      ? actionId === 'fc_conf1' ? '#EF444422' : actionId === 'fc_conf2' ? '#F9731622' : actionId === 'fc_conf3' ? '#22C55E22' : '#3B82F622'
+                                      : '#1e1e1e',
+                                    borderRadius: 12,
+                                    border: isNav ? '1px solid #555' : `1px solid ${page.color}30`,
+                                    minHeight: 68,
+                                    cursor: 'default',
+                                    transition: 'transform 0.1s',
                                   }}
                                 >
-                                  {ALL_STREAM_DECK_ACTIONS.map(a => (
-                                    <option key={a.id} value={a.id}>{a.label}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            )
-                          })}
+                                  <span style={{ fontSize: 24, lineHeight: 1 }}>{icon.emoji}</span>
+                                  <span style={{
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    color: isNav ? '#999' : isGrade ? '#ddd' : page.color,
+                                    letterSpacing: 0.5,
+                                    textAlign: 'center',
+                                  }}>
+                                    {icon.label}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
-                        <p style={{ fontSize: 10, color: '#666', margin: '10px 0 0', textAlign: 'center' }}>
-                          Click any button to change its action
-                        </p>
                       </div>
                     )
                   })()}
-
-                  {/* Last pressed indicator */}
-                  {qkLastPressed && (
-                    <div style={{ fontSize: 12, color: 'var(--color-accent)', padding: '6px 10px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', marginBottom: 8 }}>
-                      Button {qkLastPressed.btn + 1} pressed → {qkLastPressed.action}
-                    </div>
-                  )}
-
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => {
-                      streamDeckService.resetToDefaults()
-                      setSdConfig(streamDeckService.getConfig())
-                      showToast('Reset to defaults')
-                    }}
-                  >
-                    Reset to Defaults
-                  </button>
                 </div>
               )}
             </div>
