@@ -1,0 +1,21 @@
+{
+  "name": "nous-streamdeck-plugin",
+  "version": "1.0.0",
+  "description": "Nous AI — Omni Learning System for Elgato Stream Deck",
+  "main": "dist/plugin.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "link": "npx @elgato/cli@latest link",
+    "validate": "npx @elgato/cli@latest validate",
+    "pack": "npx @elgato/cli@latest pack"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "^1.2.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.9.0"
+  }
+}

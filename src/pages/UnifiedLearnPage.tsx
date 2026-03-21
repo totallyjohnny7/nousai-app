@@ -70,6 +70,7 @@ const BigContentTool       = lazyWithRetry(() => import('../components/aitools/B
 const ScreenLassoTool      = lazyWithRetry(() => import('../components/aitools/ScreenLassoTool'));
 const LeechManagerTool     = lazyWithRetry(() => import('../components/aitools/LeechManagerTool'));
 const PreTestMode          = lazyWithRetry(() => import('../components/learn/PreTestMode'));
+const OmniProtocol         = lazyWithRetry(() => import('../components/learn/OmniProtocol'));
 
 // ── Lazy imports — ToolsPage (for embedded tools) ───────────────────────────
 const ToolsPage = lazyWithRetry(() => import('./ToolsPage')) as React.LazyExoticComponent<(props: { initialView?: string }) => React.ReactElement | null>;
@@ -217,6 +218,7 @@ const TOOLS: ToolEntry[] = [
   { id: 'procedure-quiz', name: 'Procedure Quiz', desc: 'Quiz yourself on step-by-step procedures with AI scoring', icon: ClipboardList, color: '#22c55e', category: 'learn', render: () => <Suspense fallback={<Loader />}><ProcedureQuizTool /></Suspense> },
   { id: 'rsvp',        name: '⚡ Speed Preview', desc: 'Flash through cards rapidly to build familiarity before deep study', icon: Zap, color: '#f59e0b', category: 'learn', render: () => <RSVPWrapper /> },
   { id: 'pretest',     name: '🎯 Pre-Test Mode', desc: 'Test before learning — hypercorrection effect improves retention 15-20%', icon: CheckCircle, color: '#ef4444', category: 'learn', render: () => <PreTestWrapper /> },
+  { id: 'omni-protocol', name: '⚡ Omni Protocol', desc: '60-min science-backed study session: Prime → Chunk → Encode → Connect → Break → Test → Anchor → Report', icon: Zap, color: '#F5A623', category: 'learn', render: () => <Suspense fallback={<Loader />}><OmniProtocol onComplete={() => {}} /></Suspense> },
   // ── Generate ──────────────────────────────────────────────────────────────
   { id: 'course',     name: 'Course Gen',   desc: 'Build a full course outline',  icon: BookOpen,       color: '#6366f1', category: 'generate',  render: () => <Suspense fallback={<Loader />}><CourseGenTool /></Suspense> },
   { id: 'flashcardgen',name:'Flashcards',   desc: 'AI-generated flashcards',      icon: Layers,         color: '#3b82f6', category: 'generate',  render: () => <Suspense fallback={<Loader />}><FlashcardGenTool /></Suspense> },

@@ -1,0 +1,84 @@
+{
+  "Name": "Nous AI — Omni Learning System",
+  "Version": "1.0.0",
+  "Author": "NousAI",
+  "Description": "Science-backed study protocol controlled from your Stream Deck. 31 features, 60-minute Omni Protocol, live efficiency tracking.",
+  "Category": "Education",
+  "CategoryIcon": "imgs/category-icon",
+  "CodePath": "dist/plugin.js",
+  "Icon": "imgs/plugin-icon",
+  "UUID": "com.nousai.omni",
+  "SDKVersion": 2,
+  "OS": [
+    { "Platform": "windows", "MinimumVersion": "10" },
+    { "Platform": "mac", "MinimumVersion": "10.15" }
+  ],
+  "Software": {
+    "MinimumVersion": "6.0"
+  },
+  "Actions": [
+    {
+      "UUID": "com.nousai.omni.start",
+      "Name": "Omni Protocol",
+      "Icon": "imgs/omni-start",
+      "Tooltip": "Start 60-min science-backed study session",
+      "States": [
+        { "Image": "imgs/omni-start", "TitleAlignment": "bottom", "Title": "OMNI" }
+      ]
+    },
+    {
+      "UUID": "com.nousai.grade.again",
+      "Name": "Grade: Again",
+      "Icon": "imgs/grade-again",
+      "Tooltip": "Grade current card as Again (forgot)",
+      "States": [
+        { "Image": "imgs/grade-again", "TitleAlignment": "bottom", "Title": "AGAIN" }
+      ]
+    },
+    {
+      "UUID": "com.nousai.grade.hard",
+      "Name": "Grade: Hard",
+      "Icon": "imgs/grade-hard",
+      "Tooltip": "Grade current card as Hard",
+      "States": [
+        { "Image": "imgs/grade-hard", "TitleAlignment": "bottom", "Title": "HARD" }
+      ]
+    },
+    {
+      "UUID": "com.nousai.grade.good",
+      "Name": "Grade: Good",
+      "Icon": "imgs/grade-good",
+      "Tooltip": "Grade current card as Good",
+      "States": [
+        { "Image": "imgs/grade-good", "TitleAlignment": "bottom", "Title": "GOOD" }
+      ]
+    },
+    {
+      "UUID": "com.nousai.grade.easy",
+      "Name": "Grade: Easy",
+      "Icon": "imgs/grade-easy",
+      "Tooltip": "Grade current card as Easy",
+      "States": [
+        { "Image": "imgs/grade-easy", "TitleAlignment": "bottom", "Title": "EASY" }
+      ]
+    },
+    {
+      "UUID": "com.nousai.feature.focuslock",
+      "Name": "Focus Lock",
+      "Icon": "imgs/focus-lock",
+      "Tooltip": "Enter deep focus mode",
+      "States": [
+        { "Image": "imgs/focus-lock", "TitleAlignment": "bottom", "Title": "FOCUS" }
+      ]
+    },
+    {
+      "UUID": "com.nousai.feature.interleave",
+      "Name": "Interleave Mode",
+      "Icon": "imgs/interleave",
+      "Tooltip": "Toggle subject interleaving",
+      "States": [
+        { "Image": "imgs/interleave", "TitleAlignment": "bottom", "Title": "MIX" }
+      ]
+    }
+  ]
+}
