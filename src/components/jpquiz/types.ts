@@ -92,6 +92,34 @@ export interface JpQuizCourseData {
   version: number
 }
 
+export interface MiniGameStats {
+  highScore: number       // stars (MemoryFlip) or correct count (SB/LQ)
+  totalPlayed: number
+  lastPlayed: string      // ISO timestamp
+  totalCorrect: number    // for computing cumulative accuracy
+  totalQuestions: number  // for computing cumulative accuracy
+  bestFlips?: number      // MemoryFlip: fewest flips (lower is better)
+  bestTime?: number       // MemoryFlip: fastest time in seconds (lower is better)
+}
+
+export function miniGameStatsKey(game: MiniGameType, courseId: string) {
+  return `nousai-minigame-${game}-${courseId}`
+}
+
+export function loadMiniGameStats(game: MiniGameType, courseId: string): MiniGameStats | null {
+  try {
+    const raw = localStorage.getItem(miniGameStatsKey(game, courseId))
+    if (raw) return JSON.parse(raw) as MiniGameStats
+  } catch { /* ignore */ }
+  return null
+}
+
+export function saveMiniGameStats(game: MiniGameType, courseId: string, stats: MiniGameStats) {
+  try {
+    localStorage.setItem(miniGameStatsKey(game, courseId), JSON.stringify(stats))
+  } catch { /* ignore */ }
+}
+
 export const PRESET_INFO: Record<JpQuizPreset, { label: string; icon: string; desc: string }> = {
   written: { label: 'Written Exam', icon: '📝', desc: 'Type answers with IME. Timed, strict scoring.' },
   oral:    { label: 'Oral Exam',    icon: '🎤', desc: 'Speak answers in Japanese. AI rates pronunciation.' },

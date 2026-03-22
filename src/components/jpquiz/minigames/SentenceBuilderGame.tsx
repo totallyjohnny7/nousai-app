@@ -8,9 +8,10 @@
  *    by jpSentenceBank.ts (one label per space-separated token).
  *  • 8 sentences per round, "New Round" button on completion screen.
  */
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { getAllGrammar } from '../../../data/nakama1StudyContent'
-import type { VocabBankItem } from '../types'
+import type { MiniGameStats, VocabBankItem } from '../types'
+import { loadMiniGameStats, saveMiniGameStats } from '../types'
 
 // ─── Data types ───────────────────────────────────────────────────────────────
 
@@ -144,9 +145,11 @@ type FeedbackState = 'idle' | 'correct' | 'wrong'
 export default function SentenceBuilderGame({
   onBack,
   bank: vocabBank = [],
+  courseId = '',
 }: {
   onBack: () => void
   bank?: VocabBankItem[]
+  courseId?: string
 }) {
   const buildNew = useCallback(() => buildRound(vocabBank), [vocabBank])
 
@@ -163,6 +166,7 @@ export default function SentenceBuilderGame({
   const [done, setDone]                     = useState(false)
   const [shaking, setShaking]               = useState(false)
   const [showLabels, setShowLabels]         = useState(true)
+  const [stats, setStats] = useState<MiniGameStats | null>(() => loadMiniGameStats('sentence-builder', courseId))
 
   const current      = sentences[idx]
   const correctWords = useMemo(() => tokenizeJapanese(current.example), [current])
@@ -253,10 +257,28 @@ export default function SentenceBuilderGame({
     }
   }, [placed, correctWords, wrongAttempts, goNext])
 
+  // Persist stats when round ends
+  useEffect(() => {
+    if (!done) return
+    const prev = loadMiniGameStats('sentence-builder', courseId)
+    const updated: MiniGameStats = {
+      highScore: Math.max(score, prev?.highScore ?? 0),
+      totalPlayed: (prev?.totalPlayed ?? 0) + 1,
+      lastPlayed: new Date().toISOString(),
+      totalCorrect: (prev?.totalCorrect ?? 0) + score,
+      totalQuestions: (prev?.totalQuestions ?? 0) + SENTENCES_PER_ROUND,
+    }
+    saveMiniGameStats('sentence-builder', courseId, updated)
+    setStats(updated)
+  }, [done]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Done screen ────────────────────────────────────────────────────────────
 
   if (done) {
     const stars = score >= 7 ? 3 : score >= 5 ? 2 : 1
+    const accuracy = stats && stats.totalQuestions > 0
+      ? Math.round((stats.totalCorrect / stats.totalQuestions) * 100)
+      : null
     return (
       <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: 24 }}>
         <div style={{ fontSize: 64, marginBottom: 8 }}>🏆</div>
@@ -267,6 +289,25 @@ export default function SentenceBuilderGame({
         <div style={{ fontSize: 40, marginBottom: 24 }}>
           {'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}
         </div>
+        {stats && (
+          <div style={{
+            display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 24,
+            background: 'var(--bg-secondary)', borderRadius: 12, padding: '12px 20px',
+          }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Best Score</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{stats.highScore}/{SENTENCES_PER_ROUND}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Accuracy</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{accuracy ?? '--'}%</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Played</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{stats.totalPlayed}×</div>
+            </div>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
             onClick={startNewRound}
