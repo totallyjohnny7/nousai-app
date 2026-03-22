@@ -111,7 +111,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
 
   // ── Screen & wizard state ────────────────────────────────────────────────
   const [screen, setScreen] = useState<OmniScreen>({ screen: 'duration' });
-  const [sessionDuration, setSessionDuration] = useState<number>(60);
+  const [, setSessionDuration] = useState<number>(60);
   const [durationConfig, setDurationConfig] = useState<OmniDurationConfig>(parseDurationChoice(60));
   const [selectedCourseId, setSelectedCourseId] = useState(courses[0]?.id ?? '');
   const [selectedTopic, setSelectedTopic] = useState('');
@@ -152,7 +152,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
   const [gradedCards, setGradedCards] = useState<CardWithMeta[]>([]);
   const [phaseCorrect, setPhaseCorrect] = useState(0);
   const [phaseTotal, setPhaseTotal] = useState(0);
-  const [comboCount, setComboCount] = useState(0);
+  const [, setComboCount] = useState(0);
   const [xpPopup, setXpPopup] = useState<string | null>(null);
   const [collapseBanner, setCollapseBanner] = useState(false);
 
@@ -186,7 +186,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
     );
   }
 
-  function prepPhaseCards(cycleIdx: number) {
+  function prepPhaseCards() {
     const allCards = getAllCards();
     const plan = sessionPlan;
     if (!plan) return;
@@ -251,7 +251,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
         feynmanGaps: pendingFeynmanRef.current,
         fsrsDueCount: dueCardsRef.current.length,
       });
-      const raw = await callAI(msgs, { temperature: 0.4, maxTokens: 400, json: true });
+      const raw = await callAI(msgs, { temperature: 0.4, maxTokens: 400, json: true }, 'omni');
       try {
         const parsed = JSON.parse(raw);
         setIntakeType(parsed.type === 'cold_start' ? 'cold_start' : 'questions');
@@ -299,12 +299,12 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
     });
 
     try {
-      const raw = await callAI(msgs, { temperature: 0.6, maxTokens: 2500, json: true });
+      const raw = await callAI(msgs, { temperature: 0.6, maxTokens: 2500, json: true }, 'omni');
       const plan = parseSessionPlanResponse(raw);
       if (!plan || !plan.cycles?.length) throw new Error('Invalid plan JSON');
       setSessionPlan(plan);
       setLoadingMsg('');
-      prepPhaseCards(0);
+      prepPhaseCards();
       const firstPhaseDuration = plan.cycles[0].phases[0].duration * 60;
       setTimeRemaining(firstPhaseDuration);
       timeRef.current = firstPhaseDuration;
@@ -390,7 +390,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
       setTimeRemaining(nextDuration);
       timeRef.current = nextDuration;
       setScreen({ screen: 'running', cycleIdx, phaseIdx: nextPhaseIdx });
-      prepPhaseCards(cycleIdx);
+      prepPhaseCards();
     }
   }, [sessionPlan, phaseCorrect, phaseTotal, gamification]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -431,7 +431,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
   function startNextCycle() {
     if (screen.screen !== 'interstitial' || !sessionPlan) return;
     const nextCycleIdx = (screen as { afterCycle: number }).afterCycle + 1;
-    prepPhaseCards(nextCycleIdx);
+    prepPhaseCards();
     const firstPhaseDuration = sessionPlan.cycles[nextCycleIdx].phases[0].duration * 60;
     setTimeRemaining(firstPhaseDuration);
     timeRef.current = firstPhaseDuration;
@@ -462,7 +462,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
     callAI(msgs, {
       temperature: 0.5, maxTokens: 600,
       onChunk: (chunk) => setFinalReportText(prev => prev + chunk),
-    }).then(() => {
+    }, 'omni').then(() => {
       setScreen({ screen: 'final-report', loading: false });
       // Persist session record
       const overallAccuracy = phaseResults.length

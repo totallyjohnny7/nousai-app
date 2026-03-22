@@ -118,7 +118,7 @@ export function evaluateMotivationState(
   phaseAccuracy: number,
   correctAnswers: number
 ): MotivationState {
-  let next = { ...state };
+  const next = { ...state };
 
   if (next.inCollapseMode) {
     // Track consecutive correct answers since collapse
