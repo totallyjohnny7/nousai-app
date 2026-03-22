@@ -158,10 +158,11 @@ class AutoSyncScheduler {
     const uid = localStorage.getItem('nousai-auth-uid');
     const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
     if (!uid || !autoSync || !this.dataRef.current) return;
-    // Safety: don't sync empty courses to cloud (likely stale/unloaded state)
+    // Only skip if the courses array itself is missing (data not yet loaded).
+    // An empty array is a valid user state (all courses deleted) and must be synced.
     const courses = this.dataRef.current.pluginData?.coachData?.courses;
-    if (!courses || courses.length === 0) {
-      console.warn('[AUTO-SYNC] Skipped: no courses in state (likely stale)');
+    if (!Array.isArray(courses)) {
+      console.warn('[AUTO-SYNC] Skipped: courses is not an array (data not loaded yet)');
       return;
     }
     this.dirty = false;
@@ -261,6 +262,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const dataRef = useRef<NousAIData | null>(null);
   const fromSyncRef = useRef(false); // true when data was loaded from cross-tab sync (skip broadcast)
   const localDirtyRef = useRef(false); // true when local changes haven't been saved to IDB yet
+  const loadedRef = useRef(false); // true after initial IDB load completes (guards against pre-load saves)
 
   // ── Sync status state ───────────────────────────────────
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() =>
@@ -307,6 +309,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         console.log('[STORE] Loaded from IDB:', normalized.pluginData?.coachData?.courses?.length ?? 0, 'courses,', normalized.pluginData?.quizHistory?.length ?? 0, 'quiz entries');
         setDataRaw(normalized);
       }
+      loadedRef.current = true;
       setLoaded(true);
     });
   }, []);
@@ -317,15 +320,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!data) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
-      // Safety: don't overwrite IDB if current state has 0 courses but IDB has courses
-      const courses = data.pluginData?.coachData?.courses;
-      if (!courses || courses.length === 0) {
-        const existing = await loadFromIDB();
-        const existingCourses = existing?.pluginData?.coachData?.courses;
-        if (existingCourses && existingCourses.length > 0) {
-          console.warn('[STORE] Blocked save: would overwrite', existingCourses.length, 'courses with empty array');
-          return;
-        }
+      // Safety: don't save to IDB before the initial load has completed (prevents race condition
+      // where a pre-load state transition could wipe persisted data). After loadedRef is true, any
+      // state (including 0 courses) represents an intentional user action and must be persisted.
+      if (!loadedRef.current) {
+        console.warn('[STORE] Blocked save: initial IDB load not yet complete');
+        return;
       }
       const MAX_QUIZ_HISTORY = 500;
       const qh = data.pluginData?.quizHistory;
@@ -435,6 +435,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (localLastSync) {
           const msSinceSync = Date.now() - new Date(localLastSync).getTime();
           if (msSinceSync < 10_000) return;
+        }
+        // Skip if local data has changes not yet uploaded to cloud.
+        // This prevents remote load from overwriting local deletions (e.g. deleting all cards
+        // from a course) before the 30s auto-sync debounce has had a chance to upload them.
+        const localModifiedAt = localStorage.getItem('nousai-data-modified-at');
+        if (localLastSync && localModifiedAt && localModifiedAt > localLastSync) {
+          console.log('[STORE] Remote update available but local has unsynced changes — deferring remote load to protect local deletions');
+          return;
         }
         // Auto-load silently — no banner click required
         const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
