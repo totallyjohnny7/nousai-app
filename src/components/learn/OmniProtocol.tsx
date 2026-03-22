@@ -114,7 +114,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
   const [, setSessionDuration] = useState<number>(60);
   const [durationConfig, setDurationConfig] = useState<OmniDurationConfig>(parseDurationChoice(60));
   const [selectedCourseId, setSelectedCourseId] = useState(courses[0]?.id ?? '');
-  const [selectedTopic, setSelectedTopic] = useState('');
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [difficulty, setDifficulty] = useState<OmniDifficulty>('Review');
   const [arcPhase, setArcPhase] = useState<OmniArcPhase>('Foundation');
   const [intakeQuestions, setIntakeQuestions] = useState<string[]>([]);
@@ -223,7 +223,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
     if (screen.screen !== 'loading') return;
     setLoadingMsg('Pulling your course data...');
     const courseId = selectedCourseId || courses[0]?.id || '';
-    const topicId = selectedTopic;
+    const topicId = selectedTopics[0] ?? '';
 
     dueCardsRef.current = getOmniDueCards(srData, { courseIds: courseId ? [courseId] : [], topics: [] });
     pendingFeynmanRef.current = getPendingFeynmanGaps(omniData, courseId);
@@ -244,7 +244,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
     setLoadingMsg('Generating intake assessment...');
     try {
       const msgs = buildIntakePrompt({
-        topic: selectedTopic || 'General',
+        topic: selectedTopics.join(', ') || 'General',
         courseName: courses.find(c => c.id === selectedCourseId)?.name ?? selectedCourseId,
         difficulty,
         arcPhase,
@@ -261,13 +261,13 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
       } catch {
         // Fallback: ask a default question
         setIntakeType('questions');
-        setIntakeQuestions([`What do you already know about "${selectedTopic || 'this topic'}" and where do you feel least confident?`]);
+        setIntakeQuestions([`What do you already know about "${selectedTopics.join(', ') || 'this topic'}" and where do you feel least confident?`]);
         setIntakeAnswers(['']);
       }
       setLoadingMsg('');
     } catch {
       setLoadingMsg('');
-      setIntakeQuestions([`What do you already know about "${selectedTopic || 'this topic'}"?`]);
+      setIntakeQuestions([`What do you already know about "${selectedTopics.join(', ') || 'this topic'}"?`]);
       setIntakeAnswers(['']);
     }
   }
@@ -285,7 +285,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
     const courseName = courses.find(c => c.id === selectedCourseId)?.name ?? selectedCourseId;
 
     const msgs = buildSessionPlanPrompt({
-      topic: selectedTopic || 'General',
+      topic: selectedTopics.join(', ') || 'General',
       courseName,
       difficulty,
       arcPhase,
@@ -801,20 +801,53 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Course</div>
                 <select
                   value={selectedCourseId}
-                  onChange={e => { setSelectedCourseId(e.target.value); setSelectedTopic(''); }}
+                  onChange={e => { setSelectedCourseId(e.target.value); setSelectedTopics([]); }}
                   style={{ ...S.input }}
                 >
                   {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   {courses.length === 0 && <option value=''>No courses found — add courses first</option>}
                 </select>
               </div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Topic (optional)</div>
-                <select value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} style={{ ...S.input }}>
-                  <option value=''>All topics</option>
-                  {(selectedCourse?.topics ?? []).map(t => <option key={t.id ?? t.name} value={t.name}>{t.name}</option>)}
-                </select>
-              </div>
+              {(selectedCourse?.topics ?? []).length > 0 && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Topic (optional){selectedTopics.length > 0 && <span style={{ color: 'var(--accent)', marginLeft: 6 }}>{selectedTopics.length} selected</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => setSelectedTopics((selectedCourse?.topics ?? []).map(t => t.name))}
+                        style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}
+                      >Select All</button>
+                      <button
+                        onClick={() => setSelectedTopics([])}
+                        style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}
+                      >Clear</button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 180, overflowY: 'auto', padding: '4px 0' }}>
+                    {(selectedCourse?.topics ?? []).map(t => {
+                      const active = selectedTopics.includes(t.name);
+                      return (
+                        <button
+                          key={t.id ?? t.name}
+                          onClick={() => setSelectedTopics(prev =>
+                            active ? prev.filter(x => x !== t.name) : [...prev, t.name]
+                          )}
+                          style={{
+                            fontSize: 12, padding: '5px 10px', borderRadius: 20,
+                            border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
+                            background: active ? 'var(--accent)22' : 'transparent',
+                            color: active ? 'var(--accent)' : 'var(--text-secondary)',
+                            cursor: 'pointer', transition: 'all 0.15s',
+                            fontWeight: active ? 600 : 400,
+                          }}
+                        >{t.name}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Session Difficulty</div>
                 <div style={{ display: 'flex', gap: 8 }}>
