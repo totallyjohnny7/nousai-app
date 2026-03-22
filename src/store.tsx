@@ -3,6 +3,10 @@ import type { NousAIData, FlashcardItem, CanvasEvent, QuizAttempt, Course, Gamif
 import { writeClipboard, saveFilePicker, openFilePicker, getPermPref } from './utils/permissions';
 import { syncToCloud, syncFromCloud, subscribeToMetadataChanges } from './utils/auth';
 import { runMigrations } from './utils/migrations';
+import { validateBeforeWrite, countCards, logWrite } from './utils/writeGuard';
+import { saveSnapshot } from './utils/snapshotManager';
+import { dataHealthCheck, type HealthReport } from './utils/dataHealthCheck';
+import { saveGoldenCopy } from './utils/goldenCopy';
 
 /* ── Default empty state ──────────────────────────────── */
 const emptyGamification: GamificationData = {
@@ -32,34 +36,53 @@ export function mergeLocalCardMeta(local: NousAIData | null, cloud: NousAIData):
   const cloudCourses = cloud.pluginData?.coachData?.courses ?? [];
   if (localCourses.length === 0 || cloudCourses.length === 0) return cloud;
 
-  // Build lookup: courseId → Map<"front\0back" → FlashcardItem>
-  const localCardsByCourse = new Map<string, Map<string, FlashcardItem>>();
-  for (const course of localCourses) {
-    const byKey = new Map<string, FlashcardItem>();
-    for (const card of course.flashcards ?? []) {
-      byKey.set(`${card.front}\0${card.back}`, card);
+  // Per-course merge using updatedAt timestamps (Lamport 1978 simplified)
+  const localById = new Map(localCourses.map(c => [c.id, c]));
+  const cloudById = new Map(cloudCourses.map(c => [c.id, c]));
+  const allIds = new Set([...localById.keys(), ...cloudById.keys()]);
+  const mergedCourses: Course[] = [];
+
+  for (const id of allIds) {
+    const localCourse = localById.get(id);
+    const cloudCourse = cloudById.get(id);
+
+    if (!localCourse && cloudCourse) {
+      // Only in cloud — new from other device
+      mergedCourses.push(cloudCourse);
+    } else if (localCourse && !cloudCourse) {
+      // Only in local — new on this device
+      mergedCourses.push(localCourse);
+    } else if (localCourse && cloudCourse) {
+      // Both exist — compare updatedAt, merge card metadata for the winner
+      const localTime = localCourse.updatedAt || '';
+      const cloudTime = cloudCourse.updatedAt || '';
+
+      let winner: Course;
+      if (cloudTime > localTime) {
+        winner = cloudCourse;
+      } else if (localTime > cloudTime) {
+        winner = localCourse;
+      } else {
+        // Equal timestamps — trust cloud's card list; deletions bump updatedAt so they won't land here
+        winner = cloudCourse;
+      }
+
+      // Preserve locally-set topic/media that cloud may lack
+      const localCards = new Map((localCourse.flashcards ?? []).map(c => [`${c.front}\0${c.back}`, c]));
+      const flashcards = (winner.flashcards ?? []).map(winnerCard => {
+        const localCard = localCards.get(`${winnerCard.front}\0${winnerCard.back}`);
+        if (!localCard) return winnerCard;
+        const merged: FlashcardItem = { ...winnerCard };
+        const cloudHasTopic = winnerCard.topic && winnerCard.topic !== '__none__';
+        const localHasTopic = localCard.topic && localCard.topic !== '__none__';
+        if (!cloudHasTopic && localHasTopic) merged.topic = localCard.topic;
+        if (!winnerCard.media && localCard.media) merged.media = localCard.media;
+        return merged;
+      });
+
+      mergedCourses.push({ ...winner, flashcards });
     }
-    localCardsByCourse.set(course.id, byKey);
   }
-
-  const mergedCourses = cloudCourses.map(course => {
-    const localCards = localCardsByCourse.get(course.id);
-    if (!localCards) return course;
-
-    const flashcards = (course.flashcards ?? []).map(cloudCard => {
-      const localCard = localCards.get(`${cloudCard.front}\0${cloudCard.back}`);
-      if (!localCard) return cloudCard;
-
-      const cloudHasTopic = cloudCard.topic && cloudCard.topic !== '__none__';
-      const localHasTopic = localCard.topic && localCard.topic !== '__none__';
-      const merged: FlashcardItem = { ...cloudCard };
-      if (!cloudHasTopic && localHasTopic) merged.topic = localCard.topic;
-      if (!cloudCard.media && localCard.media) merged.media = localCard.media;
-      return merged;
-    });
-
-    return { ...course, flashcards };
-  });
 
   return {
     ...cloud,
@@ -116,6 +139,7 @@ export function normalizeData(d: NousAIData): NousAIData {
       matchSets: safeArray(p?.matchSets),
       aiChatSessions: safeArray(p?.aiChatSessions),
       savedVideos: safeArray(p?.savedVideos),
+      omniProtocol: p?.omniProtocol ?? undefined,
     } as NousAIData['pluginData'],
   };
 }
@@ -153,20 +177,30 @@ class AutoSyncScheduler {
     this.timer = setTimeout(() => this.flush(), AUTO_SYNC_DEBOUNCE_MS);
   }
 
+  /** Urgent sync — 5s debounce for critical state changes (card ratings, imports, course create/delete) */
+  markDirtyUrgent() {
+    this.dirty = true;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.flush(), 5_000);
+  }
+
   async flush() {
     if (!this.dirty) return;
     const uid = localStorage.getItem('nousai-auth-uid');
     const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
     if (!uid || !autoSync || !this.dataRef.current) return;
-    // Safety: don't sync empty courses to cloud (likely stale/unloaded state)
+    // Safety: don't sync if courses is not an array (truly unloaded/corrupt state)
+    // Empty array IS valid — user may have deleted all courses intentionally
     const courses = this.dataRef.current.pluginData?.coachData?.courses;
-    if (!courses || courses.length === 0) {
-      console.warn('[AUTO-SYNC] Skipped: no courses in state (likely stale)');
+    if (!Array.isArray(courses)) {
+      console.warn('[AUTO-SYNC] Skipped: courses is not an array (unloaded state)');
       return;
     }
     this.dirty = false;
     this.onFlushStart?.();
     try {
+      // Pre-sync snapshot — save "before image" for recovery
+      await saveSnapshot(this.dataRef.current, 'pre-sync').catch(() => {});
       await syncToCloud(uid, this.dataRef.current);
       const now = new Date().toISOString();
       localStorage.setItem('nousai-last-sync', now);
@@ -230,6 +264,8 @@ interface StoreCtx {
   betaMode: boolean;
   setBetaMode: (v: boolean) => void;
   backupNow: () => Promise<boolean>;
+  // Data health
+  healthReport: HealthReport | null;
   // Sync status
   syncStatus: SyncStatus;
   lastSyncAt: string | null;
@@ -248,7 +284,7 @@ interface StoreCtx {
   savedVideos: SavedVideo[]
   addVideo: (video: SavedVideo) => void
   deleteVideo: (videoId: string) => void
-  updateVideoMeta: (videoId: string, updates: Partial<Pick<SavedVideo, 'title' | 'captions' | 'defaultSpeed' | 'courseId' | 'downloadUrl' | 'thumbnailBase64' | 'notes' | 'noteTemplates'>>) => void
+  updateVideoMeta: (videoId: string, updates: Partial<Pick<SavedVideo, 'title' | 'captions' | 'defaultSpeed' | 'courseId' | 'downloadUrl' | 'thumbnailBase64' | 'notes' | 'noteTemplates' | 'duration'>>) => void
 }
 
 const Ctx = createContext<StoreCtx>({} as StoreCtx);
@@ -256,6 +292,7 @@ const Ctx = createContext<StoreCtx>({} as StoreCtx);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setDataRaw] = useState<NousAIData | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [healthReport, setHealthReport] = useState<HealthReport | null>(null);
   const [einkMode, setEinkModeState] = useState(() => localStorage.getItem('nousai-eink') === 'true');
   const [betaMode, setBetaModeState] = useState(() => localStorage.getItem('nousai-beta') === 'true');
   const dataRef = useRef<NousAIData | null>(null);
@@ -304,8 +341,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // NOTE: No longer auto-removing quizzes by subject — previously removed entries
         // where subject === 'Imported', but this was deleting valid user-imported quizzes
         // whose subject defaulted to 'Imported' when no course was selected at import time.
-        console.log('[STORE] Loaded from IDB:', normalized.pluginData?.coachData?.courses?.length ?? 0, 'courses,', normalized.pluginData?.quizHistory?.length ?? 0, 'quiz entries');
-        setDataRaw(normalized);
+        // Boot health check — detect corruption before displaying
+        const { report, repairedData } = dataHealthCheck(normalized);
+        const final = report.autoRepaired.length > 0 ? repairedData : normalized;
+        if (!report.healthy) {
+          console.warn('[HEALTH CHECK]', report.score + '/100 —', report.issues.length, 'issues:', report.issues.map(i => `[${i.severity}] ${i.code}: ${i.message}`).join('; '));
+        } else {
+          console.log('[HEALTH CHECK] Score:', report.score + '/100 — healthy');
+        }
+        if (report.autoRepaired.length > 0) {
+          console.log('[HEALTH CHECK] Auto-repaired:', report.autoRepaired.join('; '));
+        }
+        setHealthReport(report);
+        console.log('[STORE] Loaded from IDB:', final.pluginData?.coachData?.courses?.length ?? 0, 'courses,', final.pluginData?.quizHistory?.length ?? 0, 'quiz entries');
+        lastSavedData = final; // Initialize write guard baseline
+        saveSnapshot(final, 'boot').catch(() => {}); // Boot snapshot for recovery
+        setDataRaw(final);
       }
       setLoaded(true);
     });
@@ -317,15 +368,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!data) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
-      // Safety: don't overwrite IDB if current state has 0 courses but IDB has courses
-      const courses = data.pluginData?.coachData?.courses;
-      if (!courses || courses.length === 0) {
-        const existing = await loadFromIDB();
-        const existingCourses = existing?.pluginData?.coachData?.courses;
-        if (existingCourses && existingCourses.length > 0) {
-          console.warn('[STORE] Blocked save: would overwrite', existingCourses.length, 'courses with empty array');
-          return;
-        }
+      // Safety: don't save before initial IDB load completes (state is still default/empty)
+      // Previously checked courses.length === 0 which blocked saving legitimate deletions
+      if (!loaded) {
+        console.warn('[STORE] Blocked save: initial IDB load not yet complete');
+        return;
       }
       const MAX_QUIZ_HISTORY = 500;
       const qh = data.pluginData?.quizHistory;
@@ -436,6 +483,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const msSinceSync = Date.now() - new Date(localLastSync).getTime();
           if (msSinceSync < 10_000) return;
         }
+        // Defer remote load if local has unsynced changes (prevents overwriting local deletions)
+        const localModified = localStorage.getItem('nousai-data-modified-at');
+        const lastSync = localStorage.getItem('nousai-last-sync');
+        if (localModified && lastSync && localModified > lastSync) {
+          console.log('[STORE] Remote update available but local has unsynced changes — deferring');
+          return;
+        }
         // Auto-load silently — no banner click required
         const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
         if (autoSync) {
@@ -462,8 +516,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (cloudData) {
         const normalized = normalizeData(cloudData);
         // Preserve locally-set topic/media that the cloud snapshot may lack
-        const merged = mergeLocalCardMeta(data, normalized);
+        const merged = mergeLocalCardMeta(dataRef.current, normalized);
         setData(merged);
+        saveGoldenCopy(merged).catch(() => {}); // Growth-only golden copy update
         const now = new Date().toISOString();
         localStorage.setItem('nousai-last-sync', now);
         localStorage.setItem('nousai-data-modified-at', now);
@@ -498,14 +553,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') autoSyncRef.current.flush();
+      if (document.visibilityState === 'hidden') {
+        autoSyncRef.current.flush();
+      } else if (document.visibilityState === 'visible') {
+        // Pull latest from cloud when tab becomes visible (cross-device freshness)
+        loadRemoteData();
+      }
     };
+    // pagehide: iOS Safari fires this but not always beforeunload
+    const handlePageHide = () => { autoSyncRef.current.flush(); };
+    // 60s heartbeat: catch edge cases where debounce timer was cleared
+    const heartbeat = setInterval(() => {
+      if (autoSyncRef.current.dirty && navigator.onLine) {
+        autoSyncRef.current.flush();
+      }
+    }, 60_000);
     document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('pagehide', handlePageHide);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pagehide', handlePageHide);
+      clearInterval(heartbeat);
       autoSyncRef.current.stop();
     };
-  }, []);
+  }, [loadRemoteData]);
 
   // Flush to IDB immediately on tab close so no data is lost
   // Also warn the user if the auto-sync has pending changes that haven't reached the cloud
@@ -529,6 +600,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   function importData(json: string) {
     try {
+      // Pre-import snapshot — save current state before overwriting
+      if (data) saveSnapshot(data, 'pre-import').catch(() => {});
       const parsed = JSON.parse(json);
       // Validate basic structure
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
@@ -636,7 +709,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     updatePluginData({ savedVideos: savedVideos.filter(v => v.id !== videoId) });
   }
 
-  function updateVideoMeta(videoId: string, updates: Partial<Pick<SavedVideo, 'title' | 'captions' | 'defaultSpeed' | 'courseId' | 'downloadUrl' | 'thumbnailBase64' | 'notes' | 'noteTemplates'>>) {
+  function updateVideoMeta(videoId: string, updates: Partial<Pick<SavedVideo, 'title' | 'captions' | 'defaultSpeed' | 'courseId' | 'downloadUrl' | 'thumbnailBase64' | 'notes' | 'noteTemplates' | 'duration'>>) {
     updatePluginData({
       savedVideos: savedVideos.map(v => v.id === videoId ? { ...v, ...updates } : v),
     });
@@ -698,6 +771,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     data, setData, updatePluginData, loaded, importData, exportData, copyToClipboard, exportToFile, importFromFile,
     matchSets, saveMatchSet, events, quizHistory, courses, gamification, proficiency, srData,
     timerState, setTimerState, einkMode, setEinkMode, betaMode, setBetaMode, backupNow,
+    healthReport,
     syncStatus, lastSyncAt, remoteUpdateAvailable,
     startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
     activePageContext, setPageContext,
@@ -711,7 +785,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setData, updatePluginData, copyToClipboard, exportToFile, backupNow,
     syncStatus, lastSyncAt, remoteUpdateAvailable,
     startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
-    activePageContext, hiddenToolIds]);
+    activePageContext, hiddenToolIds, healthReport]);
 
   return (
     <Ctx.Provider value={ctxValue}>
@@ -745,11 +819,28 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+// Track last successfully saved data for write guard comparison
+let lastSavedData: NousAIData | null = null;
+
 async function saveToIDB(data: NousAIData) {
+  // Write guard: validate before committing to IDB
+  const validation = validateBeforeWrite(data, lastSavedData);
+  if (!validation.valid) {
+    console.error('[WRITE-GUARD] IDB write BLOCKED:', validation.reason);
+    window.dispatchEvent(new CustomEvent('nousai-write-blocked', {
+      detail: { reason: validation.reason, source: 'saveToIDB' }
+    }));
+    return;
+  }
   try {
     const db = await withTimeout(openDB());
     const tx = db.transaction(STORE_NAME, 'readwrite');
     tx.objectStore(STORE_NAME).put(data, 'main');
+    lastSavedData = data;
+    // Update card count checkpoint
+    const cardCount = countCards(data);
+    localStorage.setItem('nous_card_count_checkpoint', String(cardCount));
+    logWrite('nousai-data', JSON.stringify(data).length, 'saveToIDB', cardCount);
   } catch (e) {
     console.error('[IDB] Failed to save:', e);
   }

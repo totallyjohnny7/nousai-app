@@ -1,22 +1,36 @@
 /**
- * OmniProtocol — 60-minute auto-sequenced science-backed study session.
+ * OmniProtocol V6 — Variable-length, multi-cycle, AI-generated study session.
+ *
+ * Screen flow: duration → loading → wizard(1→2→3→4) → running → interstitial → final-report → complete
  *
  * Science basis:
- *  - Pre-test effect / hypercorrection: testing before learning boosts retention 15-20%
- *  - Chunking: pattern recognition before encoding reduces cognitive load
- *  - Active recall (ENCODE): spaced-rep style self-grading
- *  - Elaborative interrogation (CONNECT): cross-domain connections deepen encoding
- *  - Rest consolidation: 5-min break allows hippocampal replay (Tambini & Davachi 2019)
- *  - Retrieval practice (TEST): testing hard/failed items amplifies long-term retention
- *  - Memory palace (ANCHOR): method of loci for hardest items
- *  - Spaced feedback (REPORT): metacognitive review closes the learning loop
+ *  - Bloom's taxonomy escalation across cycles (Remember → Apply → Evaluate)
+ *  - FSRS spaced repetition targeting due + gap cards
+ *  - Feynman technique: WHY chains + self-assessed gaps
+ *  - Motivation collapse handler: accuracy gate + dopamine rebuild loop
+ *  - Elaborative interrogation (CONNECT), retrieval practice (TEST), memory palace (ANCHOR)
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ToolErrorBoundary } from '../ToolErrorBoundary';
 import { useStore } from '../../store';
-import type { FlashcardItem, Course } from '../../types';
+import { callAI } from '../../utils/ai';
+import { safeRenderMd } from '../../utils/renderMd';
+import { awardQuizXp, awardStudyTimeXp } from '../../utils/gamification';
+import {
+  parseDurationChoice, getOmniDueCards, getPendingFeynmanGaps,
+  getKnowledgeGraphConnections, getArcPhaseForCourse,
+  evaluateMotivationState, INITIAL_MOTIVATION, determineArcPhaseProgression,
+  generateSessionId, buildIntakePrompt, buildSessionPlanPrompt,
+  buildFinalReportPrompt, parseSessionPlanResponse,
+  type OmniDurationConfig, type MotivationState,
+} from '../../utils/omniV6';
+import type {
+  OmniArcPhase, OmniDifficulty, OmniSessionPlan, OmniPhaseResult,
+  OmniFeynmanGap, OmniSessionRecord, OmniProtocolData,
+} from '../../types';
+import type { Course } from '../../types';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 
 interface OmniProps {
   courseId?: string;
@@ -24,44 +38,37 @@ interface OmniProps {
   onClose?: () => void;
 }
 
-interface SessionStats {
-  cardsReviewed: number;
-  correctCount: number;
-  startTime: number;
-  phaseHistory: { phase: string; cardsInPhase: number; correctInPhase: number }[];
-}
+type OmniScreen =
+  | { screen: 'duration' }
+  | { screen: 'loading' }
+  | { screen: 'wizard'; step: 1 | 2 | 3 | 4 }
+  | { screen: 'running'; cycleIdx: number; phaseIdx: number }
+  | { screen: 'interstitial'; afterCycle: number }
+  | { screen: 'final-report'; loading: boolean }
+  | { screen: 'complete' };
 
-interface CardWithMeta extends FlashcardItem {
-  courseId: string;
-  courseName: string;
-  cardIdx: number;
-  grade?: 1 | 2 | 3 | 4; // 1=Again 2=Hard 3=Good 4=Easy
-}
-
-type PhaseName = 'PRIME' | 'CHUNK' | 'ENCODE' | 'CONNECT' | 'BREAK' | 'TEST' | 'ANCHOR' | 'REPORT';
-
-interface Phase {
-  name: PhaseName;
-  label: string;
-  icon: string;
-  durationSec: number;
-  color: string;
-}
+interface CardWithMeta { courseId: string; courseName: string; front: string; back: string; topic?: string; grade?: 1 | 2 | 3 | 4; }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const PHASES: Phase[] = [
-  { name: 'PRIME',   label: 'Prime',   icon: '📋', durationSec: 5  * 60, color: '#ef4444' },
-  { name: 'CHUNK',   label: 'Chunk',   icon: '🎼', durationSec: 5  * 60, color: '#f97316' },
-  { name: 'ENCODE',  label: 'Encode',  icon: '🧠', durationSec: 15 * 60, color: '#eab308' },
-  { name: 'CONNECT', label: 'Connect', icon: '🌉', durationSec: 10 * 60, color: '#22c55e' },
-  { name: 'BREAK',   label: 'Break',   icon: '☕', durationSec: 5  * 60, color: '#06b6d4' },
-  { name: 'TEST',    label: 'Test',    icon: '🔍', durationSec: 10 * 60, color: '#8b5cf6' },
-  { name: 'ANCHOR',  label: 'Anchor',  icon: '🏛️', durationSec: 5  * 60, color: '#ec4899' },
-  { name: 'REPORT',  label: 'Report',  icon: '📊', durationSec: 5  * 60, color: '#F5A623' },
-];
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
+const PHASE_ICONS: Record<string, string> = {
+  Prime: '📋', Chunk: '🎼', Encode: '🧠', Connect: '🌉',
+  Break: '☕', Test: '🔍', Anchor: '🏛️', Report: '📊',
+};
+const PHASE_COLORS: Record<string, string> = {
+  Prime: '#ef4444', Chunk: '#f97316', Encode: '#eab308', Connect: '#22c55e',
+  Break: '#06b6d4', Test: '#8b5cf6', Anchor: '#ec4899', Report: '#F5A623',
+};
+const ARC_PHASE_DESC: Record<OmniArcPhase, string> = {
+  Foundation:   'First exposure — survive & orient',
+  BuildUp:      'Building WHY chains — understand causality',
+  Application:  'Apply to real problems — transfer skills',
+  Synthesis:    'Cross-domain links — see the full picture',
+  Mastery:      'Think like the professor — explain everything',
+};
+const DURATION_OPTIONS = [60, 90, 120, 150, 180];
+const DIFFICULTY_OPTIONS: OmniDifficulty[] = ['Beginner', 'Review', 'DeepDive'];
+const ARC_PHASES: OmniArcPhase[] = ['Foundation', 'BuildUp', 'Application', 'Synthesis', 'Mastery'];
 
 function fmtTime(sec: number): string {
   const m = Math.floor(sec / 60).toString().padStart(2, '0');
@@ -78,80 +85,319 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-// ── Inner component (wrapped by error boundary below) ─────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+const S = {
+  container: { background: 'var(--bg-primary)', borderRadius: 12, overflow: 'hidden', minHeight: 480, display: 'flex', flexDirection: 'column' as const },
+  header: { background: 'var(--bg-secondary, #111)', borderBottom: '1px solid var(--border)', padding: '12px 16px' },
+  btn: (accent = false) => ({
+    padding: '10px 20px', borderRadius: 8, border: accent ? 'none' : '1px solid var(--border)',
+    background: accent ? 'var(--accent, #F5A623)' : 'transparent',
+    color: accent ? '#000' : 'var(--text-muted)', fontWeight: 700, fontSize: 13,
+    cursor: 'pointer', fontFamily: 'Sora, sans-serif',
+  }),
+  input: { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary, #111)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' as const },
+  card: { background: 'var(--bg-secondary, #111)', borderRadius: 10, border: '1px solid var(--border)', padding: 20 },
+};
+
+// ── Main Component ────────────────────────────────────────────────────────────
 
 function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
-  const { data } = useStore();
+  const { data, updatePluginData } = useStore();
   const courses: Course[] = data?.pluginData?.coachData?.courses ?? [];
-  const allCards: CardWithMeta[] = courses.flatMap(c =>
-    (c.flashcards ?? []).map((f, i) => ({
-      ...f,
-      courseId: c.id,
-      courseName: c.shortName ?? c.name,
-      cardIdx: i,
-    }))
-  );
+  const srData = data?.pluginData?.srData ?? null;
+  const gamification = data?.pluginData?.gamificationData;
+  const omniData: OmniProtocolData = data?.pluginData?.omniProtocol ?? { sessions: [], feynmanGaps: [], currentArcPhase: {} };
 
-  // ── Session state ──────────────────────────────────────────────────────────
-  const [started, setStarted] = useState(false);
-  const [phaseIdx, setPhaseIdx] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState(PHASES[0].durationSec);
+  // ── Screen & wizard state ────────────────────────────────────────────────
+  const [screen, setScreen] = useState<OmniScreen>({ screen: 'duration' });
+  const [sessionDuration, setSessionDuration] = useState<number>(60);
+  const [durationConfig, setDurationConfig] = useState<OmniDurationConfig>(parseDurationChoice(60));
+  const [selectedCourseId, setSelectedCourseId] = useState(courses[0]?.id ?? '');
+  const [selectedTopic, setSelectedTopic] = useState('');
+  const [difficulty, setDifficulty] = useState<OmniDifficulty>('Review');
+  const [arcPhase, setArcPhase] = useState<OmniArcPhase>('Foundation');
+  const [intakeQuestions, setIntakeQuestions] = useState<string[]>([]);
+  const [intakeType, setIntakeType] = useState<'questions' | 'cold_start'>('questions');
+  const [intakeAnswers, setIntakeAnswers] = useState<string[]>([]);
+  const [professorEmphasis, setProfessorEmphasis] = useState('');
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [loadingMsg, setLoadingMsg] = useState('');
+  const [planError, setPlanError] = useState('');
+
+  // ── Session plan & running state ────────────────────────────────────────
+  const [sessionPlan, setSessionPlan] = useState<OmniSessionPlan | null>(null);
+  const [phaseResults, setPhaseResults] = useState<OmniPhaseResult[]>([]);
+  const [motivationState, setMotivationState] = useState<MotivationState>(INITIAL_MOTIVATION);
+  const [totalXp, setTotalXp] = useState(0);
+  const sessionStartRef = useRef(Date.now());
+
+  // ── Timer state ──────────────────────────────────────────────────────────
+  const [timeRemaining, setTimeRemaining] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [flash, setFlash] = useState(false);
-
-  // Card state
-  const [primeCards, setPrimeCards] = useState<CardWithMeta[]>([]);
-  const [encodeCards, setEncodeCards] = useState<CardWithMeta[]>([]);
-  const [encodeIdx, setEncodeIdx] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
-  const [gradedCards, setGradedCards] = useState<CardWithMeta[]>([]);
-
-  const [stats, setStats] = useState<SessionStats>({
-    cardsReviewed: 0, correctCount: 0, startTime: Date.now(), phaseHistory: [],
-  });
-
-  // refs for interval
+  const [interstitialTime, setInterstitialTime] = useState(120);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const phaseIdxRef = useRef(phaseIdx);
-  const timeRef = useRef(timeRemaining);
-  const isPausedRef = useRef(isPaused);
-  phaseIdxRef.current = phaseIdx;
+  const interstitialRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeRef = useRef(0);
+  const isPausedRef = useRef(false);
+  const screenRef = useRef<OmniScreen>({ screen: 'duration' });
   timeRef.current = timeRemaining;
   isPausedRef.current = isPaused;
+  screenRef.current = screen;
 
-  // ── Card prep ──────────────────────────────────────────────────────────────
-  const prepSession = useCallback(() => {
-    const prime = shuffle(allCards).slice(0, 10);
-    const encode = shuffle(allCards).slice(0, 30);
-    setPrimeCards(prime);
-    setEncodeCards(encode);
-    setEncodeIdx(0);
+  // ── Card state ───────────────────────────────────────────────────────────
+  const [phaseCards, setPhaseCards] = useState<CardWithMeta[]>([]);
+  const [currentCardIdx, setCurrentCardIdx] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [gradedCards, setGradedCards] = useState<CardWithMeta[]>([]);
+  const [phaseCorrect, setPhaseCorrect] = useState(0);
+  const [phaseTotal, setPhaseTotal] = useState(0);
+  const [comboCount, setComboCount] = useState(0);
+  const [xpPopup, setXpPopup] = useState<string | null>(null);
+  const [collapseBanner, setCollapseBanner] = useState(false);
+
+  // ── Feynman gaps & WHY chain state ────────────────────────────────────────
+  const [whyChainAssessment, setWhyChainAssessment] = useState<Record<string, 'ok' | 'unclear'>>({});
+  const [pendingGaps, setPendingGaps] = useState<OmniFeynmanGap[]>([]);
+
+  // ── Final report state ────────────────────────────────────────────────────
+  const [finalReportText, setFinalReportText] = useState('');
+
+  // ── Data pull refs (populated during 'loading' screen) ───────────────────
+  const dueCardsRef = useRef<ReturnType<typeof getOmniDueCards>>([]);
+  const pendingFeynmanRef = useRef<OmniFeynmanGap[]>([]);
+  const knowledgeConnectionsRef = useRef<string[]>([]);
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  function showToast(msg: string, ms = 5000) {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), ms);
+  }
+
+  function showXpBurst(xp: number) {
+    setXpPopup(`+${xp} XP`);
+    setTimeout(() => setXpPopup(null), 2000);
+  }
+
+  function getAllCards(): CardWithMeta[] {
+    return courses.flatMap(c =>
+      (c.flashcards ?? []).map(f => ({ ...f, courseId: c.id, courseName: c.shortName ?? c.name }))
+    );
+  }
+
+  function prepPhaseCards(cycleIdx: number) {
+    const allCards = getAllCards();
+    const plan = sessionPlan;
+    if (!plan) return;
+    const filter = plan.flashcardFilter;
+    const filtered = allCards.filter(c => {
+      const courseOk = filter.courseIds.length === 0 || filter.courseIds.includes(c.courseId);
+      const topicOk = filter.topics.length === 0 || filter.topics.some(t => (c.topic ?? '').toLowerCase().includes(t.toLowerCase()));
+      return courseOk && topicOk;
+    });
+    const pool = filtered.length >= 5 ? filtered : allCards;
+    setPhaseCards(shuffle(pool).slice(0, 20));
+    setCurrentCardIdx(0);
     setShowAnswer(false);
     setGradedCards([]);
-    setStats({ cardsReviewed: 0, correctCount: 0, startTime: Date.now(), phaseHistory: [] });
-  }, [allCards.length]); // eslint-disable-line react-hooks/exhaustive-deps
+    setPhaseCorrect(0);
+    setPhaseTotal(0);
+  }
 
-  // ── Timer ──────────────────────────────────────────────────────────────────
-  const advancePhase = useCallback(() => {
-    const nextIdx = phaseIdxRef.current + 1;
-    if (nextIdx >= PHASES.length) {
-      // Session complete
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
+  // ── Duration picker ──────────────────────────────────────────────────────
+
+  function handleDurationSelect(minutes: number) {
+    setSessionDuration(minutes);
+    const config = parseDurationChoice(minutes);
+    setDurationConfig(config);
+    if (minutes === 180 && new Date().getHours() >= 22) {
+      showToast('Cognitive consolidation drops after midnight. Consider 1hr now + schedule the rest tomorrow.');
     }
-    // Flash transition
-    setFlash(true);
-    setTimeout(() => setFlash(false), 600);
-    // Play chime (optional — silently fail on mobile policy)
-    try { new Audio('/chime.mp3').play().catch(() => {}); } catch { /* noop */ }
+    setScreen({ screen: 'loading' });
+  }
 
-    setPhaseIdx(nextIdx);
-    setTimeRemaining(PHASES[nextIdx].durationSec);
-    setShowAnswer(false);
-  }, []);
+  // ── Data pull (loading screen) ────────────────────────────────────────────
 
   useEffect(() => {
-    if (!started) return;
+    if (screen.screen !== 'loading') return;
+    setLoadingMsg('Pulling your course data...');
+    const courseId = selectedCourseId || courses[0]?.id || '';
+    const topicId = selectedTopic;
+
+    dueCardsRef.current = getOmniDueCards(srData, { courseIds: courseId ? [courseId] : [], topics: [] });
+    pendingFeynmanRef.current = getPendingFeynmanGaps(omniData, courseId);
+    knowledgeConnectionsRef.current = getKnowledgeGraphConnections(courses, courseId, topicId);
+
+    // Pre-fill arc phase from stored data
+    const storedArc = getArcPhaseForCourse(omniData, courseId);
+    setArcPhase(storedArc);
+    setSelectedCourseId(courseId);
+
+    setScreen({ screen: 'wizard', step: 1 });
+  }, [screen.screen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Wizard step transitions ───────────────────────────────────────────────
+
+  async function handleWizardStep1Next() {
+    setScreen({ screen: 'wizard', step: 2 });
+    setLoadingMsg('Generating intake assessment...');
+    try {
+      const msgs = buildIntakePrompt({
+        topic: selectedTopic || 'General',
+        courseName: courses.find(c => c.id === selectedCourseId)?.name ?? selectedCourseId,
+        difficulty,
+        arcPhase,
+        feynmanGaps: pendingFeynmanRef.current,
+        fsrsDueCount: dueCardsRef.current.length,
+      });
+      const raw = await callAI(msgs, { temperature: 0.4, maxTokens: 400, json: true });
+      try {
+        const parsed = JSON.parse(raw);
+        setIntakeType(parsed.type === 'cold_start' ? 'cold_start' : 'questions');
+        const qs: string[] = parsed.questions ?? parsed.diagnostic ?? [];
+        setIntakeQuestions(qs);
+        setIntakeAnswers(new Array(qs.length).fill(''));
+      } catch {
+        // Fallback: ask a default question
+        setIntakeType('questions');
+        setIntakeQuestions([`What do you already know about "${selectedTopic || 'this topic'}" and where do you feel least confident?`]);
+        setIntakeAnswers(['']);
+      }
+      setLoadingMsg('');
+    } catch {
+      setLoadingMsg('');
+      setIntakeQuestions([`What do you already know about "${selectedTopic || 'this topic'}"?`]);
+      setIntakeAnswers(['']);
+    }
+  }
+
+  async function handleWizardStep3Submit() {
+    setScreen({ screen: 'wizard', step: 4 });
+    setLoadingMsg('Claude is building your personalized session plan...');
+    setPlanError('');
+
+    const intakeSummary = intakeQuestions
+      .map((q, i) => `Q: ${q}\nA: ${intakeAnswers[i] ?? ''}`)
+      .join('\n\n');
+
+    const sessionId = generateSessionId();
+    const courseName = courses.find(c => c.id === selectedCourseId)?.name ?? selectedCourseId;
+
+    const msgs = buildSessionPlanPrompt({
+      topic: selectedTopic || 'General',
+      courseName,
+      difficulty,
+      arcPhase,
+      durationConfig,
+      intakeAnswers: intakeSummary,
+      professorEmphasis,
+      fsrsDueCards: dueCardsRef.current,
+      feynmanGaps: pendingFeynmanRef.current,
+      knowledgeConnections: knowledgeConnectionsRef.current,
+      sessionId,
+    });
+
+    try {
+      const raw = await callAI(msgs, { temperature: 0.6, maxTokens: 2500, json: true });
+      const plan = parseSessionPlanResponse(raw);
+      if (!plan || !plan.cycles?.length) throw new Error('Invalid plan JSON');
+      setSessionPlan(plan);
+      setLoadingMsg('');
+      prepPhaseCards(0);
+      const firstPhaseDuration = plan.cycles[0].phases[0].duration * 60;
+      setTimeRemaining(firstPhaseDuration);
+      timeRef.current = firstPhaseDuration;
+      sessionStartRef.current = Date.now();
+      setScreen({ screen: 'running', cycleIdx: 0, phaseIdx: 0 });
+    } catch (e) {
+      setLoadingMsg('');
+      setPlanError(`Failed to generate plan: ${e instanceof Error ? e.message : 'Unknown error'}. Check your AI settings and try again.`);
+    }
+  }
+
+  // ── Cycle runner — advance phase ─────────────────────────────────────────
+
+  const advancePhase = useCallback(() => {
+    const s = screenRef.current;
+    if (s.screen !== 'running') return;
+    const { cycleIdx, phaseIdx } = s;
+    if (!sessionPlan) return;
+
+    const currentCycle = sessionPlan.cycles[cycleIdx];
+    if (!currentCycle) return;
+
+    // Record phase result
+    const accuracy = phaseTotal > 0 ? Math.round((phaseCorrect / phaseTotal) * 100) : 100;
+    const phaseContent = currentCycle.phases[phaseIdx];
+    const phaseName = phaseContent?.name ?? 'Phase';
+
+    setPhaseResults(prev => [...prev, {
+      cycleIdx, phaseIdx, phaseName, accuracy,
+      cardsReviewed: phaseTotal, xpAwarded: 0,
+    }]);
+
+    // Evaluate motivation after this phase
+    setMotivationState(prev => {
+      const updated = evaluateMotivationState(prev, accuracy, phaseCorrect);
+      if (!prev.inCollapseMode && updated.inCollapseMode) {
+        setCollapseBanner(true);
+        setTimeout(() => setCollapseBanner(false), 4000);
+      }
+      return updated;
+    });
+
+    // Award XP for this phase
+    if (gamification && phaseTotal > 0) {
+      const updated = awardQuizXp(gamification, phaseCorrect, phaseTotal);
+      const xpGained = updated.xp - gamification.xp;
+      if (xpGained > 0) {
+        setTotalXp(prev => prev + xpGained);
+        showXpBurst(xpGained);
+        updatePluginData({ gamificationData: updated });
+      }
+    }
+
+    // Reset phase card state
+    setPhaseCorrect(0);
+    setPhaseTotal(0);
+    setShowAnswer(false);
+    setWhyChainAssessment({});
+
+    // Chime
+    try { new Audio('/chime.mp3').play().catch(() => {}); } catch { /* noop */ }
+
+    const nextPhaseIdx = phaseIdx + 1;
+    const phasesInCycle = currentCycle.phases.length;
+
+    if (nextPhaseIdx >= phasesInCycle) {
+      // Cycle complete
+      const nextCycleIdx = cycleIdx + 1;
+      if (nextCycleIdx >= sessionPlan.cycleCount) {
+        // All cycles done — fire final report
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setScreen({ screen: 'final-report', loading: true });
+      } else {
+        // Go to interstitial
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setInterstitialTime(120);
+        setScreen({ screen: 'interstitial', afterCycle: cycleIdx });
+      }
+    } else {
+      // Next phase in same cycle
+      const nextPhase = currentCycle.phases[nextPhaseIdx];
+      const nextDuration = nextPhase.duration * 60;
+      setTimeRemaining(nextDuration);
+      timeRef.current = nextDuration;
+      setScreen({ screen: 'running', cycleIdx, phaseIdx: nextPhaseIdx });
+      prepPhaseCards(cycleIdx);
+    }
+  }, [sessionPlan, phaseCorrect, phaseTotal, gamification]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Timer interval (running screen) ──────────────────────────────────────
+
+  useEffect(() => {
+    if (screen.screen !== 'running') return;
     intervalRef.current = setInterval(() => {
       if (isPausedRef.current) return;
       const next = timeRef.current - 1;
@@ -159,655 +405,735 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
         advancePhase();
       } else {
         setTimeRemaining(next);
+        timeRef.current = next;
       }
     }, 1000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [started, advancePhase]);
+  }, [screen.screen, advancePhase]);
 
-  // ── Grading helpers ────────────────────────────────────────────────────────
-  function handleGrade(grade: 1 | 2 | 3 | 4) {
-    const card = encodeCards[encodeIdx];
-    if (!card) return;
-    const graded = { ...card, grade };
-    setGradedCards(prev => [...prev, graded]);
-    setStats(prev => ({
-      ...prev,
-      cardsReviewed: prev.cardsReviewed + 1,
-      correctCount: grade >= 3 ? prev.correctCount + 1 : prev.correctCount,
+  // ── Interstitial timer ────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (screen.screen !== 'interstitial') return;
+    interstitialRef.current = setInterval(() => {
+      setInterstitialTime(prev => {
+        if (prev <= 1) {
+          clearInterval(interstitialRef.current!);
+          startNextCycle();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { if (interstitialRef.current) clearInterval(interstitialRef.current!); };
+  }, [screen.screen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function startNextCycle() {
+    if (screen.screen !== 'interstitial' || !sessionPlan) return;
+    const nextCycleIdx = (screen as { afterCycle: number }).afterCycle + 1;
+    prepPhaseCards(nextCycleIdx);
+    const firstPhaseDuration = sessionPlan.cycles[nextCycleIdx].phases[0].duration * 60;
+    setTimeRemaining(firstPhaseDuration);
+    timeRef.current = firstPhaseDuration;
+    setScreen({ screen: 'running', cycleIdx: nextCycleIdx, phaseIdx: 0 });
+  }
+
+  // ── Final report generation ───────────────────────────────────────────────
+
+  useEffect(() => {
+    if (screen.screen !== 'final-report' || !(screen as { loading: boolean }).loading) return;
+    if (!sessionPlan) return;
+
+    const phaseAccuracies = phaseResults.map(r => ({
+      cycleIdx: r.cycleIdx, phaseName: r.phaseName, accuracy: r.accuracy,
     }));
+    const feynmanConcepts = pendingGaps.map(g => g.concept);
+    const totalTimeSec = Math.round((Date.now() - sessionStartRef.current) / 1000);
+
+    const msgs = buildFinalReportPrompt({
+      plan: sessionPlan,
+      phaseAccuracies,
+      totalXp,
+      totalTimeSec,
+      motivationResets: motivationState.motivationResets,
+      feynmanGapsDetected: feynmanConcepts,
+    });
+
+    callAI(msgs, {
+      temperature: 0.5, maxTokens: 600,
+      onChunk: (chunk) => setFinalReportText(prev => prev + chunk),
+    }).then(() => {
+      setScreen({ screen: 'final-report', loading: false });
+      // Persist session record
+      const overallAccuracy = phaseResults.length
+        ? Math.round(phaseResults.reduce((s, r) => s + r.accuracy, 0) / phaseResults.length)
+        : 0;
+      const newArcPhase = determineArcPhaseProgression(arcPhase, overallAccuracy);
+      const record: OmniSessionRecord = {
+        id: sessionPlan.sessionId,
+        plan: sessionPlan,
+        startedAt: new Date(sessionStartRef.current).toISOString(),
+        completedAt: new Date().toISOString(),
+        totalXpAwarded: totalXp,
+        totalCardsReviewed: phaseResults.reduce((s, r) => s + r.cardsReviewed, 0),
+        overallAccuracy,
+        motivationResets: motivationState.motivationResets,
+        finalArcPhase: newArcPhase,
+        feynmanGapsDetected: feynmanConcepts,
+        finalReportText,
+      };
+      const mergedGaps = [
+        ...omniData.feynmanGaps.filter(g => !pendingGaps.find(pg => pg.id === g.id)),
+        ...pendingGaps,
+      ];
+      // Award study time XP
+      if (gamification) {
+        const mins = Math.round((Date.now() - sessionStartRef.current) / 60000);
+        const updatedGam = awardStudyTimeXp(gamification, mins);
+        updatePluginData({
+          gamificationData: updatedGam,
+          omniProtocol: {
+            ...omniData,
+            sessions: [...omniData.sessions.slice(-19), record],
+            currentArcPhase: { ...omniData.currentArcPhase, [selectedCourseId]: newArcPhase },
+            feynmanGaps: mergedGaps,
+            lastSessionId: record.id,
+          },
+        });
+      } else {
+        updatePluginData({
+          omniProtocol: {
+            ...omniData,
+            sessions: [...omniData.sessions.slice(-19), record],
+            currentArcPhase: { ...omniData.currentArcPhase, [selectedCourseId]: newArcPhase },
+            feynmanGaps: mergedGaps,
+            lastSessionId: record.id,
+          },
+        });
+      }
+    }).catch(() => {
+      setFinalReportText('Session complete! Your progress has been saved.');
+      setScreen({ screen: 'final-report', loading: false });
+    });
+  }, [screen.screen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Card grading ──────────────────────────────────────────────────────────
+
+  function handleGrade(grade: 1 | 2 | 3 | 4) {
+    const card = phaseCards[currentCardIdx];
+    if (!card) return;
+    setGradedCards(prev => [...prev, { ...card, grade }]);
+    const correct = grade >= 3;
+    setPhaseCorrect(prev => prev + (correct ? 1 : 0));
+    setPhaseTotal(prev => prev + 1);
+    setComboCount(prev => correct ? prev + 1 : 0);
     setShowAnswer(false);
-    if (encodeIdx + 1 < encodeCards.length) {
-      setEncodeIdx(i => i + 1);
+
+    // Instant XP popup during collapse mode (every 2 correct)
+    if (motivationState.inCollapseMode && correct) {
+      const newConsec = motivationState.consecutiveCorrectSinceCollapse + 1;
+      if (newConsec % 2 === 0) showXpBurst(10);
+    }
+
+    if (currentCardIdx + 1 < phaseCards.length) {
+      setCurrentCardIdx(i => i + 1);
     }
   }
 
-  function handlePrimeGrade(correct: boolean) {
-    setStats(prev => ({
-      ...prev,
-      cardsReviewed: prev.cardsReviewed + 1,
-      correctCount: correct ? prev.correctCount + 1 : prev.correctCount,
-    }));
+  function handleWhyChain(chain: string, verdict: 'ok' | 'unclear') {
+    setWhyChainAssessment(prev => ({ ...prev, [chain]: verdict }));
+    if (verdict === 'unclear' && sessionPlan) {
+      const gap: OmniFeynmanGap = {
+        id: `gap-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        concept: chain,
+        courseId: selectedCourseId,
+        sessionId: sessionPlan.sessionId,
+        detectedAt: new Date().toISOString(),
+        resolved: false,
+      };
+      setPendingGaps(prev => {
+        if (prev.some(g => g.concept === chain)) return prev;
+        return [...prev, gap];
+      });
+    }
   }
 
-  function skipPhase() {
-    advancePhase();
-  }
+  // ── Render helpers ────────────────────────────────────────────────────────
 
-  function endSession() {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    // Jump to REPORT
-    const reportIdx = PHASES.findIndex(p => p.name === 'REPORT');
-    setPhaseIdx(reportIdx);
-    setTimeRemaining(PHASES[reportIdx].durationSec);
-  }
+  function renderProgressBars(cycleIdx: number, phaseIdx: number) {
+    if (!sessionPlan) return null;
+    const phasesPerCycle = sessionPlan.cycles[cycleIdx]?.phases.length ?? 8;
+    const totalPhases = sessionPlan.cycleCount * 8;
+    const donePhases = cycleIdx * 8 + phaseIdx;
+    const cycleProgress = ((phaseIdx + 1) / phasesPerCycle) * 100;
+    const sessionProgress = (donePhases / totalPhases) * 100;
 
-  function togglePause() {
-    setIsPaused(p => !p);
-  }
-
-  // ── Pre-start screen ───────────────────────────────────────────────────────
-  if (!started) {
     return (
-      <div style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--bg-primary)', borderRadius: 12 }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>⚡</div>
-        <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: 22, fontWeight: 800, marginBottom: 8, color: 'var(--text-primary)' }}>
-          Omni Protocol
-        </h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16, lineHeight: 1.6 }}>
-          A 60-minute science-backed study session that cycles through 8 optimized learning phases.
-          Make sure you have at least 10 flashcards across your courses.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 24, textAlign: 'left' }}>
-          {PHASES.map(p => (
-            <div key={p.name} style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '8px 12px', borderRadius: 8,
-              background: 'var(--bg-secondary, #111)', border: '1px solid var(--border)',
-              fontSize: 12,
-            }}>
-              <span>{p.icon}</span>
-              <div>
-                <div style={{ fontWeight: 700, color: p.color }}>{p.label}</div>
-                <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{p.durationSec / 60} min</div>
-              </div>
-            </div>
-          ))}
+      <div style={{ padding: '6px 16px 10px' }}>
+        {/* Session bar (thin) */}
+        <div style={{ height: 2, background: 'var(--border)', borderRadius: 1, marginBottom: 4 }}>
+          <div style={{ height: '100%', width: `${sessionProgress}%`, background: 'var(--accent, #F5A623)', borderRadius: 1, transition: 'width 1s linear' }} />
         </div>
-        {allCards.length < 5 && (
-          <p style={{ color: '#ef4444', fontSize: 12, marginBottom: 12 }}>
-            Warning: You have fewer than 5 flashcards. Add cards to your courses for the best experience.
-          </p>
+        {/* Cycle bar */}
+        <div style={{ height: 4, background: 'var(--border)', borderRadius: 2 }}>
+          <div style={{
+            height: '100%', width: `${cycleProgress}%`,
+            background: PHASE_COLORS[sessionPlan.cycles[cycleIdx]?.phases[phaseIdx]?.name ?? 'Prime'] ?? 'var(--accent)',
+            borderRadius: 2, transition: 'width 1s linear',
+          }} />
+        </div>
+      </div>
+    );
+  }
+
+  function renderPhaseContent(cycleIdx: number, phaseIdx: number) {
+    if (!sessionPlan) return null;
+    const cycle = sessionPlan.cycles[cycleIdx];
+    const phase = cycle?.phases[phaseIdx];
+    if (!phase) return null;
+
+    const isEncodeOrTest = phase.name === 'Encode' || phase.name === 'Test';
+    const testCards = phase.name === 'Test'
+      ? gradedCards.filter(c => (c.grade ?? 3) <= 2)
+      : phaseCards;
+    const activeCards = phase.name === 'Test' ? (testCards.length > 0 ? testCards : phaseCards) : phaseCards;
+    const currentCard = activeCards[currentCardIdx];
+
+    return (
+      <div style={{ padding: '16px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Collapse mode banner */}
+        {collapseBanner && (
+          <div style={{ background: '#92400e', color: '#fef3c7', padding: '10px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
+            Switching to easier questions to rebuild momentum.
+          </div>
         )}
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-          <button
-            onClick={() => { prepSession(); setStarted(true); setPhaseIdx(0); setTimeRemaining(PHASES[0].durationSec); }}
-            style={{
-              padding: '12px 28px', borderRadius: 8, border: 'none',
-              background: 'var(--accent, #F5A623)', color: '#000',
-              fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'Sora, sans-serif',
-            }}
-          >
-            Start Session
-          </button>
-          {onClose && (
-            <button
-              onClick={onClose}
-              style={{
-                padding: '12px 20px', borderRadius: 8,
-                border: '1px solid var(--border)', background: 'transparent',
-                color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
+
+        {/* Mnemonic + analogy (Encode/Chunk phases) */}
+        {(phase.name === 'Encode' || phase.name === 'Chunk') && (phase.mnemonic || phase.analogy) && (
+          <div style={{ ...S.card, borderLeft: `3px solid ${PHASE_COLORS[phase.name]}` }}>
+            {phase.mnemonic && <div style={{ fontSize: 13, marginBottom: 6 }}>🧩 <strong>Mnemonic:</strong> {phase.mnemonic}</div>}
+            {phase.analogy && <div style={{ fontSize: 13 }}>🌍 <strong>Analogy:</strong> {phase.analogy}</div>}
+          </div>
+        )}
+
+        {/* AI-generated phase content */}
+        <div style={S.card}>
+          <div style={{ fontSize: 12, color: PHASE_COLORS[phase.name], fontWeight: 700, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+            {phase.bloomsTag} · {phase.domainRule ?? ''}
+          </div>
+          <div
+            style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.7 }}
+            dangerouslySetInnerHTML={{ __html: safeRenderMd(phase.content) }}
+          />
+          {phase.keyPoints?.length > 0 && (
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {phase.keyPoints.map((kp, i) => (
+                <div key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 8 }}>
+                  <span style={{ color: 'var(--accent)' }}>▸</span> {kp}
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Multimodal hooks */}
+          {(phase.visualAnchor || phase.auditoryHook || phase.kinesthetic) && (
+            <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {phase.visualAnchor && <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg-primary)', padding: '4px 8px', borderRadius: 6 }}>👁 {phase.visualAnchor}</span>}
+              {phase.auditoryHook && <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg-primary)', padding: '4px 8px', borderRadius: 6 }}>🔊 {phase.auditoryHook}</span>}
+              {phase.kinesthetic && <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg-primary)', padding: '4px 8px', borderRadius: 6 }}>✋ {phase.kinesthetic}</span>}
+            </div>
+          )}
+        </div>
+
+        {/* Break phase: big countdown */}
+        {phase.name === 'Break' && (
+          <div style={{ textAlign: 'center', padding: 24 }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>☕</div>
+            <div style={{ fontSize: 36, fontFamily: 'DM Mono, monospace', fontWeight: 700, color: PHASE_COLORS.Break }}>{fmtTime(timeRemaining)}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>Brain consolidation in progress. Step away, hydrate.</div>
+          </div>
+        )}
+
+        {/* Encode / Test: flashcard grading */}
+        {isEncodeOrTest && currentCard && (
+          <div style={S.card}>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, color: 'var(--text-primary)' }}>{currentCard.front}</div>
+            {!showAnswer ? (
+              <button onClick={() => setShowAnswer(true)} style={{ ...S.btn(), width: '100%', textAlign: 'center' }}>
+                Show Answer
+              </button>
+            ) : (
+              <>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6, borderTop: '1px solid var(--border)', paddingTop: 12 }}
+                  dangerouslySetInnerHTML={{ __html: safeRenderMd(currentCard.back) }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
+                  {([1, 2, 3, 4] as const).map(g => (
+                    <button key={g} onClick={() => handleGrade(g)} style={{
+                      padding: '8px 4px', borderRadius: 8, border: '1px solid var(--border)',
+                      background: g === 1 ? '#ef444420' : g === 2 ? '#f9731620' : g === 3 ? '#22c55e20' : '#3b82f620',
+                      color: g === 1 ? '#ef4444' : g === 2 ? '#f97316' : g === 3 ? '#22c55e' : '#3b82f6',
+                      fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                    }}>
+                      {g === 1 ? 'Again' : g === 2 ? 'Hard' : g === 3 ? 'Good' : 'Easy'}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, textAlign: 'center' }}>
+                  Card {Math.min(currentCardIdx + 1, activeCards.length)} / {activeCards.length} · {phaseCorrect} correct
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Report phase: WHY chain self-assessment */}
+        {phase.name === 'Report' && cycle.whyChains?.length > 0 && (
+          <div style={S.card}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: 'var(--accent)' }}>WHY Chain Self-Assessment</div>
+            {cycle.whyChains.map((chain, i) => (
+              <div key={i} style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 8 }}>{chain}</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => handleWhyChain(chain, 'ok')}
+                    style={{ ...S.btn(whyChainAssessment[chain] === 'ok'), padding: '6px 14px', fontSize: 12 }}
+                  >Got it ✓</button>
+                  <button
+                    onClick={() => handleWhyChain(chain, 'unclear')}
+                    style={{
+                      padding: '6px 14px', borderRadius: 8, border: '1px solid #ef444450',
+                      background: whyChainAssessment[chain] === 'unclear' ? '#ef444420' : 'transparent',
+                      color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >Still unclear ✗</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Anchor phase: memory palace prompt */}
+        {phase.name === 'Anchor' && gradedCards.filter(c => (c.grade ?? 3) <= 2).length > 0 && (
+          <div style={S.card}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: PHASE_COLORS.Anchor }}>Memory Palace — Hardest Concepts</div>
+            {gradedCards.filter(c => (c.grade ?? 3) <= 2).slice(0, 3).map((c, i) => (
+              <div key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6, display: 'flex', gap: 8 }}>
+                <span style={{ color: PHASE_COLORS.Anchor }}>🏛️</span>
+                <span>Place "<strong>{c.front}</strong>" at a vivid location in your mental walk-through.</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Screen renders ────────────────────────────────────────────────────────
+
+  // Duration picker
+  if (screen.screen === 'duration') {
+    return (
+      <div style={{ ...S.container, padding: 24, textAlign: 'center' }}>
+        {onClose && (
+          <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, ...S.btn() }}>✕</button>
+        )}
+        <div style={{ fontSize: 36, marginBottom: 8 }}>⚡</div>
+        <h2 style={{ fontFamily: 'Sora, sans-serif', fontSize: 22, fontWeight: 800, marginBottom: 6, color: 'var(--text-primary)' }}>Omni Protocol V6</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>
+          AI-personalized multi-cycle study session. How long do you have?
+        </p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
+          {DURATION_OPTIONS.map(m => {
+            const cfg = parseDurationChoice(m);
+            return (
+              <button key={m} onClick={() => handleDurationSelect(m)} style={{
+                padding: '14px 22px', borderRadius: 10, border: '1px solid var(--border)',
+                background: 'var(--bg-secondary, #111)', color: 'var(--text-primary)',
+                cursor: 'pointer', fontFamily: 'Sora, sans-serif',
+              }}>
+                <div style={{ fontWeight: 800, fontSize: 16 }}>{m === 60 ? '1hr' : m === 90 ? '1.5hr' : m === 120 ? '2hr' : m === 150 ? '2.5hr' : '3hr'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{cfg.cycleCount} cycle{cfg.cycleCount > 1 ? 's' : ''}{cfg.extended ? ' +' : ''}</div>
+              </button>
+            );
+          })}
+        </div>
+        {toastMsg && (
+          <div style={{ background: '#92400e20', border: '1px solid #92400e', color: '#fef3c7', padding: '10px 16px', borderRadius: 8, fontSize: 13, marginTop: 8 }}>
+            ⚠️ {toastMsg}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Loading
+  if (screen.screen === 'loading') {
+    return (
+      <div style={{ ...S.container, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>{loadingMsg || 'Loading...'}</div>
+        <div style={{ width: 40, height: 40, border: '3px solid var(--border)', borderTop: '3px solid var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    );
+  }
+
+  // Wizard
+  if (screen.screen === 'wizard') {
+    const step = screen.step;
+    const selectedCourse = courses.find(c => c.id === selectedCourseId);
+
+    return (
+      <div style={{ ...S.container }}>
+        <div style={{ ...S.header, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+            Setup — Step {step} of 4
+          </span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {[1, 2, 3, 4].map(s => (
+              <div key={s} style={{ width: 20, height: 4, borderRadius: 2, background: s <= step ? 'var(--accent)' : 'var(--border)' }} />
+            ))}
+          </div>
+        </div>
+
+        <div style={{ padding: 20, flex: 1, overflowY: 'auto' }}>
+          {/* Step 1: Course/Topic/Difficulty/Arc */}
+          {step === 1 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Course</div>
+                <select
+                  value={selectedCourseId}
+                  onChange={e => { setSelectedCourseId(e.target.value); setSelectedTopic(''); }}
+                  style={{ ...S.input }}
+                >
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {courses.length === 0 && <option value=''>No courses found — add courses first</option>}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Topic (optional)</div>
+                <select value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} style={{ ...S.input }}>
+                  <option value=''>All topics</option>
+                  {(selectedCourse?.topics ?? []).map(t => <option key={t.id ?? t.name} value={t.name}>{t.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Session Difficulty</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {DIFFICULTY_OPTIONS.map(d => (
+                    <button key={d} onClick={() => setDifficulty(d)} style={{
+                      ...S.btn(difficulty === d), flex: 1, textAlign: 'center',
+                    }}>{d === 'DeepDive' ? 'Deep Dive' : d}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Your Learning Arc</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {ARC_PHASES.map(p => (
+                    <button key={p} onClick={() => setArcPhase(p)} style={{
+                      textAlign: 'left', padding: '10px 14px', borderRadius: 8,
+                      border: arcPhase === p ? '1px solid var(--accent)' : '1px solid var(--border)',
+                      background: arcPhase === p ? 'var(--accent)15' : 'transparent',
+                      color: arcPhase === p ? 'var(--accent)' : 'var(--text-secondary)',
+                      cursor: 'pointer', fontSize: 13,
+                    }}>
+                      <span style={{ fontWeight: 700 }}>{p}</span>
+                      <span style={{ fontSize: 11, marginLeft: 8, opacity: 0.7 }}>{ARC_PHASE_DESC[p]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={handleWizardStep1Next}
+                disabled={!selectedCourseId}
+                style={{ ...S.btn(true), marginTop: 8 }}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+
+          {/* Step 2: Intake */}
+          {step === 2 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {loadingMsg ? (
+                <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)', fontSize: 13 }}>
+                  <div>{loadingMsg}</div>
+                  <div style={{ width: 30, height: 30, border: '2px solid var(--border)', borderTop: '2px solid var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '12px auto 0' }} />
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {intakeType === 'cold_start' ? '5-Question Diagnostic' : 'Quick Intake'}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -10 }}>
+                    {intakeType === 'cold_start'
+                      ? 'Answer briefly — Claude uses this to calibrate your session.'
+                      : 'Help Claude tailor your session to what you actually need.'}
+                  </div>
+                  {intakeQuestions.map((q, i) => (
+                    <div key={i}>
+                      <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 6, fontWeight: 600 }}>
+                        {i + 1}. {q}
+                      </div>
+                      <textarea
+                        value={intakeAnswers[i] ?? ''}
+                        onChange={e => setIntakeAnswers(prev => prev.map((a, j) => j === i ? e.target.value : a))}
+                        placeholder='Your answer...'
+                        rows={2}
+                        style={{ ...S.input, resize: 'vertical' }}
+                      />
+                    </div>
+                  ))}
+                  <button onClick={() => setScreen({ screen: 'wizard', step: 3 })} style={{ ...S.btn(true) }}>
+                    Next →
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Professor emphasis */}
+          {step === 3 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Professor Emphasis (optional)</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Paste keywords, exam headers, or topics your professor emphasized most. Claude will angle Cycle 3 toward these. Leave blank to use MCAT/AP high-frequency defaults.
+              </div>
+              <textarea
+                value={professorEmphasis}
+                onChange={e => setProfessorEmphasis(e.target.value)}
+                placeholder='e.g. "Na/K pump mechanism, action potential threshold, Nernst equation..."'
+                rows={4}
+                style={{ ...S.input, resize: 'vertical' }}
+              />
+              {pendingFeynmanRef.current.length > 0 && (
+                <div style={{ ...S.card, borderLeft: '3px solid #ef4444' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', marginBottom: 6 }}>Prior Feynman Gaps Being Targeted</div>
+                  {pendingFeynmanRef.current.slice(0, 5).map((g, i) => (
+                    <div key={i} style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 2 }}>• {g.concept}</div>
+                  ))}
+                </div>
+              )}
+              <button onClick={handleWizardStep3Submit} style={{ ...S.btn(true) }}>
+                Generate My Session Plan ✨
+              </button>
+            </div>
+          )}
+
+          {/* Step 4: Plan loading */}
+          {step === 4 && (
+            <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+              {planError ? (
+                <>
+                  <div style={{ color: '#ef4444', fontSize: 13, marginBottom: 16 }}>{planError}</div>
+                  <button onClick={handleWizardStep3Submit} style={{ ...S.btn(true) }}>Retry</button>
+                  <button onClick={() => setScreen({ screen: 'wizard', step: 3 })} style={{ ...S.btn(), marginLeft: 8 }}>Back</button>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>{loadingMsg}</div>
+                  <div style={{ width: 48, height: 48, border: '3px solid var(--border)', borderTop: '3px solid var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 12 }}>
+                    {durationConfig.cycleCount} cycle{durationConfig.cycleCount > 1 ? 's' : ''} · {durationConfig.durationMin} minutes
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
     );
   }
 
-  const phase = PHASES[phaseIdx];
-  const progressPct = ((phase.durationSec - timeRemaining) / phase.durationSec) * 100;
+  // Running
+  if (screen.screen === 'running') {
+    const { cycleIdx, phaseIdx } = screen;
+    const cycle = sessionPlan?.cycles[cycleIdx];
+    const phase = cycle?.phases[phaseIdx];
+    if (!sessionPlan || !cycle || !phase) return null;
+    const phaseName = phase.name;
+    const phaseColor = PHASE_COLORS[phaseName] ?? '#F5A623';
 
-  // ── Phase content ──────────────────────────────────────────────────────────
-  function renderPhaseContent() {
-    switch (phase.name) {
-      case 'PRIME': return <PrimePhase cards={primeCards} onGrade={handlePrimeGrade} />;
-      case 'CHUNK': return <ChunkPhase allCards={allCards} courses={courses as Course[]} />;
-      case 'ENCODE': return (
-        <EncodePhase
-          cards={encodeCards}
-          currentIdx={encodeIdx}
-          showAnswer={showAnswer}
-          onShowAnswer={() => setShowAnswer(true)}
-          onGrade={handleGrade}
-          stats={stats}
-        />
-      );
-      case 'CONNECT': return <ConnectPhase courses={courses as Course[]} />;
-      case 'BREAK': return <BreakPhase timeRemaining={timeRemaining} />;
-      case 'TEST': return (
-        <TestPhase
-          gradedCards={gradedCards.filter(c => (c.grade ?? 3) <= 2)}
-          showAnswer={showAnswer}
-          onShowAnswer={() => setShowAnswer(true)}
-          onGrade={handleGrade}
-          stats={stats}
-        />
-      );
-      case 'ANCHOR': return <AnchorPhase hardCards={gradedCards.filter(c => (c.grade ?? 3) <= 2).slice(0, 3)} />;
-      case 'REPORT': return <ReportPhase stats={stats} phases={PHASES} onComplete={onComplete} />;
-    }
+    return (
+      <div style={{ ...S.container }}>
+        {/* XP popup */}
+        {xpPopup && (
+          <div style={{
+            position: 'fixed', top: 80, right: 16, background: 'var(--accent)', color: '#000',
+            padding: '8px 16px', borderRadius: 8, fontWeight: 800, fontSize: 14,
+            fontFamily: 'DM Mono, monospace', zIndex: 999, animation: 'fadeUp 2s ease forwards',
+          }}>{xpPopup}</div>
+        )}
+
+        {/* Header */}
+        <div style={S.header}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>
+              Cycle {cycleIdx + 1} of {sessionPlan.cycleCount} — {cycle.bloomsTarget}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 16, fontWeight: 700, color: phaseColor }}>
+                {fmtTime(timeRemaining)}
+              </div>
+              <button onClick={() => setIsPaused(p => !p)} style={{ ...S.btn(), padding: '4px 10px', fontSize: 11 }}>
+                {isPaused ? 'Resume' : 'Pause'}
+              </button>
+              <button onClick={advancePhase} style={{ ...S.btn(), padding: '4px 10px', fontSize: 11 }}>
+                Skip →
+              </button>
+            </div>
+          </div>
+          {renderProgressBars(cycleIdx, phaseIdx)}
+          {/* Phase pills */}
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+            {cycle.phases.map((p, i) => (
+              <div key={i} style={{
+                fontSize: 11, padding: '3px 8px', borderRadius: 12,
+                background: i < phaseIdx ? '#22c55e20' : i === phaseIdx ? `${phaseColor}25` : 'var(--bg-primary)',
+                color: i < phaseIdx ? '#22c55e' : i === phaseIdx ? phaseColor : 'var(--text-muted)',
+                border: `1px solid ${i === phaseIdx ? phaseColor : 'transparent'}`,
+                fontWeight: i === phaseIdx ? 700 : 400,
+              }}>
+                {PHASE_ICONS[p.name]} {p.name}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Phase title */}
+        <div style={{ padding: '12px 16px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontSize: 24 }}>{PHASE_ICONS[phaseName]}</div>
+          <div>
+            <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 16, fontWeight: 800, color: phaseColor }}>{phaseName}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{cycle.cycleTheme}</div>
+          </div>
+          <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>
+            {phase.duration} min · {totalXp} XP
+          </div>
+        </div>
+
+        {/* Phase content */}
+        {renderPhaseContent(cycleIdx, phaseIdx)}
+      </div>
+    );
   }
 
-  return (
-    <div style={{
-      background: 'var(--bg-primary)', borderRadius: 12, overflow: 'hidden',
-      minHeight: 500, display: 'flex', flexDirection: 'column',
-      transition: flash ? 'background 0.2s ease' : undefined,
-      outline: flash ? `2px solid ${phase.color}` : '2px solid transparent',
-    }}>
-      {/* ── Phase bar ── */}
-      <div style={{
-        display: 'flex', gap: 4, padding: '12px 12px 8px',
-        background: 'var(--bg-secondary, #111)', borderBottom: '1px solid var(--border)',
-        flexWrap: 'wrap',
-      }}>
-        {PHASES.map((p, i) => (
-          <div key={p.name} style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            padding: '4px 8px', borderRadius: 20,
-            background: i === phaseIdx ? p.color : i < phaseIdx ? 'var(--bg-primary)' : 'transparent',
-            border: `1px solid ${i === phaseIdx ? p.color : i < phaseIdx ? 'var(--border)' : 'var(--border)'}`,
-            fontSize: 10, fontWeight: i === phaseIdx ? 800 : 500,
-            color: i === phaseIdx ? '#000' : i < phaseIdx ? 'var(--text-muted)' : 'var(--text-muted)',
-            transition: 'all 0.3s ease',
-            boxShadow: i === phaseIdx ? `0 0 10px ${p.color}66` : 'none',
-          }}>
-            <span style={{ fontSize: 12 }}>{p.icon}</span>
-            <span style={{ display: 'none' }}>{p.name}</span>
-          </div>
-        ))}
-        <div style={{
-          marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: 22,
-          fontWeight: 800, color: phase.color, letterSpacing: '-0.5px',
-          textShadow: `0 0 20px ${phase.color}88`,
-        }}>
-          {fmtTime(timeRemaining)}
+  // Interstitial
+  if (screen.screen === 'interstitial') {
+    const { afterCycle } = screen;
+    const cycle = sessionPlan?.cycles[afterCycle];
+    const cycleResults = phaseResults.filter(r => r.cycleIdx === afterCycle);
+    const cycleAccuracy = cycleResults.length
+      ? Math.round(cycleResults.reduce((s, r) => s + r.accuracy, 0) / cycleResults.length)
+      : 0;
+
+    return (
+      <div style={{ ...S.container, alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
+        <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+        <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>
+          Cycle {afterCycle + 1} Complete
         </div>
-      </div>
-
-      {/* Phase progress bar */}
-      <div style={{ height: 3, background: 'var(--border)' }}>
-        <div style={{
-          height: '100%', width: `${progressPct}%`,
-          background: phase.color, transition: 'width 1s linear',
-        }} />
-      </div>
-
-      {/* Phase header */}
-      <div style={{
-        padding: '12px 16px 4px', display: 'flex', alignItems: 'center', gap: 10,
-      }}>
-        <span style={{ fontSize: 24 }}>{phase.icon}</span>
-        <div>
-          <div style={{
-            fontFamily: 'Sora, sans-serif', fontSize: 16, fontWeight: 800,
-            color: phase.color,
-          }}>{phase.label}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-            Phase {phaseIdx + 1} of {PHASES.length}
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>{cycle?.cycleTheme}</div>
+        <div style={{ display: 'flex', gap: 20, marginBottom: 20, justifyContent: 'center' }}>
+          <div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 24, fontWeight: 700, color: 'var(--accent)' }}>{cycleAccuracy}%</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Accuracy</div>
+          </div>
+          <div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 24, fontWeight: 700, color: 'var(--accent)' }}>{totalXp}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>XP Earned</div>
           </div>
         </div>
-        {isPaused && (
-          <span style={{
-            marginLeft: 'auto', fontSize: 11, background: '#f9731633',
-            color: '#f97316', padding: '3px 8px', borderRadius: 12, fontWeight: 700,
-          }}>PAUSED</span>
+        {(cycle?.whyChains?.length ?? 0) > 0 && (
+          <div style={{ ...S.card, textAlign: 'left', marginBottom: 20, width: '100%', maxWidth: 400 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginBottom: 8 }}>WHY Chains Covered</div>
+            {(cycle?.whyChains ?? []).slice(0, 3).map((c, i) => (
+              <div key={i} style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>• {c}</div>
+            ))}
+          </div>
+        )}
+        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 28, fontWeight: 700, color: '#06b6d4', marginBottom: 8 }}>
+          {fmtTime(interstitialTime)}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>Next cycle starts automatically. Take a moment.</div>
+        <button onClick={startNextCycle} style={{ ...S.btn(true) }}>
+          Start Cycle {afterCycle + 2} Now →
+        </button>
+      </div>
+    );
+  }
+
+  // Final report
+  if (screen.screen === 'final-report') {
+    const isLoading = screen.loading;
+    const overallAccuracy = phaseResults.length
+      ? Math.round(phaseResults.reduce((s, r) => s + r.accuracy, 0) / phaseResults.length)
+      : 0;
+    const minutes = Math.round((Date.now() - sessionStartRef.current) / 60000);
+    const newArcPhase = determineArcPhaseProgression(arcPhase, overallAccuracy);
+
+    return (
+      <div style={{ ...S.container }}>
+        <div style={{ ...S.header }}>
+          <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>Session Debrief</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{sessionPlan?.sessionTitle}</div>
+        </div>
+        {/* Stats row */}
+        <div style={{ display: 'flex', gap: 12, padding: '12px 16px', background: 'var(--bg-secondary, #111)', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+          {[
+            { label: 'XP', value: totalXp },
+            { label: 'Accuracy', value: `${overallAccuracy}%` },
+            { label: 'Cards', value: phaseResults.reduce((s, r) => s + r.cardsReviewed, 0) },
+            { label: 'Time', value: `${minutes}m` },
+            { label: 'Resets', value: motivationState.motivationResets },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ textAlign: 'center', minWidth: 60 }}>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>{value}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{label}</div>
+            </div>
+          ))}
+          {newArcPhase !== arcPhase && (
+            <div style={{ background: '#22c55e20', border: '1px solid #22c55e50', borderRadius: 8, padding: '4px 10px', fontSize: 12, color: '#22c55e', alignSelf: 'center' }}>
+              Arc ↑ {arcPhase} → {newArcPhase}
+            </div>
+          )}
+        </div>
+        <div style={{ padding: 16, flex: 1, overflowY: 'auto' }}>
+          {isLoading ? (
+            <div style={{ textAlign: 'center', padding: 24 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>Claude is writing your debrief...</div>
+              <div style={{ width: 32, height: 32, border: '2px solid var(--border)', borderTop: '2px solid var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+            </div>
+          ) : null}
+          {finalReportText && (
+            <div
+              style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.8 }}
+              dangerouslySetInnerHTML={{ __html: safeRenderMd(finalReportText) }}
+            />
+          )}
+        </div>
+        {!isLoading && (
+          <div style={{ padding: 16, borderTop: '1px solid var(--border)' }}>
+            <button onClick={onComplete} style={{ ...S.btn(true), width: '100%', textAlign: 'center' }}>
+              Done ✓
+            </button>
+          </div>
         )}
       </div>
-
-      {/* Content area */}
-      <div style={{ flex: 1, padding: '8px 16px 16px', overflowY: 'auto' }}>
-        {renderPhaseContent()}
-      </div>
-
-      {/* Bottom bar */}
-      <div style={{
-        display: 'flex', gap: 8, padding: '10px 16px',
-        borderTop: '1px solid var(--border)', background: 'var(--bg-secondary, #111)',
-      }}>
-        <button
-          onClick={togglePause}
-          style={{
-            flex: 1, padding: '8px 0', borderRadius: 8,
-            border: '1px solid var(--border)', background: 'transparent',
-            color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontWeight: 600,
-          }}
-        >
-          {isPaused ? '▶ Resume' : '⏸ Pause'}
-        </button>
-        <button
-          onClick={skipPhase}
-          disabled={phaseIdx >= PHASES.length - 1}
-          style={{
-            flex: 1, padding: '8px 0', borderRadius: 8,
-            border: '1px solid var(--border)', background: 'transparent',
-            color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer',
-            opacity: phaseIdx >= PHASES.length - 1 ? 0.4 : 1,
-          }}
-        >
-          Skip Phase →
-        </button>
-        <button
-          onClick={endSession}
-          style={{
-            flex: 1, padding: '8px 0', borderRadius: 8,
-            border: '1px solid #ef444466', background: 'transparent',
-            color: '#ef4444', fontSize: 12, cursor: 'pointer',
-          }}
-        >
-          End Session
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── Phase sub-components ───────────────────────────────────────────────────────
-
-function PrimePhase({ cards, onGrade }: { cards: CardWithMeta[]; onGrade: (c: boolean) => void }) {
-  const [idx, setIdx] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const [done, setDone] = useState(false);
-
-  if (!cards.length) return <EmptyCards message="No cards available for Pre-test." />;
-  if (done) return (
-    <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)', fontSize: 14 }}>
-      ✓ Pre-test complete. Your baseline has been recorded. The session timer is still running — relax or review your answers.
-    </div>
-  );
-
-  const card = cards[idx];
-  function grade(correct: boolean) {
-    onGrade(correct);
-    setRevealed(false);
-    if (idx + 1 >= cards.length) { setDone(true); } else { setIdx(i => i + 1); }
+    );
   }
 
-  return (
-    <div>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-        Pre-test on hardest cards — tests before learning hypercorrect errors &amp; boost retention 15-20%. Card {idx + 1}/{cards.length}
-      </p>
-      <div style={cardBox}>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>{card.courseName}</div>
-        <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.5 }}>{card.front}</div>
-      </div>
-      {!revealed ? (
-        <button onClick={() => setRevealed(true)} style={btnSecondary}>Show Answer</button>
-      ) : (
-        <>
-          <div style={{ ...cardBox, background: 'var(--accent-glow, #F5A62311)', marginBottom: 10 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.5 }}>{card.back}</div>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => grade(false)} style={{ ...btnGrade, color: '#ef4444', borderColor: '#ef4444' }}>✗ Wrong</button>
-            <button onClick={() => grade(true)}  style={{ ...btnGrade, color: '#22c55e', borderColor: '#22c55e' }}>✓ Correct</button>
-          </div>
-        </>
-      )}
-    </div>
-  );
+  return null;
 }
 
-function ChunkPhase({ allCards, courses }: { allCards: CardWithMeta[]; courses: Course[] }) {
-  const topicCount = courses.reduce((n, c) => n + (c.topics?.length ?? 0), 0);
+// ── Export ────────────────────────────────────────────────────────────────────
+
+export function OmniProtocol(props: { courseId?: string; onComplete: () => void; onClose?: () => void }) {
   return (
-    <div>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
-        Pattern recognition phase — your brain is building schemas before encoding details.
-      </p>
-      <div style={{ ...cardBox, marginBottom: 12 }}>
-        <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 15, fontWeight: 800, marginBottom: 8, color: 'var(--accent, #F5A623)' }}>
-          Your Study Map
-        </div>
-        <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.8 }}>
-          You have <strong>{allCards.length}</strong> cards across <strong>{courses.length}</strong> courses
-          and <strong>{topicCount}</strong> topics.
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.7 }}>
-          During this phase, <em>don't memorize individual facts</em>. Instead, notice the patterns:
-          What categories keep appearing? What concepts bridge multiple topics?
-          Which areas feel fuzzy vs. familiar?
-        </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        {courses.slice(0, 6).map(c => (
-          <div key={c.id} style={{
-            padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)',
-            background: 'var(--bg-secondary, #111)', fontSize: 12,
-          }}>
-            <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>{c.name}</div>
-            <div style={{ color: 'var(--text-muted)' }}>{c.topics?.length ?? 0} topics</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function EncodePhase({
-  cards, currentIdx, showAnswer, onShowAnswer, onGrade, stats,
-}: {
-  cards: CardWithMeta[]; currentIdx: number; showAnswer: boolean;
-  onShowAnswer: () => void; onGrade: (g: 1 | 2 | 3 | 4) => void; stats: SessionStats;
-}) {
-  if (!cards.length) return <EmptyCards message="No cards available for encoding." />;
-  if (currentIdx >= cards.length) return (
-    <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)', fontSize: 14 }}>
-      ✓ All encode cards reviewed! Keep going — timer still running.
-    </div>
-  );
-  const card = cards[currentIdx];
-  const retention = stats.cardsReviewed > 0
-    ? Math.round((stats.correctCount / stats.cardsReviewed) * 100) : 0;
-
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 11, color: 'var(--text-muted)' }}>
-        <span>Card {currentIdx + 1}/{cards.length}</span>
-        <span>Retention: <strong style={{ color: retention >= 70 ? '#22c55e' : '#f97316' }}>{retention}%</strong></span>
-      </div>
-      <div style={{ height: 3, background: 'var(--border)', borderRadius: 2, marginBottom: 12 }}>
-        <div style={{ height: '100%', width: `${((currentIdx + 1) / cards.length) * 100}%`, background: 'var(--accent, #F5A623)', borderRadius: 2 }} />
-      </div>
-      <div style={cardBox}>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>{card.courseName}</div>
-        <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.5 }}>{card.front}</div>
-      </div>
-      {!showAnswer ? (
-        <button onClick={onShowAnswer} style={btnSecondary}>Show Answer</button>
-      ) : (
-        <>
-          <div style={{ ...cardBox, background: 'var(--accent-glow, #F5A62311)', marginBottom: 10 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.5 }}>{card.back}</div>
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 6 }}>How well did you recall?</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
-            {([
-              { g: 1 as const, label: 'Again', color: '#ef4444' },
-              { g: 2 as const, label: 'Hard',  color: '#f97316' },
-              { g: 3 as const, label: 'Good',  color: '#22c55e' },
-              { g: 4 as const, label: 'Easy',  color: '#3b82f6' },
-            ]).map(({ g, label, color }) => (
-              <button key={g} onClick={() => onGrade(g)}
-                style={{ ...btnGrade, color, borderColor: color, padding: '8px 4px', fontSize: 11 }}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function ConnectPhase({ courses }: { courses: Course[] }) {
-  const [topicA, topicB] = courses.length >= 2
-    ? [courses[0].name, courses[1].name]
-    : courses.length === 1
-      ? [courses[0].name, 'another subject you know']
-      : ['Topic A', 'Topic B'];
-
-  const prompts = [
-    `How does ${topicA} relate to ${topicB}? What shared principles connect them?`,
-    `If you had to explain a key concept from ${topicA} using only ideas from ${topicB}, how would you do it?`,
-    `What would fail in ${topicA} if the foundational principles of ${topicB} were wrong?`,
-    `What metaphor from everyday life describes the relationship between ${topicA} and ${topicB}?`,
-  ];
-  const prompt = prompts[Math.floor(Date.now() / 1000) % prompts.length];
-
-  return (
-    <div>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
-        Elaborative interrogation — connecting ideas across domains strengthens long-term memory encoding.
-      </p>
-      <div style={{ ...cardBox, marginBottom: 16 }}>
-        <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 16, color: '#22c55e', marginBottom: 10 }}>
-          🌉 Connection Prompt
-        </div>
-        <div style={{ fontSize: 15, lineHeight: 1.7, color: 'var(--text-primary)' }}>{prompt}</div>
-      </div>
-      <div style={{ ...cardBox, background: 'transparent', border: '1px dashed var(--border)' }}>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Your reflection (think it through, no need to write)</div>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          Take 2-3 minutes to mentally sketch the connection. Think about: shared mechanisms,
-          analogous structures, or how one explains the other.
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BreakPhase({ timeRemaining }: { timeRemaining: number }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '24px 16px' }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>☕</div>
-      <div style={{
-        fontFamily: 'DM Mono, monospace', fontSize: 52, fontWeight: 800,
-        color: '#06b6d4', marginBottom: 16, letterSpacing: '-2px',
-        textShadow: '0 0 30px #06b6d488',
-      }}>
-        {fmtTime(timeRemaining)}
-      </div>
-      <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 18, fontWeight: 800, marginBottom: 10, color: 'var(--text-primary)' }}>
-        Take a Break
-      </div>
-      <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.7, maxWidth: 320, margin: '0 auto' }}>
-        Walk around. Get water. Look out a window.
-        <br /><br />
-        Your hippocampus is replaying what you just learned, strengthening memory traces.
-        Staying still or using your phone disrupts this consolidation.
-      </div>
-    </div>
-  );
-}
-
-function TestPhase({
-  gradedCards, showAnswer, onShowAnswer, onGrade, stats,
-}: {
-  gradedCards: CardWithMeta[]; showAnswer: boolean;
-  onShowAnswer: () => void; onGrade: (g: 1 | 2 | 3 | 4) => void; stats: SessionStats;
-}) {
-  const [idx, setIdx] = useState(0);
-  const [localShow, setLocalShow] = useState(false);
-
-  if (!gradedCards.length) return (
-    <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)', fontSize: 13 }}>
-      No hard/failed cards to retest — great job in the Encode phase!
-    </div>
-  );
-  if (idx >= gradedCards.length) return (
-    <div style={{ textAlign: 'center', padding: 24 }}>
-      <div style={{ fontSize: 32, marginBottom: 8 }}>🎯</div>
-      <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Retrieval Complete</div>
-      <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>All hard cards retested. Timer still running.</div>
-    </div>
-  );
-
-  const card = gradedCards[idx];
-  function grade(g: 1 | 2 | 3 | 4) {
-    onGrade(g);
-    setLocalShow(false);
-    setIdx(i => i + 1);
-  }
-
-  return (
-    <div>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-        Retrieval practice on {gradedCards.length} hard/failed cards. Testing is more powerful than re-studying.
-        Card {idx + 1}/{gradedCards.length}
-      </p>
-      <div style={cardBox}>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>{card.courseName}</div>
-        <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.5 }}>{card.front}</div>
-      </div>
-      {!localShow ? (
-        <button onClick={() => { setLocalShow(true); onShowAnswer(); }} style={btnSecondary}>Show Answer</button>
-      ) : (
-        <>
-          <div style={{ ...cardBox, background: 'var(--accent-glow, #F5A62311)', marginBottom: 10 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.5 }}>{card.back}</div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
-            {([
-              { g: 1 as const, label: 'Again', color: '#ef4444' },
-              { g: 2 as const, label: 'Hard',  color: '#f97316' },
-              { g: 3 as const, label: 'Good',  color: '#22c55e' },
-              { g: 4 as const, label: 'Easy',  color: '#3b82f6' },
-            ]).map(({ g, label, color }) => (
-              <button key={g} onClick={() => grade(g)}
-                style={{ ...btnGrade, color, borderColor: color, padding: '8px 4px', fontSize: 11 }}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function AnchorPhase({ hardCards }: { hardCards: CardWithMeta[] }) {
-  const rooms = ['your front door', 'your kitchen', 'your living room', 'your bedroom', 'your bathroom'];
-  return (
-    <div>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-        Method of loci — associating concepts with physical locations encodes them in spatial memory,
-        one of the most robust memory systems.
-      </p>
-      {hardCards.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)', fontSize: 13 }}>
-          No hard cards to anchor — excellent session performance!
-        </div>
-      ) : (
-        hardCards.map((card, i) => (
-          <div key={card.cardIdx + card.courseId} style={{ ...cardBox, marginBottom: 12 }}>
-            <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 13, color: '#ec4899', marginBottom: 8 }}>
-              🏛️ Memory Palace — {rooms[i % rooms.length]}
-            </div>
-            <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-primary)' }}>
-              Place <strong>"{card.front}"</strong> at <em>{rooms[i % rooms.length]}</em>.
-              Visualize it vividly: the answer <strong>"{card.back}"</strong> is literally there.
-              Make it absurd, colorful, or emotional — anything that makes it stick.
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
-
-function ReportPhase({ stats, phases, onComplete }: { stats: SessionStats; phases: Phase[]; onComplete: () => void }) {
-  const elapsed = Math.round((Date.now() - stats.startTime) / 1000);
-  const retention = stats.cardsReviewed > 0
-    ? Math.round((stats.correctCount / stats.cardsReviewed) * 100) : 0;
-  const grade = retention >= 80 ? '🟢 Excellent' : retention >= 60 ? '🟡 Good' : retention >= 40 ? '🟠 Fair' : '🔴 Needs Work';
-
-  return (
-    <div>
-      <div style={{ textAlign: 'center', marginBottom: 16 }}>
-        <div style={{ fontSize: 40, marginBottom: 8 }}>📊</div>
-        <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 20, fontWeight: 800, color: 'var(--accent, #F5A623)' }}>
-          Session Complete
-        </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-        {[
-          { label: 'Cards Reviewed', value: stats.cardsReviewed, color: '#F5A623' },
-          { label: 'Retention Rate', value: `${retention}%`, color: retention >= 70 ? '#22c55e' : '#f97316' },
-          { label: 'Session Time', value: fmtTime(elapsed), color: '#06b6d4' },
-          { label: 'Performance', value: grade, color: '#8b5cf6' },
-        ].map(stat => (
-          <div key={stat.label} style={{
-            padding: '12px', borderRadius: 8, border: '1px solid var(--border)',
-            background: 'var(--bg-secondary, #111)', textAlign: 'center',
-          }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 18, fontWeight: 800, color: stat.color, marginBottom: 4 }}>
-              {stat.value}
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{stat.label}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ ...cardBox, marginBottom: 16 }}>
-        <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 13, marginBottom: 8, color: 'var(--text-primary)' }}>
-          Phase Summary
-        </div>
-        {phases.map((p, i) => (
-          <div key={p.name} style={{
-            display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0',
-            borderBottom: i < phases.length - 1 ? '1px solid var(--border)' : 'none',
-            fontSize: 12,
-          }}>
-            <span>{p.icon}</span>
-            <span style={{ flex: 1, color: 'var(--text-muted)' }}>{p.label}</span>
-            <span style={{ color: p.color, fontWeight: 700 }}>✓ {p.durationSec / 60} min</span>
-          </div>
-        ))}
-      </div>
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 12 }}>
-        Next session recommended in 24 hours for optimal spaced repetition timing.
-      </div>
-      <button
-        onClick={onComplete}
-        style={{
-          width: '100%', padding: '12px', borderRadius: 8, border: 'none',
-          background: 'var(--accent, #F5A623)', color: '#000',
-          fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'Sora, sans-serif',
-        }}
-      >
-        Done — Back to Tools
-      </button>
-    </div>
-  );
-}
-
-function EmptyCards({ message }: { message: string }) {
-  return (
-    <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)', fontSize: 13 }}>
-      {message}
-    </div>
-  );
-}
-
-// ── Shared inline style objects ────────────────────────────────────────────────
-
-const cardBox: React.CSSProperties = {
-  padding: 16, borderRadius: 10, border: '1px solid var(--border)',
-  background: 'var(--bg-secondary, #111)', marginBottom: 12, lineHeight: 1.5,
-};
-
-const btnSecondary: React.CSSProperties = {
-  width: '100%', padding: '10px', borderRadius: 8,
-  border: '1px solid var(--border)', background: 'transparent',
-  color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', fontWeight: 600,
-  marginBottom: 4,
-};
-
-const btnGrade: React.CSSProperties = {
-  padding: '9px 4px', borderRadius: 8,
-  border: '1px solid', background: 'transparent',
-  fontSize: 12, cursor: 'pointer', fontWeight: 700,
-};
-
-// ── Export (wrapped in ToolErrorBoundary) ──────────────────────────────────────
-
-export default function OmniProtocol(props: OmniProps) {
-  return (
-    <ToolErrorBoundary toolName="Omni Protocol">
+    <ToolErrorBoundary toolName="Omni Protocol V6">
       <OmniProtocolInner {...props} />
     </ToolErrorBoundary>
   );
 }
+
+export default OmniProtocol;

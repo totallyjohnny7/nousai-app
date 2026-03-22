@@ -2,7 +2,7 @@
  * UnifiedLearnPage — merges Learn, AI Tools, and Tools into one searchable, filterable page.
  * 57 items across 6 categories with hide/show customization.
  */
-import React, { useState, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useMemo, useEffect, Suspense, lazy } from 'react';
 import {
   Zap, Lightbulb, Clock, MessageCircle, Search, Brain,
   Shuffle, Calculator, AlertTriangle, FileText, Link, Layers,
@@ -158,7 +158,7 @@ function RSVPWrapper() {
         {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
       <Suspense fallback={<Loader />}>
-        <RSVPMode key={courseId} cards={cards} onComplete={() => {}} />
+        <RSVPMode key={courseId} cards={cards} onComplete={() => window.dispatchEvent(new CustomEvent('nousai-switch-tool', { detail: 'spaced' }))} />
       </Suspense>
     </div>
   );
@@ -176,7 +176,7 @@ function PreTestWrapper() {
         {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
       <Suspense fallback={<Loader />}>
-        <PreTestMode key={courseId} cards={cards} onComplete={() => {}} />
+        <PreTestMode key={courseId} cards={cards} onComplete={() => window.dispatchEvent(new CustomEvent('nousai-switch-tool', { detail: 'spaced' }))} />
       </Suspense>
     </div>
   );
@@ -218,7 +218,7 @@ const TOOLS: ToolEntry[] = [
   { id: 'procedure-quiz', name: 'Procedure Quiz', desc: 'Quiz yourself on step-by-step procedures with AI scoring', icon: ClipboardList, color: '#22c55e', category: 'learn', render: () => <Suspense fallback={<Loader />}><ProcedureQuizTool /></Suspense> },
   { id: 'rsvp',        name: '⚡ Speed Preview', desc: 'Flash through cards rapidly to build familiarity before deep study', icon: Zap, color: '#f59e0b', category: 'learn', render: () => <RSVPWrapper /> },
   { id: 'pretest',     name: '🎯 Pre-Test Mode', desc: 'Test before learning — hypercorrection effect improves retention 15-20%', icon: CheckCircle, color: '#ef4444', category: 'learn', render: () => <PreTestWrapper /> },
-  { id: 'omni-protocol', name: '⚡ Omni Protocol', desc: '60-min science-backed study session: Prime → Chunk → Encode → Connect → Break → Test → Anchor → Report', icon: Zap, color: '#F5A623', category: 'learn', render: () => <Suspense fallback={<Loader />}><OmniProtocol onComplete={() => {}} /></Suspense> },
+  { id: 'omni-protocol', name: '⚡ Omni Protocol V6', desc: '60min–3hr AI-personalized session: multi-cycle Bloom\'s escalation, arc phase tracking, Feynman gap targeting', icon: Zap, color: '#F5A623', category: 'learn', render: () => <Suspense fallback={<Loader />}><OmniProtocol onComplete={() => window.dispatchEvent(new CustomEvent('nousai-switch-tool', { detail: 'spaced' }))} /></Suspense> },
   // ── Generate ──────────────────────────────────────────────────────────────
   { id: 'course',     name: 'Course Gen',   desc: 'Build a full course outline',  icon: BookOpen,       color: '#6366f1', category: 'generate',  render: () => <Suspense fallback={<Loader />}><CourseGenTool /></Suspense> },
   { id: 'flashcardgen',name:'Flashcards',   desc: 'AI-generated flashcards',      icon: Layers,         color: '#3b82f6', category: 'generate',  render: () => <Suspense fallback={<Loader />}><FlashcardGenTool /></Suspense> },
@@ -306,6 +306,17 @@ export default function UnifiedLearnPage() {
     const allCards = courses.flatMap(c => c.flashcards || []);
     return Math.min(allCards.length, 20);
   }, [courses]);
+
+  // Listen for tool-switch events from wrappers (RSVPWrapper, PreTestWrapper)
+  // that can't access setActiveTool directly (TOOLS array is module-level)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const toolId = (e as CustomEvent).detail;
+      if (typeof toolId === 'string') setActiveTool(toolId);
+    };
+    window.addEventListener('nousai-switch-tool', handler);
+    return () => window.removeEventListener('nousai-switch-tool', handler);
+  }, []);
 
   const visibleTools = useMemo(() => {
     let list = TOOLS;

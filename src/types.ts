@@ -193,6 +193,7 @@ export interface Course {
   topics: CourseTopic[];
   flashcards: FlashcardItem[];
   modules?: CourseModule[];
+  updatedAt?: string; // ISO timestamp for per-course merge conflict resolution (Lamport 1978)
 }
 
 export interface CoachData {
@@ -504,6 +505,8 @@ export interface PluginData {
   savedVideos?: SavedVideo[];
   // Card quality cache — keyed by cardKey; stripped from trimForSync (ephemeral)
   cardQualityCache?: Record<string, CardQualityScore>;
+  // Omni Protocol V6 — session history, Feynman gaps, arc phase per course
+  omniProtocol?: OmniProtocolData;
   // Mind map user edits — keyed by map id ('phys'|'biol'|'evol'|'jp')
   mindmapOverrides_phys?: unknown[];
   mindmapOverrides_biol?: unknown[];
@@ -755,6 +758,92 @@ export interface AttachedFile {
   content: string       // base64 data URL for images; extracted UTF-8 text for pdf/text
   mimeType: string
   sizeBytes: number
+}
+
+// ─── Omni Protocol V6 ────────────────────────────────────────────────────────
+
+export type OmniArcPhase = 'Foundation' | 'BuildUp' | 'Application' | 'Synthesis' | 'Mastery';
+export type OmniDifficulty = 'Beginner' | 'Review' | 'DeepDive';
+export type OmniBloomsLevel = 'Remember' | 'Understand' | 'Apply' | 'Analyze' | 'Evaluate' | 'Create';
+
+export interface OmniFeynmanGap {
+  id: string;
+  concept: string;
+  courseId: string;
+  topicId?: string;
+  detectedAt: string;     // ISO
+  sessionId: string;
+  resolved: boolean;
+  resolvedAt?: string;
+}
+
+export interface OmniPhaseContent {
+  name: 'Prime' | 'Chunk' | 'Encode' | 'Connect' | 'Break' | 'Test' | 'Anchor' | 'Report';
+  duration: number;       // minutes
+  content: string;
+  keyPoints: string[];
+  mnemonic?: string;
+  analogy?: string;
+  visualAnchor?: string;
+  auditoryHook?: string;
+  kinesthetic?: string;
+  bloomsTag: OmniBloomsLevel;
+  failurePatterns?: string[];
+  domainRule?: string;
+}
+
+export interface OmniCycle {
+  cycleNumber: number;
+  cycleTheme: string;
+  bloomsTarget: string;
+  whyChains: string[];
+  phases: OmniPhaseContent[];
+}
+
+export interface OmniSessionPlan {
+  sessionId: string;
+  sessionTitle: string;
+  totalDuration: number;
+  cycleCount: number;
+  studentArcPhase: OmniArcPhase;
+  focusSummary: string;
+  standardsRef: string[];
+  professorEmphasis: string[];
+  fsrsDueCardKeys: string[];
+  feynmanGapIds: string[];
+  cycles: OmniCycle[];
+  flashcardFilter: { topics: string[]; courseIds: string[] };
+  generatedAt: string;
+}
+
+export interface OmniPhaseResult {
+  cycleIdx: number;
+  phaseIdx: number;
+  phaseName: string;
+  accuracy: number;       // 0–100
+  cardsReviewed: number;
+  xpAwarded: number;
+}
+
+export interface OmniSessionRecord {
+  id: string;
+  plan: OmniSessionPlan;
+  startedAt: string;
+  completedAt?: string;
+  totalXpAwarded: number;
+  totalCardsReviewed: number;
+  overallAccuracy: number;
+  motivationResets: number;
+  finalArcPhase: OmniArcPhase;
+  feynmanGapsDetected: string[];
+  finalReportText?: string;
+}
+
+export interface OmniProtocolData {
+  sessions: OmniSessionRecord[];          // keep last 20 only
+  feynmanGaps: OmniFeynmanGap[];
+  currentArcPhase: Record<string, OmniArcPhase>;  // keyed by courseId
+  lastSessionId?: string;
 }
 
 // ─── Links & Files ────────────────────────────────────────────────────────────
