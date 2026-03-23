@@ -30,10 +30,10 @@ export interface SavedRecallItem {
   name: string;
   type: 'procedure' | 'concept';
   points: RecallPoint[];          // renamed from 'steps'
-  subtopics?: string[];           // ordered unique subtopic names (derived from points)
   createdAt: number;
   lastQuizzedAt?: number;
   bestScore?: number;
+  lastScore?: number;             // NEW — most recent quiz score (more actionable than best)
   quizCount?: number;
 }
 
@@ -50,8 +50,17 @@ export interface RecallQuizResult {
 
 - Keep `PluginData.savedProcedures` field name for storage compatibility
 - On load: map existing items — rename `steps` → `points`, add `type: 'procedure'` if missing
+- Migration must be **idempotent** — if data already has `points` and `type`, skip re-processing
 - Old `ProcedureStep` and `SavedProcedure` types become aliases for backward compat
 - Old `ProcedureQuizResult` → `RecallQuizResult` (alias kept)
+
+### `subtopics` derivation
+
+`subtopics` is a **computed property derived at render time** from `points`, never stored separately. Computed as:
+```ts
+const subtopics = [...new Set(item.points.map(p => p.subtopic).filter(Boolean))]
+```
+This prevents stale state when users edit points and change subtopic assignments.
 
 ### Storage
 
@@ -91,7 +100,7 @@ Or markdown heading style:
 - Produces 4 haploid cells
 ```
 
-**Parser logic:** Lines with `#` or `##` headers, or 2+ space indentation, trigger hierarchical parsing. Each heading/indented group becomes a subtopic. Points under each subtopic get `subtopic: "Mitosis"` etc.
+**Parser logic:** Normalize tabs to 2-space first. Lines with `#` or `##` headers, or 2+ space indentation, trigger hierarchical parsing. Each heading/indented group becomes a subtopic. Points under each subtopic get `subtopic: "Mitosis"` etc. **Tie-breaking:** Numbered list with sub-bullets = procedure with elaboration (sub-bullets become part of the step text, not subtopics). User can override type after import.
 
 ### Auto-type detection
 
@@ -104,8 +113,18 @@ Or markdown heading style:
 "Create from AI" button in the library view:
 1. User types a topic name (e.g., "Mitosis")
 2. AI generates 8-15 key points organized by subtopic
-3. System prompt asks for JSON: `{ name, type, subtopics, points: [{ text, subtopic }] }`
-4. Result is parsed and added to the library for review/editing before first quiz
+3. Uses `callAI(..., 'analysis')` with system prompt:
+   ```
+   You are a study content generator. Given a topic, generate key points to remember.
+   Return ONLY valid JSON in this exact format:
+   {"name":"Topic Name","type":"concept","points":[{"text":"key point","subtopic":"Category"}]}
+   Generate 8-15 points. Group by 2-4 subtopics. Be specific and factual.
+   ```
+4. JSON extraction uses same `raw.match(/\{[\s\S]*\}/)` pattern as existing grading
+5. Result validated: clamp to 5-20 points, reject if outside range with retry prompt
+6. Added to library in edit mode for review before first quiz
+7. Loading spinner shown during generation; user can cancel via abort controller
+8. On parse failure: show error "Could not generate content. Try again or import manually."
 
 ---
 
@@ -138,10 +157,18 @@ Score: step accuracy 70%, sequencing 20%, completeness 10%
 
 **Concept:**
 ```
-Score: coverage 60% (key points recalled), accuracy 25% (no false claims), depth 15% (explained well, not just name-dropped)
+You are a knowledge recall evaluator. Given reference key points and a student's recall, output ONLY valid JSON.
+Return exactly: {"score":0-100,"correct":["..."],"missed":["..."],"errors":["..."],"mnemonic":"..."}
+- "correct": key points the student accurately recalled (even if worded differently)
+- "missed": key points from the reference they did not mention
+- "errors": factually incorrect claims the student made. Do NOT penalize correct information that is simply not in the reference points — only penalize genuinely false statements.
+- "mnemonic": a grouping, acronym, or memory framework to remember all key points
+Score: coverage 60% (proportion of key points recalled), accuracy 25% (no false claims), depth 15% (explained meaningfully, not just name-dropped).
 ```
 
-Both return the same JSON shape: `{ score, correct, missed, errors, mnemonic }`
+**Subtopic-scoped quiz:** When quizzing on a specific subtopic, the AI prompt receives ALL reference points for context but is told: "Grade ONLY against the [subtopic] points. If the student mentions correct points from other subtopics, acknowledge but do not count toward the score."
+
+Both types return the same JSON shape: `{ score, correct, missed, errors, mnemonic }`
 
 ### Result view
 
@@ -166,6 +193,14 @@ Same score circle and feedback sections. Labels adapt:
 | Icon | `ClipboardList` | `ClipboardList` (keep) |
 | Color | `#22c55e` | `#22c55e` (keep) |
 
+### ID Migration
+
+Register **both** old and new IDs in `UnifiedLearnPage.tsx` to prevent bookmark/deep-link breakage:
+- Primary: `recall-quiz` (new ID)
+- Alias: `procedure-quiz` (old ID, renders same component)
+
+Any `nousai-switch-tool` event dispatching the old ID will still work.
+
 ---
 
 ## 5. Files to Modify
@@ -173,7 +208,7 @@ Same score circle and feedback sections. Labels adapt:
 | File | Changes |
 |------|---------|
 | `src/types.ts` | Add `RecallPoint`, `SavedRecallItem`, `RecallQuizResult`. Keep old types as aliases. |
-| `src/components/aitools/ProcedureQuizTool.tsx` | Rename to `RecallQuizTool.tsx`. Add type field, subtopic scope picker, adaptive grading prompts, AI generation, hierarchical import parser. Migration shim for `steps` → `points`. |
+| `src/components/aitools/ProcedureQuizTool.tsx` | Rename component export to `RecallQuizTool` (keep filename to preserve git history). Add type field, subtopic scope picker, adaptive grading prompts, AI generation, hierarchical import parser. Migration shim for `steps` → `points`. |
 | `src/pages/UnifiedLearnPage.tsx` | Update tool registration: new ID, name, description, import path. |
 | `src/store.tsx` | No change (data stored in `pluginData.savedProcedures` — field name stays for compat). |
 
@@ -187,8 +222,13 @@ Same score circle and feedback sections. Labels adapt:
 | Existing `steps` field (no `points`) | Mapped to `points` on load, transparent |
 | Import with mixed ordered/unordered | Auto-detect, user can override |
 | Concept with 0 subtopics | Works as flat list, no scope picker shown |
-| AI generation fails | Show error, user can retry or import manually |
+| AI generation fails | Show error "Could not generate content. Try again or import manually." |
+| AI generation returns malformed JSON | Extract via `raw.match()`, retry once, then show error |
+| AI generation returns <5 or >20 points | Clamp and warn, let user edit |
 | Quiz on empty subtopic | Prevented — subtopic buttons only shown if ≥1 point |
+| Numbered list with sub-bullets | Treat as procedure with elaboration (type: procedure), user can override |
+| Import with tabs instead of spaces | Normalize tabs to 2-space before hierarchical parsing |
+| User changes type after quiz history | Allowed — historical scores kept but library shows "Last: X% / Best: Y%" for context |
 
 ---
 
