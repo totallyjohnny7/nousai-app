@@ -878,80 +878,7 @@ export function removeLocalPin(): void {
   localStorage.removeItem('nousai-pin');
 }
 
-// ─── Cross-Device Content Relay ─────────────────────────────────────────────
-// Ephemeral Firestore doc at users/{uid}/relay/clipRelay.
-// NOT part of the main sync pipeline — no gzip, no trimForSync, no BroadcastChannel.
-
-/**
- * Write a relay payload to Firestore for pickup by another device.
- * Overwrites any previous relay doc — "last sent wins" clipboard model.
- */
-export async function writeRelayDoc(uid: string, data: unknown): Promise<void> {
-  const loaded = await loadFirebase();
-  if (!loaded || !fbFns) return;
-  const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'clipRelay');
-  await fbFns.setDoc(ref, data);
-}
-
-/**
- * Subscribe to relay doc updates for this user.
- * Returns an unsubscribe function — call it on component unmount.
- */
-export function watchRelayDoc(uid: string, cb: (data: unknown) => void): () => void {
-  // loadFirebase is async; we start the subscribe once Firebase is ready.
-  let unsub: (() => void) | null = null;
-  let cancelled = false;
-
-  loadFirebase().then((loaded) => {
-    if (cancelled || !loaded || !fbFns) return;
-    const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'clipRelay');
-    unsub = fbFns.onSnapshot(ref, (snap: any) => {
-      if (snap.exists()) cb(snap.data());
-    });
-  });
-
-  return () => {
-    cancelled = true;
-    unsub?.();
-  };
-}
-
-/**
- * Delete the relay doc after it has been received (keeps Firestore clean).
- */
-export async function deleteRelayDoc(uid: string): Promise<void> {
-  const loaded = await loadFirebase();
-  if (!loaded || !fbFns) return;
-  const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'clipRelay');
-  try { await fbFns.deleteDoc(ref); } catch { /* non-fatal */ }
-}
-
-/**
- * Upload large relay content to Firebase Storage.
- * Used when payload exceeds ~100KB to avoid Firestore 1MB doc limit.
- * Path: relay/{uid}/large-payload (overwritten each send — clipboard model)
- * Returns a download URL for the receiver to fetch.
- */
-export async function uploadRelayContent(uid: string, content: string): Promise<string> {
-  const loaded = await loadFirebase();
-  if (!loaded || !fbFns || !firebaseStorage) throw new Error('Firebase Storage not available');
-  const path = `relay/${uid}/large-payload`;
-  const ref = fbFns.storageRef(firebaseStorage, path);
-  await fbFns.uploadString(ref, content, 'raw');
-  return fbFns.getDownloadURL(ref);
-}
-
-/**
- * Download large relay content from a Firebase Storage URL.
- * Called by the receiver when `contentRef` is present in the relay doc.
- */
-export async function downloadRelayContent(url: string): Promise<string> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Relay content download failed: HTTP ${response.status}`);
-  return response.text();
-}
-
-// ─── Quick Keys Action Relay ──────────────────────────────────────────────────
+// ─── Quick Keys Action Sync ──────────────────────────────────────────────────
 //
 // Ephemeral Firestore doc at users/{uid}/relay/qkAction.
 // Physical Quick Keys on Windows → Firestore → Boox fires same action.
@@ -1051,5 +978,54 @@ export async function saveConflictBackup(uid: string, data: NousAIData, label: s
   } catch (e) {
     // Backup failures are non-fatal — log but don't throw
     console.error('[BACKUP] Failed to save conflict backup:', e);
+  }
+}
+
+// ─── Content Sharing ────────────────────────────────────────
+
+export interface ShareableContent {
+  type: 'deck' | 'note' | 'drawing' | 'quiz';
+  data: unknown;
+  title: string;
+  ownerId: string;
+  ownerName: string;
+  courseId: string | null;
+  courseName: string | null;
+  createdAt: string;
+}
+
+/** Publish content to the shared-content collection. Returns the shareId. */
+export async function publishSharedContent(content: ShareableContent): Promise<string | null> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns) return null;
+  const fb = fbFns;
+  const shareId = crypto.randomUUID();
+  try {
+    const docRef = fb.doc(firebaseDb, 'shared-content', shareId);
+    await fb.setDoc(docRef, {
+      ...content,
+      createdAt: new Date().toISOString(),
+    });
+    console.log('[SHARE] Published content:', shareId);
+    return shareId;
+  } catch (e) {
+    console.error('[SHARE] Failed to publish:', e);
+    return null;
+  }
+}
+
+/** Fetch shared content by ID (public read). */
+export async function fetchSharedContent(shareId: string): Promise<ShareableContent | null> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns) return null;
+  const fb = fbFns;
+  try {
+    const docRef = fb.doc(firebaseDb, 'shared-content', shareId);
+    const snap = await fb.getDoc(docRef);
+    if (snap.exists()) return snap.data() as ShareableContent;
+    return null;
+  } catch (e) {
+    console.error('[SHARE] Failed to fetch:', e);
+    return null;
   }
 }

@@ -6,7 +6,7 @@
  */
 
 export type AIProvider = 'none' | 'openai' | 'anthropic' | 'openrouter' | 'google' | 'groq' | 'mistral' | 'custom'
-export type AIFeatureSlot = 'chat' | 'generation' | 'analysis' | 'ocr' | 'japanese' | 'physics'
+export type AIFeatureSlot = 'chat' | 'generation' | 'analysis' | 'ocr' | 'japanese' | 'physics' | 'omni'
 
 export type AIContentPart =
   | { type: 'text'; text: string }
