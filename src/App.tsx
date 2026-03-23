@@ -19,12 +19,9 @@ import { getDueCount } from './utils/getDueCount'
 import { initFsrsCache } from './utils/fsrsStorage'
 import { detectDeviceProfile } from './utils/deviceDetection'
 import { useAuthUser } from './hooks/useAuthUser'
-import { streamDeckService, StreamDeckService } from './utils/streamDeckService'
-import { watchQKAction } from './utils/auth'
-import { getDeviceFingerprint } from './utils/contentRelay'
+import { streamDeckService, StreamDeckService, getDeviceFingerprint } from './utils/streamDeckService'
+import { watchQKAction, syncToCloud, syncFromCloud } from './utils/auth'
 import './App.css'
-
-const ContentRelay = lazyWithRetry(() => import('./components/ContentRelay'))
 
 /* ── Error Boundary to prevent blank page crashes ──── */
 interface EBProps { children: ReactNode }
@@ -102,11 +99,8 @@ const Flashcards = lazyWithRetry(() => import('./pages/Flashcards'))
 const Timer = lazyWithRetry(() => import('./pages/Timer'))
 const CalendarPage = lazyWithRetry(() => import('./pages/CalendarPage'))
 const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage'))
-const ToolsPage = lazyWithRetry(() => import('./pages/ToolsPage'))
-const LearnPage = lazyWithRetry(() => import('./pages/LearnPage'))
 const UnifiedLearnPage = lazyWithRetry(() => import('./pages/UnifiedLearnPage'))
 const LibraryPage = lazyWithRetry(() => import('./pages/LibraryPage'))
-const AIToolsPage = lazyWithRetry(() => import('./pages/AIToolsPage'))
 const CoursePage = lazyWithRetry(() => import('./pages/CoursePage'))
 const VideosPage = lazyWithRetry(() => import('./pages/VideosPage'))
 
@@ -160,6 +154,8 @@ const SHORTCUTS = [
   { keys: ['N'], description: 'New note' },
   { keys: ['Q'], description: 'Go to Quiz' },
   { keys: ['F'], description: 'Go to Flashcards' },
+  { keys: ['Shift', 'S'], description: 'Sync to cloud' },
+  { keys: ['Shift', 'D'], description: 'Download from cloud' },
   { keys: ['Ctrl', 'F'], description: 'Open search palette' },
   { keys: ['?'], description: 'Show this overlay' },
 ]
@@ -283,10 +279,11 @@ export default function App() {
   const { uid } = useAuthUser()
   const location = useLocation()
   const initRef = useRef(false)
+  const [syncToast, setSyncToast] = useState<string | null>(null)
+  const syncingRef = useRef(false)
 
   // Auto-connect Quick Keys silently on load (no popup — uses already-granted devices).
-  // Sets uid on service so button presses relay to other devices via Firestore.
-  // Also subscribes to the relay listener so actions from Boox/other devices fire here.
+  // Sets uid on service so QK actions from Boox/other devices fire here.
   useEffect(() => {
     streamDeckService.setUid(uid ?? null)
     if (uid && StreamDeckService.isSupported() && !streamDeckService.connected) {
@@ -456,6 +453,40 @@ export default function App() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [betaMode, navigate])
+
+  // Global sync shortcuts: Shift+S = push to cloud, Shift+D = pull from cloud
+  useEffect(() => {
+    const handler = async (e: KeyboardEvent) => {
+      if (!uid || syncingRef.current) return
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
+      if (!e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return
+
+      if (e.key === 'S') {
+        e.preventDefault()
+        if (!data) return
+        syncingRef.current = true
+        setSyncToast('Syncing to cloud…')
+        try {
+          await syncToCloud(uid, data!)
+          setSyncToast('Synced to cloud ✓')
+        } catch { setSyncToast('Sync failed — check connection') }
+        finally { syncingRef.current = false; setTimeout(() => setSyncToast(null), 2500) }
+      } else if (e.key === 'D') {
+        e.preventDefault()
+        syncingRef.current = true
+        setSyncToast('Downloading from cloud…')
+        try {
+          const cloudData = await syncFromCloud(uid)
+          if (cloudData) { setData(cloudData); setSyncToast('Loaded from cloud ✓') }
+          else { setSyncToast('No cloud data found') }
+        } catch { setSyncToast('Download failed — check connection') }
+        finally { syncingRef.current = false; setTimeout(() => setSyncToast(null), 2500) }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [uid, data, setData])
 
   // Auto dark mode scheduling — check every minute
   useEffect(() => {
@@ -710,11 +741,9 @@ export default function App() {
       {/* Floating mic indicator — shows on any page while Transcribe is recording */}
       <FloatingTranscribeIndicator />
 
-      {/* Cross-device content relay — only rendered when signed in */}
-      {uid && (
-        <Suspense fallback={null}>
-          <ContentRelay uid={uid} />
-        </Suspense>
+      {/* Global sync toast — Shift+S / Shift+D feedback */}
+      {syncToast && (
+        <div role="status" aria-live="polite" className="sync-toast">{syncToast}</div>
       )}
 
       {/* Omni Search palette — triggered by Cmd+F / Ctrl+F */}

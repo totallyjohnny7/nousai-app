@@ -8,14 +8,14 @@ import {
   Plus, ChevronLeft, ChevronRight, X, Edit3, Image,
   Search, FolderOpen, FileText, Grid,
   LayoutGrid, Download, Copy, Filter, Minus, BookOpen,
-  Save, Trash2, Check, Send,
+  Save, Trash2, Check,
 } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import type { Drawing } from '../types';
 import RichTextEditor from '../components/RichTextEditor';
-import { sendToRelay, buildRelayPayload } from '../utils/contentRelay';
-import { useAuthUser } from '../hooks/useAuthUser';
+
+
 
 /* ── Types ──────────────────────────────────────────── */
 type TemplateName = 'blank' | 'cornell' | 'grid' | 'dotgrid' | 'lined';
@@ -79,7 +79,7 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
 export default function DrawPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { loaded, data, setData, updatePluginData } = useStore();
   const navigate = useNavigate();
-  const location = useLocation();
+
 
   const [drawings, setDrawings] = useState<Drawing[]>([]);
   const [view, setView] = useState<'browser' | 'canvas' | 'typed'>('browser');
@@ -104,35 +104,6 @@ export default function DrawPage({ embedded = false }: { embedded?: boolean } = 
       }
     }
   }, [data]);
-
-  // Auto-open relayed drawing — triggered by ContentRelay "Open in Draw" action
-  useEffect(() => {
-    const state = location.state as { relayDrawing?: string } | null;
-    if (!state?.relayDrawing || !loaded) return;
-    try {
-      const parsed = JSON.parse(state.relayDrawing);
-      const newDrawing: Drawing = {
-        id: generateId(),
-        name: parsed.name ?? `Relayed Drawing ${new Date().toLocaleTimeString()}`,
-        data: JSON.stringify({ elements: parsed.elements ?? [], appState: parsed.appState ?? {}, files: parsed.files ?? {} }),
-        folder: 'Relay',
-        template: 'blank',
-        width: 1920,
-        height: 1080,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setDrawings(prev => {
-        const updated = [newDrawing, ...prev];
-        updatePluginData({ drawings: updated });
-        return updated;
-      });
-      setActiveDrawingId(newDrawing.id);
-      setView('canvas');
-      // Clear state so refresh doesn't re-import
-      window.history.replaceState({}, '', window.location.href);
-    } catch { /* invalid relay payload — ignore */ }
-  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist drawings to store (uses functional updater to prevent stale data overwrites)
   const persistDrawings = useCallback((updated: Drawing[]) => {
@@ -627,27 +598,7 @@ function ExcalidrawEditor({
   const [drawingName, setDrawingName] = useState(drawing.name);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isRelaying, setIsRelaying] = useState(false);
-  const { uid } = useAuthUser();
 
-  async function handleRelayDrawing() {
-    if (!uid) { showToast('Sign in to use relay'); return; }
-    setIsRelaying(true);
-    try {
-      const scene = JSON.stringify({
-        elements: Array.from(elementsRef.current),
-        appState: { viewBackgroundColor: appStateRef.current?.viewBackgroundColor ?? '#ffffff' },
-        files: filesRef.current ?? {},
-        name: drawingName,
-      });
-      await sendToRelay(uid, buildRelayPayload('drawing', scene));
-      showToast('Drawing sent to relay →');
-    } catch {
-      showToast('Relay failed — check connection');
-    } finally {
-      setIsRelaying(false);
-    }
-  }
 
   // Parse initial data — handle both new Excalidraw JSON format and legacy base64 format
   const initialData = useMemo(() => {
@@ -797,15 +748,6 @@ function ExcalidrawEditor({
           style={{ padding: '4px 10px', fontSize: 12 }}
         >
           <Download size={13} /> Export PNG
-        </button>
-        <button
-          className="btn btn-sm btn-secondary"
-          onClick={handleRelayDrawing}
-          disabled={isRelaying || !uid}
-          title={!uid ? 'Sign in to use relay' : 'Send drawing to another device'}
-          style={{ padding: '4px 10px', fontSize: 12, color: 'var(--color-accent)' }}
-        >
-          <Send size={13} /> {isRelaying ? 'Sending…' : 'Relay'}
         </button>
         <button
           className="btn btn-sm btn-primary"

@@ -20,8 +20,18 @@
 
 import { setStreamDeckConnected } from './deviceDetection';
 import { writeQKAction, saveQKConfig, loadQKConfig } from './auth';
-import { getDeviceFingerprint } from './contentRelay';
 import { renderKeyIcon, renderEmptyKey } from './streamDeckIcons';
+
+/** Short, session-stable fingerprint to prevent echoing QK actions back to sender */
+export function getDeviceFingerprint(): string {
+  const raw = navigator.userAgent.slice(0, 60) + screen.width + screen.height;
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+}
 
 export type StreamDeckMode = 'flashcard' | 'quiz' | 'drawing' | 'navigation' | 'notes';
 

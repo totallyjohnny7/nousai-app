@@ -18,7 +18,7 @@ import type { StreamDeckMode, StreamDeckModeConfig } from '../utils/streamDeckSe
 import { getActionIcon } from '../utils/streamDeckIcons';
 import { watchQKAction } from '../utils/auth';
 import type { QKActionPayload } from '../utils/auth';
-import { getDeviceFingerprint } from '../utils/contentRelay';
+import { getDeviceFingerprint } from '../utils/streamDeckService';
 
 interface VirtualStreamDeckProps {
   uid: string;

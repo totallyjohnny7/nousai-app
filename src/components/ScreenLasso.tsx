@@ -1,8 +1,8 @@
 /**
- * ScreenLasso — Windows Screen Region Capture → OCR → Relay
+ * ScreenLasso — Windows Screen Region Capture → OCR → Notes
  *
  * Uses getDisplayMedia to capture one frame, overlays a polygon lasso,
- * OCRs the selection via Mistral, and lets user save or relay the result.
+ * OCRs the selection via Mistral, and lets user save the result.
  *
  * Platform: Chrome/Edge on Windows/macOS only (requires getDisplayMedia).
  * iPad/Boox/Firefox: shows unsupported message, never crashes.
@@ -10,7 +10,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
-import { buildRelayPayload, sendToRelay } from '../utils/contentRelay';
+
 
 interface Props {
   isOpen: boolean;
@@ -234,15 +234,6 @@ export default function ScreenLasso({ isOpen, onClose, uid }: Props) {
     onClose();
   };
 
-  const handleSendToRelay = async () => {
-    if (!ocrResult || !uid) return;
-    try {
-      await sendToRelay(uid, buildRelayPayload('text', ocrResult));
-      onClose();
-    } catch {
-      setErrorMsg('Relay send failed. Check your connection.');
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -297,7 +288,6 @@ export default function ScreenLasso({ isOpen, onClose, uid }: Props) {
             <div className="screen-lasso-result__preview">{ocrResult.slice(0, 400)}{ocrResult.length > 400 && '…'}</div>
             <div className="screen-lasso-result__actions">
               <button className="btn btn-primary btn-sm" onClick={handleSaveToNotes}>Save to Notes</button>
-              {uid && <button className="btn btn-secondary btn-sm" onClick={handleSendToRelay}>Send to Relay</button>}
               <button className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard.writeText(ocrResult)}>Copy</button>
               <button className="btn btn-ghost btn-sm" onClick={onClose}>Close</button>
             </div>

@@ -238,7 +238,7 @@ const TOOLS: ToolEntry[] = [
   { id: 'video',      name: 'Video Studio', desc: 'Upload, record & annotate videos',icon: Film,         color: '#7c3aed', category: 'capture',   render: () => <Suspense fallback={<Loader />}><VideoTool /></Suspense> },
   { id: 'summarizer', name: 'AI Summarizer',desc: 'Paste text → key points',      icon: Sparkles,       color: '#06b6d4', category: 'capture',   render: () => <Suspense fallback={<Loader />}><ToolsPage initialView="summarizer" /></Suspense> },
   { id: 'big-content',name: '📚 Big Content', desc: 'Convert large text or documents into a reviewed atomic card deck', icon: BookOpen, color: '#8b5cf6', category: 'capture', render: () => <Suspense fallback={<Loader />}><BigContentTool /></Suspense> },
-  { id: 'screen-lasso',name: 'Screen Lasso', desc: 'Capture any screen region → OCR → Notes or relay to another device', icon: ScanSearch, color: '#06b6d4', category: 'capture', render: () => <Suspense fallback={<Loader />}><ScreenLassoTool /></Suspense> },
+  { id: 'screen-lasso',name: 'Screen Lasso', desc: 'Capture any screen region → OCR → Notes', icon: ScanSearch, color: '#06b6d4', category: 'capture', render: () => <Suspense fallback={<Loader />}><ScreenLassoTool /></Suspense> },
 
   // ── Analyze ───────────────────────────────────────────────────────────────
   { id: 'factcheck',  name: 'Fact Check',   desc: 'Verify claims & sources',      icon: CheckCircle,    color: '#22c55e', category: 'analyze',   render: () => <Suspense fallback={<Loader />}><FactCheckTool /></Suspense> },

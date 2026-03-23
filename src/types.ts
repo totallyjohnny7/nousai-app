@@ -1,17 +1,5 @@
 /* ── Plugin data.json types ────────────────────────────── */
 
-// ─── Cross-Device Content Relay ─────────────────────────
-export type RelayContentType = 'text' | 'image' | 'url' | 'note' | 'drawing';
-export interface RelayPayload {
-  type: RelayContentType;
-  content: string;         // raw text / base64 / URL / Note JSON (empty string when contentRef is set)
-  contentRef?: string;     // Firebase Storage download URL for payloads > 100KB
-  sizeBytes?: number;      // original content byte size (for progress display)
-  sourceDevice: string;   // fingerprint — prevents echo to sender
-  sentAt: string;          // ISO timestamp
-  expiresAt: string;       // sentAt + 30 seconds
-}
-
 // ─── Chunked File Processing ─────────────────────────────
 export interface ChunkManifest {
   fileId: string;

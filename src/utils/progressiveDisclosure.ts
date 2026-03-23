@@ -27,7 +27,7 @@ const FEATURE_GATES: FeatureGate[] = [
   { id: 'efficiency', name: 'Efficiency Score', tier: 'day1', description: 'Live performance metric' },
   { id: 'type-recall', name: 'Type-to-Recall', tier: 'day1', description: 'Generation effect' },
   { id: 'stats', name: 'Session Stats', tier: 'day1', description: 'Performance tracking' },
-  { id: 'relay', name: 'Content Relay', tier: 'day1', description: 'Cross-device sync' },
+
 
   // Day 7 — Intermediate
   { id: 'feynman', name: 'Feynman Mode', tier: 'day7', description: 'Explain like teaching' },
