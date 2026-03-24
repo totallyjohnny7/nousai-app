@@ -254,6 +254,10 @@ class AutoSyncScheduler {
 
   async flush() {
     if (!this.dirty) return;
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync.
+    // Clearing dirty flag prevents retries/heartbeats from re-entering.
+    this.dirty = false;
+    return;
     const uid = localStorage.getItem('nousai-auth-uid');
     const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
     if (!uid || !autoSync || !this.dataRef.current) return;
@@ -626,9 +630,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const startRemoteWatch = useCallback((uid: string) => {
+  const startRemoteWatch = useCallback((_uid: string) => {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles remote changes
+    return;
     snapshotUnsubRef.current?.();
-    subscribeToMetadataChanges(uid, (remoteUpdatedAt: string) => {
+    subscribeToMetadataChanges(_uid, (remoteUpdatedAt: string) => {
       const localLastSync = localStorage.getItem('nousai-last-sync');
       if (!localLastSync || remoteUpdatedAt > localLastSync) {
         // Skip if WE caused this update (sync-ID comparison, not time-based)
@@ -660,6 +666,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadRemoteData = useCallback(async () => {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
+    return;
     const uid = localStorage.getItem('nousai-auth-uid');
     if (!uid) return;
     setSyncStatus('syncing');
@@ -693,6 +701,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // ── Global sync triggers (for Ctrl+S / Ctrl+Shift+S hotkeys) ────
   const triggerSyncToCloud = useCallback(async () => {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
+    window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync is automatic via RxDB' }));
+    return;
     const uid = localStorage.getItem('nousai-auth-uid');
     if (!uid || !data) {
       window.dispatchEvent(new CustomEvent('nousai-toast', { detail: !uid ? 'Sign in to sync' : 'No data to sync' }));
@@ -715,6 +726,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [data]);
 
   const triggerSyncFromCloud = useCallback(async () => {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
+    window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync is automatic via RxDB' }));
+    return;
     const uid = localStorage.getItem('nousai-auth-uid');
     if (!uid) {
       window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sign in to sync' }));

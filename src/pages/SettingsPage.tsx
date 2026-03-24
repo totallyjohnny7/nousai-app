@@ -843,6 +843,9 @@ export default function SettingsPage() {
   }
 
   async function handleSyncToCloud() {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
+    showToast('Sync is now automatic — changes sync in real-time via RxDB.')
+    return
     console.log('[SYNC] handleSyncToCloud called', { authUser: !!authUser, data: !!data })
     if (!authUser || !data) {
       console.warn('[SYNC] Early return — authUser:', !!authUser, 'data:', !!data)
@@ -883,6 +886,9 @@ export default function SettingsPage() {
   }
 
   async function handleSyncFromCloud() {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
+    showToast('Sync is now automatic — changes sync in real-time via RxDB.')
+    return
     console.log('[SYNC] handleSyncFromCloud called', { authUser: !!authUser })
     if (!authUser) {
       console.warn('[SYNC] Early return — no authUser')
