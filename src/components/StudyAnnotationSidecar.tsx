@@ -1,21 +1,22 @@
 /**
  * StudyAnnotationSidecar — "Scribe OS" floating annotation panel.
  *
- * Four session-isolated tabs:
+ * Five session-isolated tabs:
  *   ✏️  Draw    (Amber)   — MiniDrawCanvas, strokes persisted per question
  *   📝  Scribe  (Emerald) — Markdown textarea, debounced save
  *   🎓  Scholar (Purple)  — AI chat with strict math-formatting hygiene
+ *   🔬  Lab     (Rose)    — AI-generated interactive HTML5/Canvas simulations
  *   📚  Library (Cyan)    — All past sessions for this subject, with Rehydrate
  *
  * State lives in the Zustand sessionStore (localStorage) + IDB for canvas.
  * Framer Motion drives the sliding tab-pill and session-swap animation.
  */
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Minus, GripHorizontal, Pencil, NotebookPen,
   GraduationCap, BookOpen, Send, Loader2, RotateCcw,
-  Trash2, Zap,
+  Trash2, Zap, Microscope, Maximize, RefreshCw,
 } from 'lucide-react';
 import MiniDrawCanvas from './MiniDrawCanvas';
 import { useSessionStore, type ScribeSession, type ChatMsg } from '../store/sessionStore';
@@ -29,6 +30,7 @@ const TABS = [
   { id: 'draw',    label: 'Draw',    Icon: Pencil,         color: '#f59e0b' },
   { id: 'scribe',  label: 'Scribe',  Icon: NotebookPen,    color: '#10b981' },
   { id: 'scholar', label: 'Scholar', Icon: GraduationCap,  color: '#8b5cf6' },
+  { id: 'lab',     label: 'Lab',     Icon: Microscope,     color: '#f43f5e' },
   { id: 'library', label: 'Library', Icon: BookOpen,       color: '#06b6d4' },
 ] as const;
 type Tab = typeof TABS[number]['id'];
@@ -335,6 +337,207 @@ function LibraryCard({ session, isCurrent, onRehydrate }: LibraryCardProps) {
   );
 }
 
+// ── Visual Lab mini-panel ─────────────────────────────────────────────
+
+interface LabPanelProps {
+  questionText: string;
+  subject: string;
+  sessionId: string;
+}
+
+function LabPanel({ questionText, subject, sessionId }: LabPanelProps) {
+  const storageKey = `scribe-lab-${sessionId}`;
+  const [labHtml, setLabHtml] = useState<string | null>(() => {
+    try { return localStorage.getItem(storageKey); } catch { return null; }
+  });
+  const [prompt, setPrompt] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Persist generated lab
+  useEffect(() => {
+    if (labHtml) {
+      try { localStorage.setItem(storageKey, labHtml); } catch { /* ignore */ }
+    }
+  }, [labHtml, storageKey]);
+
+  const generateLab = useCallback(async (overridePrompt?: string) => {
+    const q = (overridePrompt || prompt).trim();
+    if (!q || loading) return;
+    setError('');
+    setLoading(true);
+    try {
+      const sysPrompt = `You generate interactive HTML5/Canvas simulations. Return ONLY valid HTML code. No explanations, no markdown.`;
+      const userPrompt = `Create a self-contained HTML page that demonstrates: "${q}"
+
+Context: ${subject} — related to question: "${questionText.slice(0, 200)}"
+
+Requirements:
+1. Use a <canvas> element (320x240) for visualization with animation loop
+2. Include interactive controls (sliders, buttons) below the canvas
+3. Dark theme (background: #1a1a2e, text: #e0e0e0, accent: #f43f5e)
+4. All JavaScript inline (no external dependencies)
+5. Brief title at top, play/pause + reset buttons
+6. Display relevant values in real-time
+7. Start PAUSED, draw initial state immediately
+8. Wrap JS in try-catch + add window.onerror handler
+9. Keep total HTML under 8000 characters — compact, efficient code
+10. Use requestAnimationFrame for smooth animation
+11. Responsive layout with flexbox, fits small container
+
+Return ONLY the HTML. Start with <!DOCTYPE html>.`;
+
+      const html = await callAI([
+        { role: 'system', content: sysPrompt },
+        { role: 'user', content: userPrompt },
+      ], { temperature: 0.3, maxTokens: 12000 }, 'analysis');
+
+      let cleaned = html.trim();
+      if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```(?:html)?\n?/, '').replace(/\n?```$/, '');
+      }
+      if (!cleaned.includes('<') || cleaned.length < 100) {
+        throw new Error('AI returned invalid content.');
+      }
+      if (!cleaned.includes('<!DOCTYPE') && !cleaned.includes('<html')) {
+        cleaned = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>body{background:#1a1a2e;color:#e0e0e0;font-family:system-ui,sans-serif;margin:8px;}
+canvas{border:1px solid #333;border-radius:6px;display:block;margin:0 auto 8px;max-width:100%;}
+button{background:#f43f5e;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:11px;margin:2px;}
+input[type=range]{width:140px;}</style>
+</head><body>${cleaned}</body></html>`;
+      }
+
+      setLabHtml(cleaned);
+      setPrompt('');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to generate simulation.');
+    }
+    setLoading(false);
+  }, [prompt, loading, questionText, subject]);
+
+  const autoPrompt = `Visualize the concept from this question: "${questionText.slice(0, 120)}"`;
+
+  if (!isAIConfigured()) {
+    return (
+      <div style={{ padding: 16, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.6 }}>
+        Configure an AI provider in Settings to use Visual Lab.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 8, gap: 6 }}>
+      {labHtml ? (
+        <>
+          {/* Rendered simulation */}
+          <div style={{ flex: 1, minHeight: 0, position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
+            <iframe
+              ref={iframeRef}
+              srcDoc={labHtml}
+              sandbox="allow-scripts"
+              style={{ width: '100%', height: '100%', border: 'none', minHeight: 260, background: '#1a1a2e' }}
+              title="Visual Lab Simulation"
+            />
+          </div>
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => iframeRef.current?.requestFullscreen?.()}
+              style={{
+                fontSize: 10, padding: '3px 8px', borderRadius: 5,
+                border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+                color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', gap: 3,
+              }}
+            >
+              <Maximize size={9} /> Fullscreen
+            </button>
+            <button
+              onClick={() => generateLab(autoPrompt)}
+              disabled={loading}
+              style={{
+                fontSize: 10, padding: '3px 8px', borderRadius: 5,
+                border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+                color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', gap: 3,
+                opacity: loading ? 0.5 : 1,
+              }}
+            >
+              <RefreshCw size={9} /> Regenerate
+            </button>
+            <button
+              onClick={() => { setLabHtml(null); try { localStorage.removeItem(storageKey); } catch { /* */ } }}
+              style={{
+                fontSize: 10, padding: '3px 8px', borderRadius: 5,
+                border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.06)',
+                color: '#ef4444', cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', gap: 3, marginLeft: 'auto',
+              }}
+            >
+              <Trash2 size={9} /> Clear
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Prompt input */}
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 2 }}>
+            🔬 Generate an interactive simulation for this question.
+          </div>
+          <button
+            onClick={() => generateLab(autoPrompt)}
+            disabled={loading}
+            style={{
+              padding: '8px 12px', borderRadius: 8,
+              background: loading ? 'var(--bg-secondary)' : 'rgba(244,63,94,0.12)',
+              border: '1px solid rgba(244,63,94,0.3)',
+              color: loading ? 'var(--text-muted)' : '#f43f5e',
+              cursor: loading ? 'default' : 'pointer',
+              fontSize: 12, fontWeight: 700, fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}
+          >
+            {loading ? <><Loader2 size={13} className="spin" /> Generating…</> : <><Microscope size={13} /> Auto-Generate from Question</>}
+          </button>
+          <div style={{ fontSize: 10, color: 'var(--text-dim)', textAlign: 'center' }}>or</div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <input
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') generateLab(); }}
+              placeholder="Custom simulation prompt…"
+              disabled={loading}
+              style={{
+                flex: 1, padding: '6px 8px', border: '1px solid var(--border)',
+                borderRadius: 6, background: 'var(--bg-input)', color: 'var(--text-primary)',
+                fontSize: 11, outline: 'none', fontFamily: 'inherit',
+              }}
+            />
+            <button
+              onClick={() => generateLab()}
+              disabled={loading || !prompt.trim()}
+              style={{
+                padding: '4px 10px', borderRadius: 6, background: '#f43f5e',
+                border: 'none', cursor: 'pointer', color: '#fff',
+                opacity: loading || !prompt.trim() ? 0.4 : 1, fontFamily: 'inherit',
+              }}
+            >
+              <Send size={11} />
+            </button>
+          </div>
+          {error && (
+            <div style={{ fontSize: 10, color: '#ef4444', padding: '4px 6px', background: 'rgba(239,68,68,0.08)', borderRadius: 6 }}>
+              {error}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Main sidecar component ───────────────────────────────────────────
 
 interface Props {
@@ -385,13 +588,20 @@ export default function StudyAnnotationSidecar({
     setTextDraft(activeSession.textContent ?? '');
   }, [activeSession.sessionId, activeSession.textContent]);
 
-  // ── Dragging ──
-  const [pos, setPos] = useState(() => ({
-    x: Math.max(0, window.innerWidth - PANEL_W - 56),
-    y: 80,
-  }));
+  // ── Dragging (persisted position) ──
+  const [pos, setPos] = useState(() => {
+    try {
+      const saved = localStorage.getItem('scribe-os-pos');
+      if (saved) { const p = JSON.parse(saved); return { x: Math.min(p.x, window.innerWidth - 60), y: Math.min(p.y, window.innerHeight - 60) }; }
+    } catch { /* ignore */ }
+    return { x: Math.max(0, window.innerWidth - PANEL_W - 56), y: 80 };
+  });
   const dragging = useRef(false);
   const dragOrigin = useRef({ mx: 0, my: 0, px: 0, py: 0 });
+
+  // Persist position on change (debounced via drag end)
+  const savePosRef = useRef(pos);
+  savePosRef.current = pos;
 
   const onHeaderDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('button')) return;
@@ -405,12 +615,15 @@ export default function StudyAnnotationSidecar({
     const dx = e.clientX - dragOrigin.current.mx;
     const dy = e.clientY - dragOrigin.current.my;
     setPos({
-      x: Math.max(0, Math.min(window.innerWidth - PANEL_W, dragOrigin.current.px + dx)),
-      y: Math.max(0, Math.min(window.innerHeight - PANEL_H, dragOrigin.current.py + dy)),
+      x: Math.max(-PANEL_W + 60, Math.min(window.innerWidth - 60, dragOrigin.current.px + dx)),
+      y: Math.max(0, Math.min(window.innerHeight - 40, dragOrigin.current.py + dy)),
     });
   }, []);
 
-  const onHeaderUp = useCallback(() => { dragging.current = false; }, []);
+  const onHeaderUp = useCallback(() => {
+    dragging.current = false;
+    try { localStorage.setItem('scribe-os-pos', JSON.stringify(savePosRef.current)); } catch { /* ignore */ }
+  }, []);
 
   // ── Debounced text save ──
   const textTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -541,7 +754,7 @@ export default function StudyAnnotationSidecar({
         background: 'rgba(255,255,255,0.03)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
-        {TABS.filter(t => t.id !== 'scholar' || isAIConfigured()).map((t) => {
+        {TABS.filter(t => (t.id !== 'scholar' && t.id !== 'lab') || isAIConfigured()).map((t) => {
           const active = tab === t.id;
           return (
             <button
@@ -673,6 +886,16 @@ export default function StudyAnnotationSidecar({
                 questionText={questionText}
                 subject={subject}
                 options={options}
+              />
+            )}
+
+            {/* ── Lab Tab ── */}
+            {tab === 'lab' && isAIConfigured() && (
+              <LabPanel
+                key={activeSession.sessionId}
+                questionText={questionText}
+                subject={subject}
+                sessionId={activeSession.sessionId}
               />
             )}
 
