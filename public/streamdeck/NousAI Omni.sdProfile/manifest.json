@@ -1,0 +1,94 @@
+{
+  "Name": "NousAI Omni",
+  "Version": "3.0.0",
+  "Pages": {
+    "Page0": {
+      "Name": "📖 Study Mode",
+      "Rows": 3,
+      "Columns": 5,
+      "Actions": {
+        "0":  { "Name": "Flip Card",    "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 124, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "FLIP"       } },
+        "1":  { "Name": "Prev Card",    "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 125, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "PREV"       } },
+        "2":  { "Name": "Next Card",    "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 126, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "NEXT"       } },
+        "3":  { "Name": "Select Text",  "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 127, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "LASSO"      } },
+        "4":  { "Name": "Full Screen",  "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 124, "Shift": false, "Ctrl": false, "Alt": true  }, "Title": "FULL SCR"   } },
+        "5":  { "Name": "Again",        "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 128, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "AGAIN"      } },
+        "6":  { "Name": "Hard",         "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 129, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "HARD"       } },
+        "7":  { "Name": "Good",         "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 130, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "GOOD"       } },
+        "8":  { "Name": "Easy",         "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 131, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "EASY"       } },
+        "9":  { "Name": "Type Recall",  "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 125, "Shift": false, "Ctrl": false, "Alt": true  }, "Title": "TYPE"       } },
+        "10": { "Name": "AI Explain",   "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 132, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "AI EXPLAIN" } },
+        "11": { "Name": "RSVP Mode",    "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 133, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "RSVP"       } },
+        "12": { "Name": "Zen Mode",     "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 134, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "ZEN"        } },
+        "13": { "Name": "◄ Page",       "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 135, "Shift": false, "Ctrl": false, "Alt": false }, "Title": "◄PAGE"      } },
+        "14": { "Name": "Page ►",       "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 126, "Shift": false, "Ctrl": false, "Alt": true  }, "Title": "PAGE►"      } }
+      }
+    },
+    "Page1": {
+      "Name": "✏️ Drawing & Notes",
+      "Rows": 3,
+      "Columns": 5,
+      "Actions": {
+        "0":  { "Name": "Bold",         "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 124, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "BOLD"   } },
+        "1":  { "Name": "Highlighter",  "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 125, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "HILITE" } },
+        "2":  { "Name": "Pen Tool",     "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 126, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "PEN"    } },
+        "3":  { "Name": "Clear Canvas", "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 127, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "CLEAR"  } },
+        "4":  { "Name": "Fill Tool",    "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 124, "Shift": true,  "Ctrl": false, "Alt": true  }, "Title": "FILL"   } },
+        "5":  { "Name": "Search Notes", "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 128, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "SEARCH" } },
+        "6":  { "Name": "Italic",       "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 129, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "ITALIC" } },
+        "7":  { "Name": "Save",         "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 130, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "SAVE"   } },
+        "8":  { "Name": "Color Picker", "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 131, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "COLOR"  } },
+        "9":  { "Name": "Snap to Grid", "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 125, "Shift": true,  "Ctrl": false, "Alt": true  }, "Title": "SNAP"   } },
+        "10": { "Name": "Undo",         "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 132, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "UNDO"   } },
+        "11": { "Name": "Redo",         "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 133, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "REDO"   } },
+        "12": { "Name": "Eraser",       "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 134, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "ERASE"  } },
+        "13": { "Name": "◄ Page",       "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 135, "Shift": true,  "Ctrl": false, "Alt": false }, "Title": "◄PAGE"  } },
+        "14": { "Name": "Page ►",       "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 126, "Shift": true,  "Ctrl": false, "Alt": true  }, "Title": "PAGE►"  } }
+      }
+    },
+    "Page2": {
+      "Name": "🧭 Navigation",
+      "Rows": 3,
+      "Columns": 5,
+      "Actions": {
+        "0":  { "Name": "Home",         "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 124, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "HOME"   } },
+        "1":  { "Name": "Flashcards",   "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 125, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "CARDS"  } },
+        "2":  { "Name": "Quiz",         "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 126, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "QUIZ"   } },
+        "3":  { "Name": "Learn",        "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 127, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "LEARN"  } },
+        "4":  { "Name": "Dashboard",    "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 124, "Shift": false, "Ctrl": true,  "Alt": true  }, "Title": "DASH"   } },
+        "5":  { "Name": "Timer",        "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 128, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "TIMER"  } },
+        "6":  { "Name": "Library",      "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 129, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "NOTES"  } },
+        "7":  { "Name": "Calendar",     "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 130, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "CAL"    } },
+        "8":  { "Name": "Settings",     "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 131, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "SET"    } },
+        "9":  { "Name": "AI Tools",     "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 125, "Shift": false, "Ctrl": true,  "Alt": true  }, "Title": "AI"     } },
+        "10": { "Name": "Focus Lock",   "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 132, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "FOCUS"  } },
+        "11": { "Name": "Relay Send",   "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 133, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "RELAY"  } },
+        "12": { "Name": "Omni Study",   "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 134, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "OMNI"   } },
+        "13": { "Name": "◄ Page",       "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 135, "Shift": false, "Ctrl": true,  "Alt": false }, "Title": "◄PAGE"  } },
+        "14": { "Name": "Page ►",       "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 126, "Shift": false, "Ctrl": true,  "Alt": true  }, "Title": "PAGE►"  } }
+      }
+    },
+    "Page3": {
+      "Name": "🤖 AI Tools",
+      "Rows": 3,
+      "Columns": 5,
+      "Actions": {
+        "0":  { "Name": "Summarize",    "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 124, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "SUMM"   } },
+        "1":  { "Name": "Gen Cards",    "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 125, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "FLASH"  } },
+        "2":  { "Name": "Gen Quiz",     "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 126, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "QUIZ+"  } },
+        "3":  { "Name": "Dictionary",   "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 127, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "DICT"   } },
+        "4":  { "Name": "Gen Notes",    "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 124, "Shift": true,  "Ctrl": true,  "Alt": true  }, "Title": "NOTE"   } },
+        "5":  { "Name": "Hint",         "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 128, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "HINT"   } },
+        "6":  { "Name": "Cram Mode",    "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 129, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "CRAM"   } },
+        "7":  { "Name": "Study Plan",   "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 130, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "STUDY"  } },
+        "8":  { "Name": "Speed Preview","Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 131, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "SPEED"  } },
+        "9":  { "Name": "AI Tutor",     "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 125, "Shift": true,  "Ctrl": true,  "Alt": true  }, "Title": "TUTOR"  } },
+        "10": { "Name": "Interleave",   "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 132, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "INTER"  } },
+        "11": { "Name": "Statistics",   "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 133, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "STATS"  } },
+        "12": { "Name": "AI Review",    "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 134, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "REVIEW" } },
+        "13": { "Name": "◄ Page",       "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 135, "Shift": true,  "Ctrl": true,  "Alt": false }, "Title": "◄PAGE"  } },
+        "14": { "Name": "Page ►",       "Action": "com.elgato.streamdeck.system.hotkey", "Settings": { "HotKey": { "KeyCode": 126, "Shift": true,  "Ctrl": true,  "Alt": true  }, "Title": "PAGE►"  } }
+      }
+    }
+  }
+}

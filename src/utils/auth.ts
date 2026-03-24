@@ -13,6 +13,7 @@
 
 import type { NousAIData } from '../types';
 import pako from 'pako';
+import { setFirebaseRefs, startReplication, stopReplication } from '../db/replication';
 
 // ─── Firebase Config ────────────────────────────────────
 // Defaults to the NousAI Firebase project; can be overridden via localStorage
@@ -102,6 +103,9 @@ async function _doLoadFirebase(): Promise<boolean> {
     firebaseDb = getFirestore(firebaseApp);
     firebaseStorage = getStorage(firebaseApp);
 
+    // Expose Firebase refs to RxDB replication layer
+    setFirebaseRefs(firebaseDb, null); // fns set below after fbFns is populated
+
     // Store firebase functions in module scope (secure — not on window)
     fbFns = {
       signInWithEmailAndPassword,
@@ -127,6 +131,9 @@ async function _doLoadFirebase(): Promise<boolean> {
       uploadBytesResumable,
       deleteObject,
     };
+
+    // Now that fbFns is populated, update replication layer with full refs
+    setFirebaseRefs(firebaseDb, fbFns);
 
     return true;
   } catch (e) {
@@ -218,6 +225,9 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
 }
 
 export async function logOut(): Promise<void> {
+  // Stop RxDB replication before signing out
+  await stopReplication().catch(() => {});
+
   const loaded = await loadFirebase();
   if (!loaded) return;
 
@@ -242,8 +252,14 @@ export async function onAuthChange(callback: (user: AuthUser | null) => void): P
         emailVerified: fbUser.emailVerified,
         isAnonymous: fbUser.isAnonymous,
       });
+      // Start RxDB ↔ Firestore per-document replication
+      startReplication(fbUser.uid).catch(e =>
+        console.warn('[AUTH] RxDB replication start failed (non-fatal):', e)
+      );
     } else {
       callback(null);
+      // Stop replication on sign-out
+      stopReplication().catch(() => {});
     }
   });
 }
@@ -505,37 +521,56 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
   console.log('[AUTH] syncToCloud: splitting into', totalChunks, 'chunks');
 
   try {
-    // Delete old chunks first
+    // ATOMIC SYNC: Write new chunks with a versioned prefix FIRST, then swap
+    // the metadata pointer, then clean up old chunks. If we fail mid-write,
+    // old data is still intact and the metadata still points to the old version.
+    const syncVersion = Date.now();
+    const chunkPrefix = `v${syncVersion}_chunk_`;
     const chunksCol = fb.collection(firebaseDb, 'users', uid, 'sync-chunks');
-    const oldChunks = await fb.getDocs(chunksCol);
-    if (!oldChunks.empty) {
-      const batch = fb.writeBatch(firebaseDb);
-      oldChunks.forEach((d: any) => batch.delete(d.ref));
-      await batch.commit();
-      console.log('[AUTH] syncToCloud: deleted', oldChunks.size, 'old chunks');
-    }
 
-    // Write new chunks (Firestore batch limit is 500 ops)
+    // Step 1: Write ALL new chunks (versioned names — won't collide with old chunks)
     for (let i = 0; i < totalChunks; i++) {
       const chunk = compressed.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-      const chunkRef = fb.doc(firebaseDb, 'users', uid, 'sync-chunks', `chunk_${String(i).padStart(4, '0')}`);
+      const chunkRef = fb.doc(firebaseDb, 'users', uid, 'sync-chunks', `${chunkPrefix}${String(i).padStart(4, '0')}`);
       await fb.setDoc(chunkRef, { data: chunk, index: i });
     }
-    console.log('[AUTH] syncToCloud: wrote', totalChunks, 'chunks');
+    console.log('[AUTH] syncToCloud: wrote', totalChunks, 'new chunks (v' + syncVersion + ')');
 
-    // Write metadata and remove stale legacy fields from old sync formats
+    // Step 2: Atomically swap the metadata pointer to the new version
+    // This is the "commit point" — after this, readers see the new data
+    const now = new Date().toISOString();
     await fb.setDoc(docRef, {
       chunkedSync: true,
       totalChunks,
       compressedSize: compressed.length,
-      updatedAt: new Date().toISOString(),
-      version: '2.0.0',
-      // Clean up stale fields from old sync formats (storageSync V1.1, compressed V1)
+      chunkPrefix,           // tells reader which chunk set to load
+      syncVersion,           // monotonic version counter
+      updatedAt: now,
+      version: '2.1.0',     // bumped to indicate atomic sync format
+      // Clean up stale fields from old sync formats
       storageSync: fb.deleteField(),
       compressed: fb.deleteField(),
       data: fb.deleteField(),
     }, { merge: true });
-    console.log('[AUTH] syncToCloud: metadata written to Firestore');
+    console.log('[AUTH] syncToCloud: metadata swapped to v' + syncVersion);
+
+    // Step 3: Clean up old chunks (best-effort — if this fails, stale chunks just waste space)
+    try {
+      const allChunks = await fb.getDocs(chunksCol);
+      const staleChunks = allChunks.docs.filter((d: any) => !d.id.startsWith(chunkPrefix));
+      if (staleChunks.length > 0) {
+        // Firestore batch limit is 500 ops — process in batches
+        for (let i = 0; i < staleChunks.length; i += 450) {
+          const batch = fb.writeBatch(firebaseDb);
+          staleChunks.slice(i, i + 450).forEach((d: any) => batch.delete(d.ref));
+          await batch.commit();
+        }
+        console.log('[AUTH] syncToCloud: cleaned up', staleChunks.length, 'old chunks');
+      }
+    } catch (cleanupErr) {
+      // Cleanup failure is non-critical — old chunks are just wasted space
+      console.warn('[AUTH] syncToCloud: old chunk cleanup failed (non-critical):', cleanupErr);
+    }
   } catch (e: any) {
     console.error('[AUTH] syncToCloud: write failed', e?.code, e?.message);
     if (e?.code === 'permission-denied') {
@@ -567,13 +602,21 @@ export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
       try {
         let jsonStr: string;
         if (raw.chunkedSync) {
-          // V2: Read compressed data from Firestore subcollection chunks
-          console.log('[AUTH] syncFromCloud: reading', raw.totalChunks, 'chunks from Firestore...');
+          // V2/V2.1: Read compressed data from Firestore subcollection chunks
+          // V2.1 (atomic sync) uses chunkPrefix to identify the correct chunk set
+          const prefix = raw.chunkPrefix || 'chunk_'; // fallback for pre-atomic V2 format
+          console.log('[AUTH] syncFromCloud: reading', raw.totalChunks, 'chunks (prefix:', prefix + ')');
           const chunksCol = fb.collection(firebaseDb, 'users', uid, 'sync-chunks');
           const chunksSnap = await fb.getDocs(chunksCol);
+          // Only read chunks matching the current version prefix
           const sorted = chunksSnap.docs
+            .filter((d: any) => d.id.startsWith(prefix))
             .map((d: any) => ({ index: d.data().index, data: d.data().data }))
             .sort((a: any, b: any) => a.index - b.index);
+          if (sorted.length === 0 && raw.totalChunks > 0) {
+            console.error('[AUTH] syncFromCloud: no chunks found with prefix', prefix, '— possible corruption');
+            throw new Error('Sync data corrupted: chunks missing. Try syncing from another device.');
+          }
           const compressed = sorted.map((c: any) => c.data).join('');
           console.log('[AUTH] syncFromCloud: reassembled', (compressed.length / 1024).toFixed(1), 'KB compressed');
           jsonStr = decompressString(compressed);
@@ -878,112 +921,6 @@ export function removeLocalPin(): void {
   localStorage.removeItem('nousai-pin');
 }
 
-// ─── Cross-Device Content Relay ─────────────────────────────────────────────
-// Ephemeral Firestore doc at users/{uid}/relay/clipRelay.
-// NOT part of the main sync pipeline — no gzip, no trimForSync, no BroadcastChannel.
-
-/**
- * Write a relay payload to Firestore for pickup by another device.
- * Overwrites any previous relay doc — "last sent wins" clipboard model.
- */
-export async function writeRelayDoc(uid: string, data: unknown): Promise<void> {
-  const loaded = await loadFirebase();
-  if (!loaded || !fbFns) return;
-  const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'clipRelay');
-  await fbFns.setDoc(ref, data);
-}
-
-/**
- * Subscribe to relay doc updates for this user.
- * Returns an unsubscribe function — call it on component unmount.
- */
-export function watchRelayDoc(uid: string, cb: (data: unknown) => void): () => void {
-  // loadFirebase is async; we start the subscribe once Firebase is ready.
-  let unsub: (() => void) | null = null;
-  let cancelled = false;
-
-  loadFirebase().then((loaded) => {
-    if (cancelled || !loaded || !fbFns) return;
-    const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'clipRelay');
-    unsub = fbFns.onSnapshot(ref, (snap: any) => {
-      if (snap.exists()) cb(snap.data());
-    });
-  });
-
-  return () => {
-    cancelled = true;
-    unsub?.();
-  };
-}
-
-/**
- * Delete the relay doc after it has been received (keeps Firestore clean).
- */
-export async function deleteRelayDoc(uid: string): Promise<void> {
-  const loaded = await loadFirebase();
-  if (!loaded || !fbFns) return;
-  const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'clipRelay');
-  try { await fbFns.deleteDoc(ref); } catch { /* non-fatal */ }
-}
-
-/**
- * Upload large relay content to Firebase Storage.
- * Used when payload exceeds ~100KB to avoid Firestore 1MB doc limit.
- * Path: relay/{uid}/large-payload (overwritten each send — clipboard model)
- * Returns a download URL for the receiver to fetch.
- */
-export async function uploadRelayContent(uid: string, content: string): Promise<string> {
-  const loaded = await loadFirebase();
-  if (!loaded || !fbFns || !firebaseStorage) throw new Error('Firebase Storage not available');
-  const path = `relay/${uid}/large-payload`;
-  const ref = fbFns.storageRef(firebaseStorage, path);
-  await fbFns.uploadString(ref, content, 'raw');
-  return fbFns.getDownloadURL(ref);
-}
-
-/**
- * Download large relay content from a Firebase Storage URL.
- * Called by the receiver when `contentRef` is present in the relay doc.
- */
-export async function downloadRelayContent(url: string): Promise<string> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Relay content download failed: HTTP ${response.status}`);
-  return response.text();
-}
-
-// ─── Quick Keys Action Relay ──────────────────────────────────────────────────
-//
-// Ephemeral Firestore doc at users/{uid}/relay/qkAction.
-// Physical Quick Keys on Windows → Firestore → Boox fires same action.
-// Each action has a unique id to prevent duplicate firing on re-renders.
-
-export interface QKActionPayload {
-  actionId: string;
-  fromDevice: string;
-  ts: number; // epoch ms — receiver ignores events >5s old
-}
-
-export async function writeQKAction(uid: string, payload: QKActionPayload): Promise<void> {
-  const loaded = await loadFirebase();
-  if (!loaded || !fbFns) return;
-  const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'qkAction');
-  await fbFns.setDoc(ref, payload);
-}
-
-export function watchQKAction(uid: string, cb: (payload: QKActionPayload) => void): () => void {
-  let unsub: (() => void) | null = null;
-  let cancelled = false;
-  loadFirebase().then((loaded) => {
-    if (!loaded || !fbFns || cancelled) return;
-    const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'qkAction');
-    unsub = fbFns.onSnapshot(ref, (snap: { exists: () => boolean; data: () => unknown }) => {
-      if (!snap.exists()) return;
-      cb(snap.data() as QKActionPayload);
-    });
-  });
-  return () => { cancelled = true; unsub?.(); };
-}
-
 // ─── Quick Keys Config Sync ───────────────────────────────────────────────────
 //
 // Persists the QK button-mapping config to users/{uid}/relay/qkConfig.
@@ -1051,5 +988,54 @@ export async function saveConflictBackup(uid: string, data: NousAIData, label: s
   } catch (e) {
     // Backup failures are non-fatal — log but don't throw
     console.error('[BACKUP] Failed to save conflict backup:', e);
+  }
+}
+
+// ─── Content Sharing ────────────────────────────────────────
+
+export interface ShareableContent {
+  type: 'deck' | 'note' | 'drawing' | 'quiz';
+  data: unknown;
+  title: string;
+  ownerId: string;
+  ownerName: string;
+  courseId: string | null;
+  courseName: string | null;
+  createdAt: string;
+}
+
+/** Publish content to the shared-content collection. Returns the shareId. */
+export async function publishSharedContent(content: ShareableContent): Promise<string | null> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns) return null;
+  const fb = fbFns;
+  const shareId = crypto.randomUUID();
+  try {
+    const docRef = fb.doc(firebaseDb, 'shared-content', shareId);
+    await fb.setDoc(docRef, {
+      ...content,
+      createdAt: new Date().toISOString(),
+    });
+    console.log('[SHARE] Published content:', shareId);
+    return shareId;
+  } catch (e) {
+    console.error('[SHARE] Failed to publish:', e);
+    return null;
+  }
+}
+
+/** Fetch shared content by ID (public read). */
+export async function fetchSharedContent(shareId: string): Promise<ShareableContent | null> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns) return null;
+  const fb = fbFns;
+  try {
+    const docRef = fb.doc(firebaseDb, 'shared-content', shareId);
+    const snap = await fb.getDoc(docRef);
+    if (snap.exists()) return snap.data() as ShareableContent;
+    return null;
+  } catch (e) {
+    console.error('[SHARE] Failed to fetch:', e);
+    return null;
   }
 }

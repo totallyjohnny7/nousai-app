@@ -145,7 +145,7 @@ const DEFAULT_GAMEPAD_CONFIGS: Record<QuickKeysMode, GamepadModeConfig> = {
     buttons: [
       { gamepadIndex: 3,  actionId: 'notes_new' },
       { gamepadIndex: 0,  actionId: 'notes_search' },
-      { gamepadIndex: 2,  actionId: 'relay_send' },
+      { gamepadIndex: 2,  actionId: 'notes_export' },
       { gamepadIndex: 1,  actionId: 'screen_lasso' },
       { gamepadIndex: 4,  actionId: 'notes_bold' },
       { gamepadIndex: 5,  actionId: 'notes_italic' },

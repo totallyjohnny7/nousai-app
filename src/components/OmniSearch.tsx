@@ -56,7 +56,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   { id: 'start-quiz',  label: 'Start Quiz',        route: '/quiz',                   description: 'Start a quiz session' },
   { id: 'settings',    label: 'Open Settings',     route: '/settings',               description: 'Open app settings' },
   { id: 'timer',       label: 'Go to Timer',       route: '/timer',                  description: 'Open Pomodoro timer' },
-  { id: 'ai-tools',    label: 'Go to AI Tools',    route: '/ai',                     description: 'Open AI tools' },
+  { id: 'ai-tools',    label: 'Go to AI Tools',    route: '/learn',                  description: 'Open AI tools' },
 ]
 
 function stripHtml(html: string): string {

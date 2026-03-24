@@ -2,12 +2,13 @@
  * SocraticMode — AI-guided Socratic dialogue for deep understanding.
  * Extracted from LearnPage.tsx for use in UnifiedLearnPage.
  */
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { MessageCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { useStore } from '../../store';
 import { callAI, isAIConfigured } from '../../utils/ai';
 import { sanitizeHtml } from '../../utils/sanitize';
 import { renderMd } from '../../utils/renderMd';
+import { useToolSession } from '../../hooks/useToolSession';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '12px 16px', border: '2px solid var(--border)',
@@ -27,7 +28,16 @@ export default function SocraticMode() {
   const chatRef = useRef<HTMLDivElement>(null);
   const callingRef = useRef(false);
 
+  const session = useToolSession({ toolName: 'Socratic', toolIcon: '🤔' });
+
   const allCards = useMemo(() => courses.flatMap(c => c.flashcards || []), [courses]);
+
+  // Sync messages to session on every change (persist to IDB → cloud)
+  useEffect(() => {
+    if (messages.length > 0 && session.activeSessionId) {
+      // Messages are added individually via addMessage in the handlers below
+    }
+  }, [messages.length, session.activeSessionId]);
 
   function startDialogue() {
     if (!topic.trim()) return;
@@ -40,6 +50,9 @@ export default function SocraticMode() {
     setMessages([{ role: 'ai', text: firstQ }]);
     setStarted(true);
     setDepth(0);
+    // Persist session
+    session.startSession(topic);
+    session.addMessage('ai', firstQ);
   }
 
   async function respond() {
@@ -51,6 +64,7 @@ export default function SocraticMode() {
     setInput('');
     const updatedMsgs = [...messages, userMsg];
     setMessages(updatedMsgs);
+    session.addMessage('user', input);
     setLoading(true);
 
     if (isAIConfigured()) {
@@ -65,6 +79,7 @@ export default function SocraticMode() {
         }, ...context], { temperature: 0.7, maxTokens: 256 }, 'analysis');
         if (aiReply.trim()) {
           setMessages(prev => [...prev, { role: 'ai', text: aiReply.trim() }]);
+          session.addMessage('ai', aiReply.trim());
           setLoading(false);
           callingRef.current = false;
           setTimeout(() => chatRef.current?.scrollTo(0, chatRef.current.scrollHeight), 50);
@@ -87,6 +102,7 @@ export default function SocraticMode() {
       ? `Excellent depth of analysis! You have explored ${topic} from multiple angles. Key insight: your understanding has progressed through ${newDepth} layers of questioning. Consider writing a summary of what you discovered.`
       : probes[newDepth % probes.length];
     setMessages(prev => [...prev, { role: 'ai', text: aiReply }]);
+    session.addMessage('ai', aiReply);
     setLoading(false);
     callingRef.current = false;
     setTimeout(() => chatRef.current?.scrollTo(0, chatRef.current.scrollHeight), 50);

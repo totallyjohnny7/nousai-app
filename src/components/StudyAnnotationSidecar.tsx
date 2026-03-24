@@ -161,7 +161,7 @@ function ScholarChat({ sessionId, session, questionText, subject, options }: Sch
       {/* Messages */}
       <div
         ref={chatRef}
-        style={{ flex: 1, overflowY: 'auto', padding: '8px 10px' }}
+        style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '8px 10px' }}
       >
         {messages.length === 0 && (
           <div style={{
