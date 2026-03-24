@@ -8,6 +8,7 @@ import { saveSnapshot } from './utils/snapshotManager';
 import { dataHealthCheck, type HealthReport } from './utils/dataHealthCheck';
 import { saveGoldenCopy } from './utils/goldenCopy';
 import { initLeaderElection, destroyLeaderElection, broadcast, isLeader, getRole, TAB_ID, type TabRole } from './utils/tabLeader';
+import { initRxStore, loadFromRxDB, saveToRxDB, subscribeToRxChanges } from './db/useRxStore';
 
 /* ── Default empty state ──────────────────────────────── */
 const emptyGamification: GamificationData = {
@@ -402,20 +403,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDataRaw(prev => prev ? { ...prev, pluginData: { ...prev.pluginData, ...partial } } : prev);
   }, []);
 
-  // Load from IndexedDB on mount (run migrations + normalization to fill missing fields)
-  // Also checks for crash-recovery data from a follower tab that closed without syncing
+  // Load from RxDB on mount — runs migration from old blob on first load.
+  // Falls back to legacy IDB if RxDB fails (safety net during transition).
   useEffect(() => {
-    loadFromIDB().then(d => {
-      let source = 'idb';
+    (async () => {
+      let d: NousAIData | null = null;
+      let source = 'rxdb';
 
-      // Check if a follower tab stashed crash-recovery data that's newer than IDB
+      try {
+        // Initialize RxDB + run migration from old blob if needed
+        await initRxStore();
+        d = await loadFromRxDB();
+        // If RxDB returned null but old IDB has data, reset migration flag and use legacy
+        if (!d) {
+          const legacyData = await loadFromIDB();
+          if (legacyData) {
+            console.warn('[STORE] RxDB returned null but legacy IDB has data — using legacy, will retry migration');
+            localStorage.removeItem('nousai-rxdb-migrated');
+            d = legacyData;
+            source = 'idb-fallback';
+          }
+        }
+      } catch (rxErr) {
+        console.error('[STORE] RxDB load failed, falling back to legacy IDB:', rxErr);
+        source = 'idb-fallback';
+        d = await loadFromIDB();
+      }
+
+      // Check crash-recovery data from a follower tab that closed
       const crashRecovery = localStorage.getItem('nousai-crash-recovery');
       const crashAt = localStorage.getItem('nousai-crash-recovery-at');
       const idbModified = localStorage.getItem('nousai-data-modified-at');
       if (crashRecovery && crashAt && (!idbModified || crashAt > idbModified)) {
         try {
           const recovered = JSON.parse(crashRecovery) as NousAIData;
-          // Validate it has basic structure before using it
           if (recovered?.pluginData?.coachData) {
             d = recovered;
             source = 'crash-recovery';
@@ -423,7 +444,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
         } catch { /* corrupt crash recovery data — ignore */ }
       }
-      // Clean up crash-recovery data regardless
       localStorage.removeItem('nousai-crash-recovery');
       localStorage.removeItem('nousai-crash-recovery-at');
 
@@ -447,7 +467,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setDataRaw(final);
       }
       setLoaded(true);
-    });
+    })();
   }, []);
 
   // Persist to IndexedDB on change — debounced to avoid redundant writes during rapid updates
@@ -474,14 +494,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Leader tab: write to IDB as before
+      // Leader tab: write to RxDB (per-document, only changed collections)
       const MAX_QUIZ_HISTORY = 500;
       const qh = data.pluginData?.quizHistory;
-      if (qh && qh.length > MAX_QUIZ_HISTORY) {
-        const trimmed = qh.slice(-MAX_QUIZ_HISTORY);
-        saveToIDB({ ...data, pluginData: { ...data.pluginData, quizHistory: trimmed } });
-      } else {
-        saveToIDB(data);
+      const dataToSave = (qh && qh.length > MAX_QUIZ_HISTORY)
+        ? { ...data, pluginData: { ...data.pluginData, quizHistory: qh.slice(-MAX_QUIZ_HISTORY) } }
+        : data;
+      try {
+        await saveToRxDB(dataToSave);
+      } catch (rxErr) {
+        console.error('[STORE] RxDB save failed, falling back to legacy IDB:', rxErr);
+        saveToIDB(dataToSave);
       }
       localDirtyRef.current = false;
       localStorage.setItem('nousai-data-modified-at', new Date().toISOString());
@@ -506,10 +529,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     initLeaderElection({
       onBecomeLeader: () => {
         tabRoleRef.current = 'leader';
-        console.log('[STORE] Became leader — owning IDB writes');
-        // Force-write current state to IDB to establish baseline
+        console.log('[STORE] Became leader — owning RxDB writes');
+        // Force-write current state to RxDB to establish baseline
         if (dataRef.current && loaded) {
-          saveToIDB(dataRef.current);
+          saveToRxDB(dataRef.current).catch(() => saveToIDB(dataRef.current!));
         }
       },
       onLoseLeadership: () => {
@@ -518,10 +541,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       onMessage: (msg: any) => {
         if (msg?.type === 'data-changed') {
-          // Another tab (leader) updated IDB — reload
+          // Another tab (leader) updated RxDB — reload
           if (debounce) clearTimeout(debounce);
           debounce = setTimeout(async () => {
-            const fresh = await loadFromIDB();
+            const fresh = await loadFromRxDB() || await loadFromIDB();
             if (fresh) {
               fromSyncRef.current = true;
               setDataRaw(normalizeData(fresh));
@@ -740,7 +763,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState === 'hidden') {
         // Leader: force-flush to IDB immediately (no debounce) + cloud sync
         if (isLeader()) {
-          if (dataRef.current) saveToIDB(dataRef.current);
+          if (dataRef.current) {
+            saveToRxDB(dataRef.current).catch(() => saveToIDB(dataRef.current!));
+          }
           autoSyncRef.current.flush();
         } else if (dataRef.current && localDirtyRef.current) {
           // Follower: stash unsaved state to localStorage before tab goes hidden
@@ -780,8 +805,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const flush = (e: BeforeUnloadEvent) => {
       if (dataRef.current) {
         if (isLeader()) {
-          // Leader: synchronous IDB write (best-effort, may not complete)
-          saveToIDB(dataRef.current);
+          // Leader: best-effort write (RxDB with IDB fallback)
+          saveToRxDB(dataRef.current).catch(() => saveToIDB(dataRef.current!));
         } else {
           // Follower: stash to localStorage as crash-recovery backup
           // (localStorage is synchronous — guaranteed to complete before tab closes)

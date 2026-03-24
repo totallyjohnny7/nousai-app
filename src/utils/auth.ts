@@ -13,6 +13,7 @@
 
 import type { NousAIData } from '../types';
 import pako from 'pako';
+import { setFirebaseRefs, startReplication, stopReplication } from '../db/replication';
 
 // ─── Firebase Config ────────────────────────────────────
 // Defaults to the NousAI Firebase project; can be overridden via localStorage
@@ -102,6 +103,9 @@ async function _doLoadFirebase(): Promise<boolean> {
     firebaseDb = getFirestore(firebaseApp);
     firebaseStorage = getStorage(firebaseApp);
 
+    // Expose Firebase refs to RxDB replication layer
+    setFirebaseRefs(firebaseDb, null); // fns set below after fbFns is populated
+
     // Store firebase functions in module scope (secure — not on window)
     fbFns = {
       signInWithEmailAndPassword,
@@ -127,6 +131,9 @@ async function _doLoadFirebase(): Promise<boolean> {
       uploadBytesResumable,
       deleteObject,
     };
+
+    // Now that fbFns is populated, update replication layer with full refs
+    setFirebaseRefs(firebaseDb, fbFns);
 
     return true;
   } catch (e) {
@@ -218,6 +225,9 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
 }
 
 export async function logOut(): Promise<void> {
+  // Stop RxDB replication before signing out
+  await stopReplication().catch(() => {});
+
   const loaded = await loadFirebase();
   if (!loaded) return;
 
@@ -242,8 +252,14 @@ export async function onAuthChange(callback: (user: AuthUser | null) => void): P
         emailVerified: fbUser.emailVerified,
         isAnonymous: fbUser.isAnonymous,
       });
+      // Start RxDB ↔ Firestore per-document replication
+      startReplication(fbUser.uid).catch(e =>
+        console.warn('[AUTH] RxDB replication start failed (non-fatal):', e)
+      );
     } else {
       callback(null);
+      // Stop replication on sign-out
+      stopReplication().catch(() => {});
     }
   });
 }
