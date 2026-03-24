@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
-import type { NousAIData, FlashcardItem, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext, SavedVideo, VideoCaption, VideoNote, VideoNoteCategory, VideoNoteTemplate } from './types';
+import type { NousAIData, FlashcardItem, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext, SavedVideo, VideoCaption, VideoNote, VideoNoteCategory, VideoNoteTemplate, DeviceSettings } from './types';
 import { writeClipboard, saveFilePicker, openFilePicker, getPermPref } from './utils/permissions';
 import { syncToCloud, syncFromCloud, subscribeToMetadataChanges } from './utils/auth';
 import { runMigrations } from './utils/migrations';
@@ -285,6 +285,16 @@ interface StoreCtx {
   addVideo: (video: SavedVideo) => void
   deleteVideo: (videoId: string) => void
   updateVideoMeta: (videoId: string, updates: Partial<Pick<SavedVideo, 'title' | 'captions' | 'defaultSpeed' | 'courseId' | 'downloadUrl' | 'thumbnailBase64' | 'notes' | 'noteTemplates' | 'duration'>>) => void
+  // Device settings (Input Devices — K20, Stream Deck, Gamepad, etc.)
+  deviceSettings: DeviceSettings
+  setDeviceSettings: (settings: DeviceSettings) => void
+  // UI state flags for K20 hotkey system
+  isReviewActive: boolean
+  setIsReviewActive: (v: boolean) => void
+  modalOpen: boolean
+  setModalOpen: (v: boolean) => void
+  annotationPanelOpen: boolean
+  setAnnotationPanelOpen: (v: boolean) => void
 }
 
 const Ctx = createContext<StoreCtx>({} as StoreCtx);
@@ -312,6 +322,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try { return JSON.parse(localStorage.getItem('nousai-hidden-tools') ?? '[]') } catch { return [] }
   });
   const snapshotUnsubRef = useRef<(() => void) | null>(null);
+
+  // ── Device settings (K20, Stream Deck, Gamepad, etc.) ──
+  const [deviceSettings, setDeviceSettingsRaw] = useState<DeviceSettings>(() => {
+    try {
+      const raw = localStorage.getItem('nousai_device_settings');
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<DeviceSettings>;
+        return { k20: true, streamDeck: false, gamepad: false, midi: false, otherHID: false, ...parsed, keyboard: true } as DeviceSettings;
+      }
+    } catch { /* corrupt */ }
+    return { keyboard: true, k20: true, streamDeck: false, gamepad: false, midi: false, otherHID: false };
+  });
+  const setDeviceSettings = useCallback((s: DeviceSettings) => {
+    const safe = { ...s, keyboard: true as const };
+    setDeviceSettingsRaw(safe);
+    try { localStorage.setItem('nousai_device_settings', JSON.stringify(safe)); } catch { /* full */ }
+  }, []);
+
+  // ── UI state flags for K20 hotkey system ──
+  const [isReviewActive, setIsReviewActive] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
 
   // Keep ref in sync so functional updaters always read latest
   useEffect(() => { dataRef.current = data; }, [data]);
@@ -781,11 +813,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('nousai-hidden-tools', JSON.stringify(ids));
     },
     savedVideos, addVideo, deleteVideo, updateVideoMeta,
+    deviceSettings, setDeviceSettings,
+    isReviewActive, setIsReviewActive,
+    modalOpen, setModalOpen,
+    annotationPanelOpen, setAnnotationPanelOpen,
   }), [data, loaded, matchSets, savedVideos, events, quizHistory, courses, gamification, proficiency, srData, timerState, einkMode, betaMode, // eslint-disable-line react-hooks/exhaustive-deps
     setData, updatePluginData, copyToClipboard, exportToFile, backupNow,
     syncStatus, lastSyncAt, remoteUpdateAvailable,
     startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
-    activePageContext, hiddenToolIds, healthReport]);
+    activePageContext, hiddenToolIds, healthReport,
+    deviceSettings, setDeviceSettings,
+    isReviewActive, setIsReviewActive, modalOpen, setModalOpen, annotationPanelOpen, setAnnotationPanelOpen]);
 
   return (
     <Ctx.Provider value={ctxValue}>

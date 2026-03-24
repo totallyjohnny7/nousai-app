@@ -857,3 +857,13 @@ export interface LinkItem {
   fileSize?: number   // bytes
   dataUrl?: string    // base64 data URL (only for files, loaded from IndexedDB)
 }
+
+// ─── Device Settings (Input Devices) ────────────────────────────────────────
+export interface DeviceSettings {
+  keyboard: true;       // locked — cannot disable
+  k20: boolean;         // HUION K20 KeyDial Mini
+  streamDeck: boolean;  // Elgato Stream Deck
+  gamepad: boolean;     // Game Controller (Gamepad API)
+  midi: boolean;        // MIDI Controller
+  otherHID: boolean;    // Other HID devices
+}

@@ -22,6 +22,7 @@ import { useAuthUser } from './hooks/useAuthUser'
 import { streamDeckService, StreamDeckService } from './utils/streamDeckService'
 import { watchQKAction } from './utils/auth'
 import { getDeviceFingerprint } from './utils/contentRelay'
+import { useK20Hotkeys } from './hooks/useK20Hotkeys'
 import './App.css'
 
 const ContentRelay = lazyWithRetry(() => import('./components/ContentRelay'))
@@ -279,7 +280,7 @@ function FloatingTranscribeIndicator() {
 }
 
 export default function App() {
-  const { loaded, data, setData, srData, updatePluginData, syncStatus, lastSyncAt, remoteUpdateAvailable, loadRemoteData, dismissRemoteBanner, betaMode, backupNow, courses, setEinkMode } = useStore()
+  const { loaded, data, setData, srData, updatePluginData, syncStatus, lastSyncAt, remoteUpdateAvailable, loadRemoteData, dismissRemoteBanner, betaMode, backupNow, courses, setEinkMode, isReviewActive, modalOpen, annotationPanelOpen, setModalOpen, setAnnotationPanelOpen } = useStore()
   const { uid } = useAuthUser()
   const location = useLocation()
   const initRef = useRef(false)
@@ -441,6 +442,17 @@ export default function App() {
 
   // Beta keyboard shortcuts: N=new note, Q=quiz, F=flashcards, ?=overlay, F11=focus mode
   const navigate = useNavigate()
+
+  // ── HUION K20 KeyDial Mini global hotkey handler ──
+  useK20Hotkeys({
+    isReviewActive,
+    modalOpen,
+    annotationPanelOpen,
+    navigateBack: () => navigate(-1),
+    closeModal: () => setModalOpen(false),
+    closeAnnotationPanel: () => setAnnotationPanelOpen(false),
+  })
+
   useEffect(() => {
     if (!betaMode) return
     const handler = (e: KeyboardEvent) => {
