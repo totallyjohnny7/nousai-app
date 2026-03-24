@@ -1,12 +1,13 @@
 /**
- * NousPanel — Persistent floating AI assistant panel
- * Pinned to the right side of every page, never interrupts navigation.
- * Collapsed: 40px vertical tab. Expanded: 350px drawer (mobile: full-width bottom sheet).
- * State persisted in localStorage key: nous_panel_open
+ * NousPanel — Production-grade floating AI assistant window
+ * Uses react-rnd for drag + resize on desktop, pure CSS bottom sheet on mobile.
+ * State machine: normal | minimized | maximized | hidden
+ * Chat state is component-local (never touches Zustand store).
  */
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Brain, X, Trash2, Copy, Check, Send, Paperclip, Settings, Maximize2, Minimize2 } from 'lucide-react'
+import { Rnd } from 'react-rnd'
+import { Brain, X, Trash2, Copy, Check, Send, Paperclip, Settings, Minus, Square, Maximize2 } from 'lucide-react'
 import { useStore } from '../store'
 import { callAI, isAIConfigured } from '../utils/ai'
 import { safeRenderMd } from '../utils/renderMd'
@@ -29,34 +30,69 @@ interface Message {
   content: string
 }
 
+type WindowState = 'normal' | 'minimized' | 'maximized' | 'hidden'
+
+interface WindowGeometry {
+  x: number
+  y: number
+  width: number
+  height: number
+  state: WindowState
+}
+
+export interface NousPanelProps {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+}
+
+/* ── Constants ────────────────────────────────────────── */
+const LS_KEY = 'nous-chat-window'
+const OLD_KEYS = ['nous_panel_open', 'nous_panel_floating', 'nous_panel_pos']
+const DEFAULT_W = 380
+const DEFAULT_H = 520
+const MIN_W = 300
+const MIN_H = 400
+const TITLE_BAR_H = 44
+const SNAP_THRESHOLD = 20
+const DEAD_ZONE = { right: 420, bottom: 220 } // bottom-right dead zone
+const MOBILE_BP = 768
+
+function defaultGeometry(): WindowGeometry {
+  const x = typeof window !== 'undefined' ? window.innerWidth - DEFAULT_W - 24 : 200
+  const y = typeof window !== 'undefined' ? Math.max(24, (window.innerHeight - DEFAULT_H) / 2) : 80
+  return { x, y, width: DEFAULT_W, height: DEFAULT_H, state: 'hidden' }
+}
+
+function loadGeometry(): WindowGeometry {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return { ...defaultGeometry(), ...parsed }
+    }
+  } catch { /* ignore */ }
+  return defaultGeometry()
+}
+
+function migrateOldKeys() {
+  try {
+    OLD_KEYS.forEach(k => localStorage.removeItem(k))
+  } catch { /* ignore */ }
+}
+
 /* ── Helpers ───────────────────────────────────────────── */
 function getViewName(pathname: string): string {
   const map: Record<string, string> = {
-    '/': 'Dashboard',
-    '/quiz': 'Quizzes',
-    '/quizzes': 'Quizzes',
-    '/learn': 'Learn',
-    '/flashcards': 'Flashcards',
-    '/library': 'Library',
-    '/ai': 'AI Tools',
-    '/tools': 'Tools',
-    '/timer': 'Timer',
-    '/calendar': 'Calendar',
-    '/settings': 'Settings',
-    '/course': 'Course',
-    '/study': 'Study',
+    '/': 'Dashboard', '/quiz': 'Quizzes', '/quizzes': 'Quizzes', '/learn': 'Learn',
+    '/flashcards': 'Flashcards', '/library': 'Library', '/ai': 'AI Tools', '/tools': 'Tools',
+    '/timer': 'Timer', '/calendar': 'Calendar', '/settings': 'Settings', '/course': 'Course', '/study': 'Study',
   }
   return map[pathname] || pathname
 }
 
 function buildSystemPrompt(
-  activeView: string,
-  courseNames: string,
-  total: number,
-  mastered: number,
-  learning: number,
-  provider: string,
-  model: string,
+  activeView: string, courseNames: string, total: number, mastered: number,
+  learning: number, provider: string, model: string,
 ): string {
   return `You are the Nous AI assistant embedded inside the Nous AI study app.
 
@@ -70,34 +106,74 @@ Answer questions about the user's notes, vocab, quizzes, and study progress. Kee
 }
 
 /* ── Action detection ──────────────────────────────────── */
-interface DetectedAction {
-  label: string
-  path: string
-}
+interface DetectedAction { label: string; path: string }
 
 function detectActions(text: string): DetectedAction[] {
   const actions: DetectedAction[] = []
   const lower = text.toLowerCase()
-  if (lower.includes('start a quiz') || lower.includes('take a quiz') || lower.includes('quiz yourself')) {
+  if (lower.includes('start a quiz') || lower.includes('take a quiz') || lower.includes('quiz yourself'))
     actions.push({ label: 'Start Quiz', path: '/quiz' })
-  }
-  if (lower.includes('review flashcard') || lower.includes('review your card') || lower.includes('spaced repetition')) {
+  if (lower.includes('review flashcard') || lower.includes('review your card') || lower.includes('spaced repetition'))
     actions.push({ label: 'Review Flashcards', path: '/flashcards' })
-  }
-  if (lower.includes('mind map') || lower.includes('ai tool') || lower.includes('open the ai')) {
+  if (lower.includes('mind map') || lower.includes('ai tool') || lower.includes('open the ai'))
     actions.push({ label: 'Open AI Tools', path: '/ai' })
-  }
-  if (lower.includes('study session') || lower.includes('timer') || lower.includes('pomodoro')) {
+  if (lower.includes('study session') || lower.includes('timer') || lower.includes('pomodoro'))
     actions.push({ label: 'Start Timer', path: '/timer' })
-  }
   return actions
 }
 
+/* ── Geometry helpers ─────────────────────────────────── */
+function snapToEdges(x: number, y: number, w: number, h: number): { x: number; y: number } {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  let sx = x, sy = y
+  if (x < SNAP_THRESHOLD) sx = 0
+  else if (x + w > vw - SNAP_THRESHOLD) sx = vw - w
+  if (y < SNAP_THRESHOLD) sy = 0
+  else if (y + h > vh - SNAP_THRESHOLD) sy = vh - h
+  return { x: sx, y: sy }
+}
+
+function enforceDeadZone(x: number, y: number, w: number, h: number): { x: number; y: number } {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const dzLeft = vw - DEAD_ZONE.right
+  const dzTop = vh - DEAD_ZONE.bottom
+  // If panel overlaps dead zone, push it out
+  if (x + w > dzLeft && y + h > dzTop) {
+    // Push whichever direction is shorter
+    const pushLeft = (x + w) - dzLeft
+    const pushUp = (y + h) - dzTop
+    if (pushLeft < pushUp) return { x: x - pushLeft, y }
+    return { x, y: y - pushUp }
+  }
+  return { x, y }
+}
+
+function clampToViewport(x: number, y: number, w: number, h: number): { x: number; y: number } {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  return {
+    x: Math.max(0, Math.min(x, vw - Math.min(w, 80))),
+    y: Math.max(0, Math.min(y, vh - TITLE_BAR_H)),
+  }
+}
+
+function isMobile() {
+  return typeof window !== 'undefined' && window.innerWidth < MOBILE_BP
+}
+
 /* ── Component ─────────────────────────────────────────── */
-export default function NousPanel() {
-  const [open, setOpen] = useState(() => {
-    try { return localStorage.getItem('nous_panel_open') === 'true' } catch { return false }
-  })
+export default function NousPanel({ open, onOpenChange }: NousPanelProps) {
+  // ── Window state ────────────────────────────────────────
+  const [geo, setGeo] = useState<WindowGeometry>(loadGeometry)
+  const [winState, setWinState] = useState<WindowState>(() => open ? (loadGeometry().state === 'hidden' ? 'normal' : loadGeometry().state) : 'hidden')
+  const [animateClass, setAnimateClass] = useState(true)
+  const [zIndex, setZIndex] = useState(9999)
+  const zRef = useRef(9999)
+  const rndRef = useRef<Rnd | null>(null)
+
+  // ── Chat state ──────────────────────────────────────────
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -108,24 +184,7 @@ export default function NousPanel() {
   const [attachError, setAttachError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // ── Floating / drag state ────────────────────────────────
-  const [isFloating, setIsFloating] = useState(() => {
-    try { return localStorage.getItem('nous_panel_floating') === 'true' } catch { return false }
-  })
-  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
-    try {
-      const saved = localStorage.getItem('nous_panel_pos')
-      return saved ? JSON.parse(saved) : { x: window.innerWidth - 400, y: 80 }
-    } catch { return { x: window.innerWidth - 400, y: 80 } }
-  })
-  const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number; currentX: number; currentY: number } | null>(null)
-  const posRef = useRef(pos)
-  const panelRef = useRef<HTMLDivElement>(null)
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { courses, srData, activePageContext } = useStore()
-
-  // ── Settings state ───────────────────────────────────────
+  // ── Settings state ──────────────────────────────────────
   const [showSettings, setShowSettings] = useState(false)
   const [contextDepth, setContextDepthState] = useState<'minimal' | 'smart' | 'deep'>(() =>
     (localStorage.getItem('nous_context_depth') as 'minimal' | 'smart' | 'deep') || 'smart'
@@ -133,69 +192,71 @@ export default function NousPanel() {
   const [maxAttachments, setMaxAttachmentsState] = useState<number>(() =>
     parseInt(localStorage.getItem('nous_max_attachments') || '4', 10)
   )
-  const [floatOnOpen, setFloatOnOpenState] = useState(() =>
-    localStorage.getItem('nous_float_on_open') === 'true'
-  )
   const [clearOnNavigate, setClearOnNavigateState] = useState(() =>
     localStorage.getItem('nous_clear_on_navigate') === 'true'
   )
 
-  // Persist panel open/closed state
-  useEffect(() => {
-    try { localStorage.setItem('nous_panel_open', String(open)) } catch { /* ignore */ }
-  }, [open])
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { courses, srData, activePageContext } = useStore()
 
-  useEffect(() => {
-    try { localStorage.setItem('nous_panel_floating', String(isFloating)) } catch { /* ignore */ }
-  }, [isFloating])
+  // ── Mobile swipe state ──────────────────────────────────
+  const touchStartY = useRef<number | null>(null)
 
-  const posSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // ── Migrate old localStorage keys on mount ──────────────
+  useEffect(() => { migrateOldKeys() }, [])
+
+  // ── Sync open prop → winState ───────────────────────────
   useEffect(() => {
-    if (posSaveTimer.current) clearTimeout(posSaveTimer.current)
-    posSaveTimer.current = setTimeout(() => {
-      try { localStorage.setItem('nous_panel_pos', JSON.stringify(pos)) } catch { /* ignore */ }
+    if (open && winState === 'hidden') setWinState('normal')
+    if (!open && winState !== 'hidden') setWinState('hidden')
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Sync winState → open prop ───────────────────────────
+  useEffect(() => {
+    if (winState === 'hidden' && open) onOpenChange(false)
+    if (winState !== 'hidden' && !open) onOpenChange(true)
+  }, [winState]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Persist geometry (debounced) ────────────────────────
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify({ ...geo, state: winState }))
+      } catch { /* ignore */ }
     }, 200)
-    return () => {
-      if (posSaveTimer.current) clearTimeout(posSaveTimer.current)
-    }
-  }, [pos])
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
+  }, [geo, winState])
 
+  // ── Settings persistence ────────────────────────────────
   const setContextDepth = useCallback((v: 'minimal' | 'smart' | 'deep') => {
     setContextDepthState(v)
     try { localStorage.setItem('nous_context_depth', v) } catch { /* ignore */ }
   }, [])
-
   const setMaxAttachments = useCallback((v: number) => {
     setMaxAttachmentsState(v)
     try { localStorage.setItem('nous_max_attachments', String(v)) } catch { /* ignore */ }
   }, [])
-
-  const setFloatOnOpen = useCallback((v: boolean) => {
-    setFloatOnOpenState(v)
-    try { localStorage.setItem('nous_float_on_open', String(v)) } catch { /* ignore */ }
-  }, [])
-
   const setClearOnNavigate = useCallback((v: boolean) => {
     setClearOnNavigateState(v)
     try { localStorage.setItem('nous_clear_on_navigate', String(v)) } catch { /* ignore */ }
   }, [])
 
-  useEffect(() => {
-    if (open && floatOnOpen) setIsFloating(true)
-  }, [open, floatOnOpen])
-
+  // ── Clear on navigate ───────────────────────────────────
   useEffect(() => {
     if (clearOnNavigate) setMessages([])
   }, [location.pathname, clearOnNavigate])
 
-  // Auto-scroll to latest message
+  // ── Auto-scroll ─────────────────────────────────────────
   useEffect(() => {
-    if (open) {
+    if (winState === 'normal' || winState === 'maximized') {
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     }
-  }, [messages, open])
+  }, [messages, winState])
 
-  // Auto-resize textarea
+  // ── Auto-resize textarea ────────────────────────────────
   useEffect(() => {
     const ta = textareaRef.current
     if (!ta) return
@@ -203,26 +264,64 @@ export default function NousPanel() {
     ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'
   }, [input])
 
+  // ── Window resize: re-clamp ─────────────────────────────
+  useEffect(() => {
+    const handler = () => {
+      if (winState !== 'normal') return
+      setGeo(prev => {
+        const { x, y } = clampToViewport(prev.x, prev.y, prev.width, prev.height)
+        if (x === prev.x && y === prev.y) return prev
+        return { ...prev, x, y }
+      })
+    }
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [winState])
+
+  // ── Click outside → minimize (desktop only, normal state) ─
+  useEffect(() => {
+    if (winState !== 'normal' || isMobile()) return
+    const handler = (e: MouseEvent) => {
+      const rndEl = document.querySelector('.nous-rnd-wrapper')
+      if (rndEl && !rndEl.contains(e.target as Node)) {
+        setTimeout(() => setWinState('minimized'), 100)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [winState])
+
+  // ── Paste handler for images ────────────────────────────
+  useEffect(() => {
+    if (winState === 'hidden') return
+    const handler = async (e: ClipboardEvent) => {
+      const items = Array.from(e.clipboardData?.items || [])
+      const imageItem = items.find(i => i.type.startsWith('image/'))
+      if (!imageItem) return
+      e.preventDefault()
+      const file = imageItem.getAsFile()
+      if (file) await addAttachment(file)
+    }
+    window.addEventListener('paste', handler)
+    return () => window.removeEventListener('paste', handler)
+  }, [winState]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── AI context ──────────────────────────────────────────
   const getContext = useCallback(() => {
     const activeView = getViewName(location.pathname)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const courseNames = (courses || []).map((c: any) => c.name).join(', ')
+    const courseNames = (courses || []).map((c: { name: string }) => c.name).join(', ')
     const cards = srData?.cards || []
     const total = cards.length
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mastered = cards.filter((c: any) => (c.stability || 0) > 10).length
+    const mastered = cards.filter((c: { S?: number }) => (c.S || 0) > 10).length
     const learning = total - mastered
     const provider = localStorage.getItem('nousai-ai-provider') || 'none'
     const model = localStorage.getItem('nousai-ai-model') || 'default'
 
     let pageCtxBlock = ''
     if (activePageContext && contextDepth !== 'minimal') {
-      const lines = [
-        `- Current page summary: ${activePageContext.summary}`,
-      ]
-      if (contextDepth === 'smart' && activePageContext.activeItem) {
+      const lines = [`- Current page summary: ${activePageContext.summary}`]
+      if (contextDepth === 'smart' && activePageContext.activeItem)
         lines.push(`- Active item:\n${activePageContext.activeItem}`)
-      }
       if (contextDepth === 'deep') {
         if (activePageContext.activeItem) lines.push(`- Active item:\n${activePageContext.activeItem}`)
         if (activePageContext.fullContent) lines.push(`- Full page content:\n${activePageContext.fullContent}`)
@@ -233,6 +332,7 @@ export default function NousPanel() {
     return buildSystemPrompt(activeView, courseNames, total, mastered, learning, provider, model) + pageCtxBlock
   }, [location.pathname, courses, srData, activePageContext, contextDepth])
 
+  // ── Send message ────────────────────────────────────────
   const sendMessage = useCallback(async () => {
     const text = input.trim()
     if (!text || loading) return
@@ -255,8 +355,6 @@ export default function NousPanel() {
 
     try {
       const systemPrompt = getContext()
-      // Build attachment block to append to user message
-      // TODO: upgrade to vision content array when callAI supports image_url content blocks
       const attachBlock = attachments.length > 0
         ? '\n\n---\nAttached files:\n' + attachments.map(a => {
             if (a.type === 'image') return `[Image: ${a.name}]`
@@ -264,11 +362,9 @@ export default function NousPanel() {
             return `[File: ${a.name}]\n\`\`\`\n${a.content.slice(0, 8000)}\n\`\`\``
           }).join('\n\n')
         : ''
-      // Build messages array: inject fresh system prompt on every send
       const history = [...messages, { ...userMsg, content: userMsg.content + attachBlock }]
-        .filter(m => m.content) // skip empty placeholder
+        .filter(m => m.content)
         .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
-      // Clear attachments after send
       setAttachments([])
 
       const allMessages = [
@@ -285,19 +381,15 @@ export default function NousPanel() {
           ))
         },
       }, 'chat')
-
-      // If no streaming happened (provider returned full response), accumulated may be empty
-      // In that case, callAI returned the full text — but we used onChunk so it should stream
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Request failed'
       setMessages(prev => prev.map(m =>
-        m.id === assistantId
-          ? { ...m, content: `❌ Error: ${err?.message || 'Request failed'}` }
-          : m
+        m.id === assistantId ? { ...m, content: `❌ Error: ${message}` } : m
       ))
     } finally {
       setLoading(false)
     }
-  }, [input, loading, messages, getContext])
+  }, [input, loading, messages, getContext, attachments])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -337,11 +429,8 @@ export default function NousPanel() {
         return [...prev, extracted]
       })
     } catch (err) {
-      if (err instanceof FileExtractError) {
-        setAttachError(err.message)
-      } else {
-        setAttachError('Failed to read file')
-      }
+      if (err instanceof FileExtractError) setAttachError(err.message)
+      else setAttachError('Failed to read file')
     }
   }, [maxAttachments])
 
@@ -349,343 +438,344 @@ export default function NousPanel() {
     setAttachments(prev => prev.filter((_, i) => i !== index))
   }, [])
 
-  // Paste handler for images
-  useEffect(() => {
-    if (!open) return
-    const handler = async (e: ClipboardEvent) => {
-      const items = Array.from(e.clipboardData?.items || [])
-      const imageItem = items.find(i => i.type.startsWith('image/'))
-      if (!imageItem) return
-      e.preventDefault()
-      const file = imageItem.getAsFile()
-      if (file) await addAttachment(file)
-    }
-    window.addEventListener('paste', handler)
-    return () => window.removeEventListener('paste', handler)
-  }, [open, addAttachment])
-
-  // Keep posRef in sync so handleDragStart doesn't need pos as a dependency
-  posRef.current = pos
-
-  const handleDragStart = useCallback((e: React.PointerEvent) => {
-    if (!isFloating) return
-    // Don't start drag if clicking a button or interactive element
-    if ((e.target as HTMLElement).closest('button, a, input, select, textarea')) return
-    e.currentTarget.setPointerCapture(e.pointerId)
-    dragRef.current = {
-      startX: e.clientX, startY: e.clientY,
-      originX: posRef.current.x, originY: posRef.current.y,
-      currentX: posRef.current.x, currentY: posRef.current.y,
-    }
-  }, [isFloating])
-
-  const handleDragMove = useCallback((e: React.PointerEvent) => {
-    if (!dragRef.current) return
-    const dx = e.clientX - dragRef.current.startX
-    const dy = e.clientY - dragRef.current.startY
-    const newX = dragRef.current.originX + dx
-    const newY = dragRef.current.originY + dy
-    // Clamp so at least 80px of the panel remains visible on each axis
-    const clampedX = Math.max(-300, Math.min(newX, window.innerWidth - 80))
-    const clampedY = Math.max(0, Math.min(newY, window.innerHeight - 80))
-    // Direct DOM mutation — no React re-render during drag (smooth 60fps)
-    dragRef.current.currentX = clampedX
-    dragRef.current.currentY = clampedY
-    if (panelRef.current) {
-      panelRef.current.style.transform = `translate(${clampedX}px, ${clampedY}px)`
-    }
+  // ── Provider label ──────────────────────────────────────
+  const providerLabel = useMemo(() => {
+    const provider = localStorage.getItem('nousai-ai-provider') || 'none'
+    const model = localStorage.getItem('nousai-ai-model') || ''
+    return model ? `${provider}/${model.split('-').slice(-2).join('-')}` : provider
   }, [])
 
-  const handleDragEnd = useCallback(() => {
-    if (!dragRef.current) return
-    const { currentX, currentY } = dragRef.current
-    dragRef.current = null
-    // Commit final position to React state (triggers save to localStorage)
-    setPos({ x: currentX, y: currentY })
+  // ── Window actions ──────────────────────────────────────
+  const doMinimize = useCallback(() => setWinState('minimized'), [])
+  const doMaximize = useCallback(() => setWinState(s => s === 'maximized' ? 'normal' : 'maximized'), [])
+  const doHide = useCallback(() => setWinState('hidden'), [])
+  const doRestore = useCallback(() => setWinState('normal'), [])
+
+  const bringToFront = useCallback(() => {
+    zRef.current += 1
+    setZIndex(zRef.current)
   }, [])
 
-  const provider = localStorage.getItem('nousai-ai-provider') || 'none'
-  const model = localStorage.getItem('nousai-ai-model') || ''
-  const providerLabel = model ? `${provider}/${model.split('-').slice(-2).join('-')}` : provider
+  // ── Mobile swipe handlers ───────────────────────────────
+  const onTitleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY
+  }, [])
+  const onTitleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartY.current === null) return
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    touchStartY.current = null
+    if (dy > 40) setWinState('minimized')     // swipe down → minimize
+    else if (dy < -40) setWinState('maximized') // swipe up → maximize
+  }, [])
 
-  return (
-    <>
-      {/* ── Collapsed tab (always visible) ── */}
-      {!open && (
-        <button
-          className="nous-panel-tab"
-          onClick={() => setOpen(true)}
-          aria-label="Open Nous AI assistant"
-        >
-          <Brain size={16} />
-          <span className="nous-panel-tab-label">✦ Nous</span>
+  // ── Title bar ───────────────────────────────────────────
+  const titleBar = (
+    <div
+      className="nous-title-bar"
+      onTouchStart={isMobile() ? onTitleTouchStart : undefined}
+      onTouchEnd={isMobile() ? onTitleTouchEnd : undefined}
+      onClick={winState === 'minimized' ? doRestore : undefined}
+    >
+      <div className="nous-title-bar-left">
+        <Brain size={16} style={{ color: 'var(--accent)' }} />
+        <span className="nous-panel-title">Nous AI</span>
+        <span className="nous-panel-badge">{providerLabel}</span>
+      </div>
+      <div className="nous-no-drag nous-title-bar-right">
+        <button className="nous-win-btn" onClick={doMinimize} title="Minimize">
+          <Minus size={14} />
         </button>
+        <button className="nous-win-btn" onClick={doMaximize} title={winState === 'maximized' ? 'Restore' : 'Maximize'}>
+          {winState === 'maximized' ? <Square size={12} /> : <Maximize2 size={14} />}
+        </button>
+        <button className="nous-win-btn nous-win-btn--close" onClick={doHide} title="Close">
+          <X size={14} />
+        </button>
+      </div>
+    </div>
+  )
+
+  // ── Panel body (shared between desktop & mobile) ────────
+  const panelBody = (
+    <div
+      className="nous-panel-body"
+      style={{ display: winState === 'minimized' ? 'none' : undefined }}
+    >
+      {/* Settings drawer */}
+      {showSettings && (
+        <div className="nous-panel-settings">
+          <div className="nous-settings-row">
+            <span className="nous-settings-label">Context depth</span>
+            <div className="nous-settings-options">
+              {([
+                { val: 'minimal', label: 'Minimal', tip: 'Only basic stats — fastest & cheapest. No page content sent.' },
+                { val: 'smart',   label: 'Smart',   tip: 'Sends page summary + active item. Best balance of context & cost.' },
+                { val: 'deep',    label: 'Deep',    tip: 'Sends full page content. Most context-aware, uses more tokens.' },
+              ] as const).map(({ val, label, tip }) => (
+                <span key={val} className="nous-setting-tip-target">
+                  <button
+                    className={`nous-settings-opt${contextDepth === val ? ' nous-settings-opt--active' : ''}`}
+                    onClick={() => setContextDepth(val)}
+                  >{label}</button>
+                  <SettingTooltip text={tip} />
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="nous-settings-row">
+            <span className="nous-settings-label">Max attachments</span>
+            <div className="nous-settings-options">
+              {([
+                { val: 2, tip: 'Up to 2 files per message. Great for quick questions.' },
+                { val: 4, tip: 'Up to 4 files per message. Recommended balance.' },
+                { val: 8, tip: 'Up to 8 files per message. For complex multi-file analysis.' },
+              ] as const).map(({ val, tip }) => (
+                <span key={val} className="nous-setting-tip-target">
+                  <button
+                    className={`nous-settings-opt${maxAttachments === val ? ' nous-settings-opt--active' : ''}`}
+                    onClick={() => setMaxAttachments(val)}
+                  >{val}</button>
+                  <SettingTooltip text={tip} />
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="nous-settings-row">
+            <span className="nous-settings-label">Clear on navigate</span>
+            <span className="nous-setting-tip-target">
+              <button
+                className={`nous-settings-toggle${clearOnNavigate ? ' nous-settings-toggle--on' : ''}`}
+                onClick={() => setClearOnNavigate(!clearOnNavigate)}
+              >{clearOnNavigate ? 'On' : 'Off'}</button>
+              <SettingTooltip text="Conversation resets automatically when you navigate to a new page." />
+            </span>
+          </div>
+        </div>
       )}
 
-      {/* ── Panel drawer ── */}
+      {/* Messages */}
+      <div className="nous-panel-messages">
+        {messages.length === 0 && (
+          <div className="nous-panel-empty">
+            <Brain size={28} style={{ color: 'var(--text-dim)', marginBottom: 8 }} />
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', lineHeight: 1.5 }}>
+              Ask anything about your notes, quiz history, or study progress.
+            </p>
+          </div>
+        )}
+
+        {messages.map(msg => (
+          <div key={msg.id} className={`nous-msg nous-msg--${msg.role}`}>
+            {msg.role === 'assistant' ? (
+              <>
+                <div
+                  className="nous-msg-content"
+                  dangerouslySetInnerHTML={{ __html: msg.content ? safeRenderMd(msg.content) : '' }}
+                />
+                {loading && msg.content === '' && (
+                  <div className="nous-typing"><span /><span /><span /></div>
+                )}
+                {msg.content && (
+                  <button className="nous-msg-copy" onClick={() => copyMessage(msg.id, msg.content)} title="Copy">
+                    {copied === msg.id ? <Check size={11} /> : <Copy size={11} />}
+                  </button>
+                )}
+                {msg.content && !loading && (() => {
+                  const actions = detectActions(msg.content)
+                  if (!actions.length) return null
+                  return (
+                    <div className="nous-actions">
+                      {actions.map(a => (
+                        <button key={a.path} className="nous-action-btn" onClick={() => navigate(a.path)}>
+                          {a.label} →
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </>
+            ) : (
+              <div className="nous-msg-content">{msg.content}</div>
+            )}
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Attachment chips */}
+      {(attachments.length > 0 || attachError) && (
+        <div className="nous-attachments">
+          {attachError && <span className="nous-attach-error">{attachError}</span>}
+          {attachments.map((a, i) => (
+            <span key={i} className="nous-attach-chip">
+              <span className="nous-attach-chip-name">
+                {a.type === 'image' ? '[img] ' : a.type === 'pdf' ? '[pdf] ' : '[txt] '}
+                {a.name}
+              </span>
+              <button className="nous-attach-chip-remove" onClick={() => removeAttachment(i)} aria-label={`Remove ${a.name}`}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="nous-panel-input-row">
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*,.pdf,.txt,.md,.js,.ts,.jsx,.tsx,.py,.java,.cs,.cpp,.c,.json,.csv,.html,.css"
+          style={{ display: 'none' }}
+          onChange={async (e) => {
+            const files = Array.from(e.target.files || [])
+            for (const file of files) await addAttachment(file)
+            e.target.value = ''
+          }}
+        />
+        <button
+          className="nous-panel-icon-btn nous-panel-attach-btn"
+          onClick={() => fileInputRef.current?.click()}
+          title="Attach file"
+          disabled={attachments.length >= maxAttachments}
+        >
+          <Paperclip size={14} />
+        </button>
+        <textarea
+          ref={textareaRef}
+          className="nous-panel-textarea"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask Nous AI… (Enter to send)"
+          rows={1}
+          disabled={loading}
+        />
+        <button
+          className="nous-panel-send"
+          onClick={sendMessage}
+          disabled={!input.trim() || loading}
+          aria-label="Send"
+        >
+          <Send size={14} />
+        </button>
+      </div>
+    </div>
+  )
+
+  // ── Header actions (settings, clear, etc.) ──────────────
+  const headerActions = (
+    <div className="nous-no-drag nous-title-bar-actions">
+      <button
+        className={`nous-panel-icon-btn${showSettings ? ' nous-panel-icon-btn--active' : ''}`}
+        onClick={() => setShowSettings(s => !s)}
+        title="Panel settings"
+      >
+        <Settings size={14} />
+      </button>
+      <button
+        className="nous-panel-icon-btn"
+        onClick={clearChat}
+        title="Clear conversation"
+        disabled={messages.length === 0}
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  )
+
+  // ── FAB (visible when hidden) ───────────────────────────
+  if (winState === 'hidden') {
+    return (
+      <button
+        className="nous-fab"
+        onClick={() => { setWinState('normal'); onOpenChange(true) }}
+        aria-label="Open Nous AI assistant"
+      >
+        <Brain size={22} />
+      </button>
+    )
+  }
+
+  // ── Mobile rendering ────────────────────────────────────
+  if (isMobile()) {
+    const mobileClass = [
+      'nous-mobile-sheet',
+      `nous-mobile-sheet--${winState}`,
+    ].join(' ')
+
+    return (
       <div
-        ref={panelRef}
-        className={`nous-panel${open ? ' nous-panel--open' : ''}${isFloating ? ' nous-panel--floating' : ''}`}
-        style={isFloating ? { transform: `translate(${pos.x}px, ${pos.y}px)` } : undefined}
+        className={mobileClass}
         role="complementary"
         aria-label="Nous AI assistant panel"
         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }}
         onDrop={async (e) => {
           e.preventDefault()
           const files = Array.from(e.dataTransfer.files)
-          for (const file of files.slice(0, maxAttachments)) {
-            await addAttachment(file)
-          }
+          for (const file of files.slice(0, maxAttachments)) await addAttachment(file)
         }}
       >
-        {/* Header */}
-        <div
-          className={`nous-panel-header${isFloating ? ' nous-panel-drag-handle' : ''}`}
-          onPointerDown={handleDragStart}
-          onPointerMove={handleDragMove}
-          onPointerUp={handleDragEnd}
-          onPointerCancel={handleDragEnd}
-        >
-          <div className="nous-panel-header-left">
-            <Brain size={16} style={{ color: 'var(--accent)' }} />
-            <span className="nous-panel-title">Nous AI</span>
-            <span className="nous-panel-badge">{providerLabel}</span>
-          </div>
-          <div className="nous-panel-header-actions" onPointerDown={(e) => e.stopPropagation()}>
-            <button
-              className="nous-panel-icon-btn"
-              onClick={() => setIsFloating(f => !f)}
-              title={isFloating ? 'Dock panel' : 'Float panel'}
-            >
-              {isFloating ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            </button>
-            <button
-              className={`nous-panel-icon-btn${showSettings ? ' nous-panel-icon-btn--active' : ''}`}
-              onClick={() => setShowSettings(s => !s)}
-              title="Panel settings"
-            >
-              <Settings size={14} />
-            </button>
-            <button
-              className="nous-panel-icon-btn"
-              onClick={clearChat}
-              title="Clear conversation"
-              disabled={messages.length === 0}
-            >
-              <Trash2 size={14} />
-            </button>
-            <button
-              className="nous-panel-icon-btn"
-              onClick={() => setOpen(false)}
-              title="Collapse"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* Settings drawer */}
-        {showSettings && (
-          <div className="nous-panel-settings">
-            <div className="nous-settings-row">
-              <span className="nous-settings-label">Context depth</span>
-              <div className="nous-settings-options">
-                {([
-                  { val: 'minimal', label: 'Minimal', tip: 'Only basic stats — fastest & cheapest. No page content sent.' },
-                  { val: 'smart',   label: 'Smart',   tip: 'Sends page summary + active item. Best balance of context & cost.' },
-                  { val: 'deep',    label: 'Deep',    tip: 'Sends full page content. Most context-aware, uses more tokens.' },
-                ] as const).map(({ val, label, tip }) => (
-                  <span key={val} className="nous-setting-tip-target">
-                    <button
-                      className={`nous-settings-opt${contextDepth === val ? ' nous-settings-opt--active' : ''}`}
-                      onClick={() => setContextDepth(val)}
-                    >
-                      {label}
-                    </button>
-                    <SettingTooltip text={tip} />
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="nous-settings-row">
-              <span className="nous-settings-label">Max attachments</span>
-              <div className="nous-settings-options">
-                {([
-                  { val: 2, tip: 'Up to 2 files per message. Great for quick questions.' },
-                  { val: 4, tip: 'Up to 4 files per message. Recommended balance.' },
-                  { val: 8, tip: 'Up to 8 files per message. For complex multi-file analysis.' },
-                ] as const).map(({ val, tip }) => (
-                  <span key={val} className="nous-setting-tip-target">
-                    <button
-                      className={`nous-settings-opt${maxAttachments === val ? ' nous-settings-opt--active' : ''}`}
-                      onClick={() => setMaxAttachments(val)}
-                    >
-                      {val}
-                    </button>
-                    <SettingTooltip text={tip} />
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="nous-settings-row">
-              <span className="nous-settings-label">Float on open</span>
-              <span className="nous-setting-tip-target">
-                <button
-                  className={`nous-settings-toggle${floatOnOpen ? ' nous-settings-toggle--on' : ''}`}
-                  onClick={() => setFloatOnOpen(!floatOnOpen)}
-                >
-                  {floatOnOpen ? 'On' : 'Off'}
-                </button>
-                <SettingTooltip text="Panel detaches and floats freely when opened. Drag the header to reposition." />
-              </span>
-            </div>
-            <div className="nous-settings-row">
-              <span className="nous-settings-label">Clear on navigate</span>
-              <span className="nous-setting-tip-target">
-                <button
-                  className={`nous-settings-toggle${clearOnNavigate ? ' nous-settings-toggle--on' : ''}`}
-                  onClick={() => setClearOnNavigate(!clearOnNavigate)}
-                >
-                  {clearOnNavigate ? 'On' : 'Off'}
-                </button>
-                <SettingTooltip text="Conversation resets automatically when you navigate to a new page." />
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Messages */}
-        <div className="nous-panel-messages">
-          {messages.length === 0 && (
-            <div className="nous-panel-empty">
-              <Brain size={28} style={{ color: 'var(--text-dim)', marginBottom: 8 }} />
-              <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', lineHeight: 1.5 }}>
-                Ask anything about your notes, quiz history, or study progress.
-              </p>
-            </div>
-          )}
-
-          {messages.map(msg => (
-            <div
-              key={msg.id}
-              className={`nous-msg nous-msg--${msg.role}`}
-            >
-              {msg.role === 'assistant' ? (
-                <>
-                  <div
-                    className="nous-msg-content"
-                    dangerouslySetInnerHTML={{ __html: msg.content ? safeRenderMd(msg.content) : '' }}
-                  />
-                  {/* Typing indicator while streaming */}
-                  {loading && msg.content === '' && (
-                    <div className="nous-typing">
-                      <span /><span /><span />
-                    </div>
-                  )}
-                  {/* Copy button */}
-                  {msg.content && (
-                    <button
-                      className="nous-msg-copy"
-                      onClick={() => copyMessage(msg.id, msg.content)}
-                      title="Copy"
-                    >
-                      {copied === msg.id ? <Check size={11} /> : <Copy size={11} />}
-                    </button>
-                  )}
-                  {/* Action suggestions */}
-                  {msg.content && !loading && (() => {
-                    const actions = detectActions(msg.content)
-                    if (!actions.length) return null
-                    return (
-                      <div className="nous-actions">
-                        {actions.map(a => (
-                          <button
-                            key={a.path}
-                            className="nous-action-btn"
-                            onClick={() => navigate(a.path)}
-                          >
-                            {a.label} →
-                          </button>
-                        ))}
-                      </div>
-                    )
-                  })()}
-                </>
-              ) : (
-                <div className="nous-msg-content">{msg.content}</div>
-              )}
-            </div>
-          ))}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Attachment chips */}
-        {(attachments.length > 0 || attachError) && (
-          <div className="nous-attachments">
-            {attachError && (
-              <span className="nous-attach-error">{attachError}</span>
-            )}
-            {attachments.map((a, i) => (
-              <span key={i} className="nous-attach-chip">
-                <span className="nous-attach-chip-name">
-                  {a.type === 'image' ? '[img] ' : a.type === 'pdf' ? '[pdf] ' : '[txt] '}
-                  {a.name}
-                </span>
-                <button
-                  className="nous-attach-chip-remove"
-                  onClick={() => removeAttachment(i)}
-                  aria-label={`Remove ${a.name}`}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Input */}
-        <div className="nous-panel-input-row">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*,.pdf,.txt,.md,.js,.ts,.jsx,.tsx,.py,.java,.cs,.cpp,.c,.json,.csv,.html,.css"
-            style={{ display: 'none' }}
-            onChange={async (e) => {
-              const files = Array.from(e.target.files || [])
-              for (const file of files) await addAttachment(file)
-              e.target.value = ''
-            }}
-          />
-          <button
-            className="nous-panel-icon-btn nous-panel-attach-btn"
-            onClick={() => fileInputRef.current?.click()}
-            title="Attach file"
-            disabled={attachments.length >= maxAttachments}
-          >
-            <Paperclip size={14} />
-          </button>
-          <textarea
-            ref={textareaRef}
-            className="nous-panel-textarea"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask Nous AI… (Enter to send)"
-            rows={1}
-            disabled={loading}
-          />
-          <button
-            className="nous-panel-send"
-            onClick={sendMessage}
-            disabled={!input.trim() || loading}
-            aria-label="Send"
-          >
-            <Send size={14} />
-          </button>
-        </div>
+        {titleBar}
+        {headerActions}
+        {panelBody}
       </div>
-    </>
+    )
+  }
+
+  // ── Desktop rendering (Rnd) ─────────────────────────────
+  const isMax = winState === 'maximized'
+  const isMin = winState === 'minimized'
+
+  return (
+    <Rnd
+      ref={rndRef}
+      className={`nous-rnd-wrapper${animateClass ? ' nous-rnd-animate' : ''}`}
+      style={{ zIndex, display: 'flex', flexDirection: 'column' }}
+      position={isMax ? { x: 0, y: 0 } : { x: geo.x, y: geo.y }}
+      size={isMax ? { width: '100vw', height: '100vh' } : isMin ? { width: geo.width, height: TITLE_BAR_H } : { width: geo.width, height: geo.height }}
+      minWidth={MIN_W}
+      minHeight={isMin ? TITLE_BAR_H : MIN_H}
+      maxWidth={window.innerWidth * 0.9}
+      maxHeight={window.innerHeight * 0.9}
+      dragHandleClassName="nous-title-bar"
+      cancel=".nous-no-drag"
+      enableResizing={!isMax && !isMin}
+      disableDragging={isMax}
+      bounds="window"
+      onDragStart={() => setAnimateClass(false)}
+      onDragStop={(_e, d) => {
+        setAnimateClass(true)
+        let { x, y } = snapToEdges(d.x, d.y, geo.width, geo.height)
+        ;({ x, y } = enforceDeadZone(x, y, geo.width, geo.height))
+        ;({ x, y } = clampToViewport(x, y, geo.width, geo.height))
+        setGeo(prev => ({ ...prev, x, y }))
+      }}
+      onResizeStart={() => setAnimateClass(false)}
+      onResizeStop={(_e, _dir, ref, _delta, position) => {
+        setAnimateClass(true)
+        const w = parseInt(ref.style.width, 10)
+        const h = parseInt(ref.style.height, 10)
+        let { x, y } = enforceDeadZone(position.x, position.y, w, h)
+        ;({ x, y } = clampToViewport(x, y, w, h))
+        setGeo({ x, y, width: w, height: h, state: winState })
+      }}
+      onMouseDown={bringToFront}
+    >
+      <div
+        className="nous-rnd-inner"
+        role="complementary"
+        aria-label="Nous AI assistant panel"
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }}
+        onDrop={async (e) => {
+          e.preventDefault()
+          const files = Array.from(e.dataTransfer.files)
+          for (const file of files.slice(0, maxAttachments)) await addAttachment(file)
+        }}
+      >
+        {titleBar}
+        {headerActions}
+        {panelBody}
+      </div>
+    </Rnd>
   )
 }
