@@ -69,7 +69,6 @@ const ACTION_ICONS: Record<string, { emoji: string; label: string }> = {
   // ─── Notes Mode ─────
   notes_new:    { emoji: '📝', label: 'NEW' },
   notes_search: { emoji: '🔍', label: 'SEARCH' },
-  relay_send:   { emoji: '📤', label: 'RELAY' },
   screen_lasso: { emoji: '✂️', label: 'LASSO' },
   notes_bold:   { emoji: '𝐁', label: 'BOLD' },
   notes_italic: { emoji: '𝐼', label: 'ITALIC' },

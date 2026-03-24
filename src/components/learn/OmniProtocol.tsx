@@ -16,6 +16,8 @@ import { useStore } from '../../store';
 import { callAI } from '../../utils/ai';
 import { safeRenderMd } from '../../utils/renderMd';
 import { awardQuizXp, awardStudyTimeXp } from '../../utils/gamification';
+import { parseManualCards, parseManualQuizQuestions, parseManualExamQuestions } from '../../utils/manualContentParser';
+import type { ManualCard, ManualMCQuestion, ManualExamQuestion } from '../../types';
 import {
   parseDurationChoice, getOmniDueCards, getPendingFeynmanGaps,
   getKnowledgeGraphConnections, getArcPhaseForCourse,
@@ -51,8 +53,8 @@ type OmniScreen =
   | { screen: 'resume' }
   | { screen: 'duration' }
   | { screen: 'loading' }
-  | { screen: 'wizard'; step: 1 | 2 | 3 | 4 | 5 | 6 }
-  | { screen: 'crisis-wizard'; step: 'C1' | 'C2' | 'C3' | 'C4' | 'C5' | 'C6' }
+  | { screen: 'wizard'; step: 1 | 2 | 'manual' | 3 | 4 | 5 | 6 }
+  | { screen: 'crisis-wizard'; step: 'C1' | 'C2' | 'C-manual' | 'C3' | 'C4' | 'C5' | 'C6' }
   | { screen: 'running'; cycleIdx: number; phaseIdx: number }
   | { screen: 'interstitial'; afterCycle: number }
   | { screen: 'final-report'; loading: boolean }
@@ -162,6 +164,17 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
   const [currentCrisisCycle, setCurrentCrisisCycle] = useState(1);
   const [crisisPromptCopied, setCrisisPromptCopied] = useState(false);
 
+  // ── Manual Content Injection state ───────────────────────────────────────
+  const [manualCardsRaw, setManualCardsRaw] = useState('');
+  const [manualQuizRaw, setManualQuizRaw] = useState('');
+  const [manualExamRaw, setManualExamRaw] = useState('');
+  const [manualCards, setManualCards] = useState<ManualCard[]>([]);
+  const [manualQuizQuestions, setManualQuizQuestions] = useState<ManualMCQuestion[]>([]);
+  const [manualExamQuestions, setManualExamQuestions] = useState<ManualExamQuestion[]>([]);
+  const [manualContentMode, setManualContentMode] = useState<'supplement' | 'replace'>('supplement');
+  const [manualTab, setManualTab] = useState<'cards' | 'quiz' | 'exam'>('cards');
+  const [useManualPreTest, setUseManualPreTest] = useState(false);
+
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [loadingMsg, setLoadingMsg] = useState('');
   const [planError, setPlanError] = useState('');
@@ -260,6 +273,11 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
       availableSources,
       userConfidence,
       mnemonicTopics,
+      // Manual content injection
+      manualCards,
+      manualQuizQuestions,
+      manualExamQuestions,
+      manualContentMode,
     };
   }
 
@@ -274,37 +292,42 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
     setDurationConfig(snap.durationConfig);
     setSessionPlan(snap.sessionPlan);
     setPhaseResults(snap.phaseResults);
-    setMotivationState(snap.motivationState);
+    setMotivationState(snap.motivationState as MotivationState);
     setTotalXp(snap.totalXp);
     sessionStartRef.current = snap.sessionStartedAt;
     setTimeRemaining(snap.timeRemaining);
-    setPhaseCards(snap.phaseCards);
+    setPhaseCards(snap.phaseCards as CardWithMeta[]);
     setCurrentCardIdx(snap.currentCardIdx);
-    setGradedCards(snap.gradedCards);
+    setGradedCards(snap.gradedCards as CardWithMeta[]);
     setPhaseCorrect(snap.phaseCorrect);
     setPhaseTotal(snap.phaseTotal);
     setWhyChainAssessment(snap.whyChainAssessment);
     setPendingGaps(snap.pendingGaps);
     // V6.1
-    if (snap.rawStudyGuide) setRawStudyGuide(snap.rawStudyGuide);
-    if (snap.guideSummary) setGuideSummary(snap.guideSummary);
-    if (snap.guideKeywords) setGuideKeywords(snap.guideKeywords);
-    if (snap.guideMainTopics) setGuideMainTopics(snap.guideMainTopics);
-    if (snap.mcQuestions) setMcQuestions(snap.mcQuestions);
-    if (snap.mcAnswers) setMcAnswers(snap.mcAnswers);
-    if (snap.adaptiveAllocation !== undefined) setAdaptiveAllocation(snap.adaptiveAllocation);
-    if (snap.usedStudyGuide !== undefined) setUsedStudyGuide(snap.usedStudyGuide);
+    if (snap.rawStudyGuide) setRawStudyGuide(snap.rawStudyGuide as string);
+    if (snap.guideSummary) setGuideSummary(snap.guideSummary as string);
+    if (snap.guideKeywords) setGuideKeywords(snap.guideKeywords as string[]);
+    if (snap.guideMainTopics) setGuideMainTopics(snap.guideMainTopics as string[]);
+    if (snap.mcQuestions) setMcQuestions(snap.mcQuestions as any);
+    if (snap.mcAnswers) setMcAnswers(snap.mcAnswers as Record<number, number>);
+    if (snap.adaptiveAllocation !== undefined) setAdaptiveAllocation(snap.adaptiveAllocation as OmniAdaptiveAllocation | null);
+    if (snap.usedStudyGuide !== undefined) setUsedStudyGuide(snap.usedStudyGuide as boolean);
     // V6.3 Crisis
-    if (snap.crisisMode) setCrisisMode(snap.crisisMode);
-    if (snap.crisisAnswers) setCrisisAnswers(snap.crisisAnswers);
-    if (snap.tieredTopics) setTieredTopics(snap.tieredTopics);
-    if (snap.currentCrisisDay) setCurrentCrisisDay(snap.currentCrisisDay);
-    if (snap.currentCrisisCycle) setCurrentCrisisCycle(snap.currentCrisisCycle);
-    if (snap.anchorSentences) setAnchorSentences(snap.anchorSentences);
-    if (snap.examDateTime) setExamDateTime(snap.examDateTime);
-    if (snap.availableSources) setAvailableSources(snap.availableSources);
-    if (snap.userConfidence) setUserConfidence(snap.userConfidence);
-    if (snap.mnemonicTopics) setMnemonicTopics(snap.mnemonicTopics);
+    if (snap.crisisMode) setCrisisMode(snap.crisisMode as boolean);
+    if (snap.crisisAnswers) setCrisisAnswers(snap.crisisAnswers as any);
+    if (snap.tieredTopics) setTieredTopics(snap.tieredTopics as { tier1: string[]; tier2: string[]; tier3: string[] });
+    if (snap.currentCrisisDay) setCurrentCrisisDay(snap.currentCrisisDay as 1 | 2);
+    if (snap.currentCrisisCycle) setCurrentCrisisCycle(snap.currentCrisisCycle as number);
+    if (snap.anchorSentences) setAnchorSentences(snap.anchorSentences as string[]);
+    if (snap.examDateTime) setExamDateTime(snap.examDateTime as string);
+    if (snap.availableSources) setAvailableSources(snap.availableSources as string[]);
+    if (snap.userConfidence) setUserConfidence(snap.userConfidence as Record<number, 'sure' | 'guess'>);
+    if (snap.mnemonicTopics) setMnemonicTopics(snap.mnemonicTopics as string[]);
+    // Manual content injection
+    if (snap.manualCards) setManualCards(snap.manualCards);
+    if (snap.manualQuizQuestions) setManualQuizQuestions(snap.manualQuizQuestions);
+    if (snap.manualExamQuestions) setManualExamQuestions(snap.manualExamQuestions);
+    if (snap.manualContentMode) setManualContentMode(snap.manualContentMode);
     isSessionActive.current = true;
     setScreen(snap.screen as OmniScreen);
   }
@@ -376,8 +399,8 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
       const topicOk = filter.topics.length === 0 || filter.topics.some(t => (c.topic ?? '').toLowerCase().includes(t.toLowerCase()));
       return courseOk && topicOk;
     });
-    const pool = filtered.length >= 5 ? filtered : allCards;
-    setPhaseCards(shuffle(pool).slice(0, 20));
+    // Strict scoping — never fall back to global card pool (was causing cross-subject contamination)
+    setPhaseCards(shuffle(filtered).slice(0, 20));
     setCurrentCardIdx(0);
     setShowAnswer(false);
     setGradedCards([]);
@@ -468,10 +491,11 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
     setGuideProcessing(false);
   }
 
-  /** V6.1: Skip study guide → go to old free-text intake */
+  /** V6.1: Skip study guide → go to manual content step */
   async function handleSkipStudyGuide() {
     setUsedStudyGuide(false);
-    setScreen({ screen: 'wizard', step: 3 });
+    setScreen({ screen: 'wizard', step: 'manual' });
+    // Pre-test generation deferred until user proceeds from manual content step
     setLoadingMsg('Generating intake assessment...');
     try {
       const msgs = buildIntakePrompt({
@@ -501,6 +525,11 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
       setIntakeQuestions([`What do you already know about "${selectedTopics.join(', ') || 'this topic'}"?`]);
       setIntakeAnswers(['']);
     }
+  }
+
+  /** V6.1: Navigate to manual content step (pre-test generation deferred) */
+  function handleStudyGuideToManual() {
+    setScreen({ screen: 'wizard', step: 'manual' });
   }
 
   /** V6.1: Generate MC pre-test from study guide summary + keywords */
@@ -631,10 +660,32 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
       });
     }
 
+    // Inject manual content into the prompt if available
+    if (manualCards.length > 0 || manualQuizQuestions.length > 0 || manualExamQuestions.length > 0) {
+      const parts: string[] = [];
+      if (manualCards.length > 0) {
+        const verb = manualContentMode === 'replace' ? 'Use ONLY these user-provided flashcards. Do not generate new cards.' : 'Use these user-provided flashcards in the Encode phase IN ADDITION to generated cards:';
+        parts.push(`USER-PROVIDED FLASHCARDS (${verb})\n${JSON.stringify(manualCards.map(c => ({ front: c.front, back: c.back })))}`);
+      }
+      if (manualQuizQuestions.length > 0) {
+        const verb = manualContentMode === 'replace' ? 'Use ONLY these for the Test/Recall phase.' : 'Include these in the Test/Recall phase alongside generated questions:';
+        parts.push(`USER-PROVIDED QUIZ QUESTIONS (${verb})\n${JSON.stringify(manualQuizQuestions.map(q => ({ question: q.question, options: q.options, correct: q.correct })))}`);
+      }
+      if (manualExamQuestions.length > 0) {
+        const verb = manualContentMode === 'replace' ? 'Use ONLY these for exam practice.' : 'Include these in the exam practice section:';
+        parts.push(`USER-PROVIDED EXAM QUESTIONS (${verb})\n${JSON.stringify(manualExamQuestions.map(q => ({ question: q.question, type: q.type, options: q.options })))}`);
+      }
+      msgs.push({ role: 'user' as const, content: parts.join('\n\n') });
+    }
+
     try {
       const raw = await callAI(msgs, { temperature: 0.6, maxTokens, json: true }, 'omni');
       const plan = parseSessionPlanResponse(raw);
       if (!plan || !plan.cycles?.length) throw new Error('Invalid plan JSON');
+      // Enforce course scoping — AI may return empty/wrong courseIds
+      if (!plan.flashcardFilter?.courseIds?.length && selectedCourseId) {
+        plan.flashcardFilter = { courseIds: [selectedCourseId], topics: selectedTopics };
+      }
       setSessionPlan(plan);
       setLoadingMsg('');
       prepPhaseCards();
@@ -1077,7 +1128,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
     const course = courses.find(c => c.id === snap.selectedCourseId);
     const elapsed = Math.round((new Date(snap.savedAt).getTime() - snap.sessionStartedAt) / 60000);
     const screenLabel = snap.screen.screen === 'running'
-      ? `Phase ${(snap.screen.phaseIdx ?? 0) + 1}, Cycle ${(snap.screen.cycleIdx ?? 0) + 1}`
+      ? `Phase ${((snap.screen.phaseIdx as number) ?? 0) + 1}, Cycle ${((snap.screen.cycleIdx as number) ?? 0) + 1}`
       : snap.screen.screen === 'wizard' ? `Setup step ${snap.screen.step ?? 1}`
       : snap.screen.screen === 'crisis-wizard' ? `Crisis Mode — ${snap.screen.step ?? 'C1'}`
       : snap.screen.screen === 'interstitial' ? 'Break between cycles'
@@ -1214,12 +1265,13 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
       <div style={{ ...S.container }}>
         <div style={{ ...S.header, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-            Setup — Step {step} of {totalSteps}
+            Setup — {step === 'manual' ? 'Manual Content' : `Step ${step} of ${totalSteps}`}
           </span>
           <div style={{ display: 'flex', gap: 4 }}>
-            {Array.from({ length: totalSteps }, (_, i) => i + 1).map(s => (
-              <div key={s} style={{ width: 20, height: 4, borderRadius: 2, background: s <= step ? 'var(--accent)' : 'var(--border)' }} />
-            ))}
+            {Array.from({ length: totalSteps }, (_, i) => i + 1).map(s => {
+              const stepNum = step === 'manual' ? 2.5 : Number(step);
+              return <div key={s} style={{ width: 20, height: 4, borderRadius: 2, background: s <= stepNum ? 'var(--accent)' : 'var(--border)' }} />;
+            })}
           </div>
         </div>
 
@@ -1382,11 +1434,126 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
                       />
                     </div>
                   </div>
-                  <button onClick={handleStudyGuideToPreTest} style={{ ...S.btn(true) }}>
-                    Looks good → Generate Pre-Test
+                  <button onClick={handleStudyGuideToManual} style={{ ...S.btn(true) }}>
+                    Looks good → Next
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Manual Content Step (between study guide and pre-test) */}
+          {step === 'manual' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Paste Your Own Content <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>(Optional)</span></div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Skip if you want AI to generate everything. Add here to use your own cards, quiz Qs, or exam Qs.
+              </div>
+
+              {/* Tabs */}
+              <div style={{ display: 'flex', gap: 4 }}>
+                {(['cards', 'quiz', 'exam'] as const).map(tab => (
+                  <button key={tab} onClick={() => setManualTab(tab)} style={{
+                    padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                    background: manualTab === tab ? 'var(--accent)' : 'var(--bg-secondary)',
+                    color: manualTab === tab ? '#fff' : 'var(--text-muted)',
+                    fontSize: 12, fontWeight: 600, textTransform: 'capitalize',
+                  }}>
+                    {tab === 'cards' ? 'Flashcards' : tab === 'quiz' ? 'Quiz Questions' : 'Exam Questions'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Textarea per tab */}
+              <textarea
+                value={manualTab === 'cards' ? manualCardsRaw : manualTab === 'quiz' ? manualQuizRaw : manualExamRaw}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (manualTab === 'cards') setManualCardsRaw(val);
+                  else if (manualTab === 'quiz') setManualQuizRaw(val);
+                  else setManualExamRaw(val);
+                }}
+                onBlur={() => {
+                  // Parse on blur (not every keystroke)
+                  if (manualTab === 'cards') setManualCards(parseManualCards(manualCardsRaw));
+                  else if (manualTab === 'quiz') setManualQuizQuestions(parseManualQuizQuestions(manualQuizRaw));
+                  else setManualExamQuestions(parseManualExamQuestions(manualExamRaw));
+                }}
+                placeholder={
+                  manualTab === 'cards' ? 'Paste Q&A pairs, pipe-separated, or JSON array...\n\nQ: What is mitosis?\nA: Cell division producing 2 identical daughter cells\n\nor: Mitosis | Cell division producing 2 identical daughter cells'
+                  : manualTab === 'quiz' ? 'Paste numbered MC questions with A/B/C/D options...\n\n1. Which of the following is correct?\nA) Option one\nB) Option two\nC) Option three\nD) Option four\nAnswer: B'
+                  : 'Paste numbered questions (MC or free response)...\n\n1. Explain the role of ATP synthase.\n2. Which of the following...\nA) ...'
+                }
+                style={{
+                  ...S.input, minHeight: 160, fontFamily: 'DM Mono, monospace', fontSize: 12,
+                  lineHeight: 1.6, resize: 'vertical', whiteSpace: 'pre-wrap',
+                }}
+              />
+
+              {/* Parse preview */}
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {manualTab === 'cards' && manualCardsRaw && (
+                  manualCards.length > 0
+                    ? <span style={{ color: '#22c55e' }}>✓ Detected {manualCards.length} card{manualCards.length !== 1 ? 's' : ''}</span>
+                    : <span style={{ color: '#f59e0b' }}>⚠ Could not parse — check format</span>
+                )}
+                {manualTab === 'quiz' && manualQuizRaw && (
+                  manualQuizQuestions.length > 0
+                    ? <span style={{ color: '#22c55e' }}>✓ Detected {manualQuizQuestions.length} question{manualQuizQuestions.length !== 1 ? 's' : ''}</span>
+                    : <span style={{ color: '#f59e0b' }}>⚠ Could not parse — check format</span>
+                )}
+                {manualTab === 'exam' && manualExamRaw && (
+                  manualExamQuestions.length > 0
+                    ? <span style={{ color: '#22c55e' }}>✓ Detected {manualExamQuestions.length} question{manualExamQuestions.length !== 1 ? 's' : ''}</span>
+                    : <span style={{ color: '#f59e0b' }}>⚠ Could not parse — check format</span>
+                )}
+              </div>
+
+              {/* Mode toggle */}
+              {(manualCards.length > 0 || manualQuizQuestions.length > 0 || manualExamQuestions.length > 0) && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {(['supplement', 'replace'] as const).map(mode => (
+                    <button key={mode} onClick={() => setManualContentMode(mode)} style={{
+                      padding: '6px 12px', borderRadius: 6, border: manualContentMode === mode ? '1px solid var(--accent)' : '1px solid var(--border)',
+                      background: manualContentMode === mode ? 'var(--accent-glow)' : 'transparent',
+                      color: manualContentMode === mode ? 'var(--accent)' : 'var(--text-muted)',
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    }}>
+                      {mode === 'supplement' ? 'Mix with AI content' : 'Use only my content'}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Navigation */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => {
+                  // Proceed to pre-test (step 3)
+                  if (usedStudyGuide) {
+                    handleStudyGuideToPreTest();
+                  } else {
+                    setScreen({ screen: 'wizard', step: 3 });
+                    setLoadingMsg('Generating intake assessment...');
+                    handleSkipStudyGuide();
+                  }
+                }} style={{ ...S.btn(), flex: 1, fontSize: 12 }}>
+                  Skip this step →
+                </button>
+                <button onClick={() => {
+                  // Parse any remaining unparsed content
+                  if (manualCardsRaw) setManualCards(parseManualCards(manualCardsRaw));
+                  if (manualQuizRaw) setManualQuizQuestions(parseManualQuizQuestions(manualQuizRaw));
+                  if (manualExamRaw) setManualExamQuestions(parseManualExamQuestions(manualExamRaw));
+                  // Proceed to pre-test
+                  if (usedStudyGuide) {
+                    handleStudyGuideToPreTest();
+                  } else {
+                    setScreen({ screen: 'wizard', step: 3 });
+                  }
+                }} style={{ ...S.btn(true), flex: 1 }}>
+                  Next →
+                </button>
+              </div>
             </div>
           )}
 
@@ -1791,8 +1958,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
                 <button
                   onClick={() => {
                     setUsedStudyGuide(false);
-                    setScreen({ screen: 'crisis-wizard', step: 'C3' });
-                    handleStudyGuideToPreTest();
+                    setScreen({ screen: 'crisis-wizard', step: 'C-manual' });
                   }}
                   style={{ ...S.btn(), fontSize: 12 }}
                 >
@@ -1835,8 +2001,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
                   </div>
                   <button
                     onClick={() => {
-                      setScreen({ screen: 'crisis-wizard', step: 'C3' });
-                      handleStudyGuideToPreTest();
+                      setScreen({ screen: 'crisis-wizard', step: 'C-manual' });
                     }}
                     style={{ ...S.btn(true), background: '#ef4444', color: '#fff' }}
                   >
@@ -1844,6 +2009,118 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* C-manual: Manual Content Injection (Crisis Mode) */}
+          {crisisStep === 'C-manual' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#ef4444' }}>Paste Your Own Content <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>(Optional)</span></div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Paste flashcards, quiz questions, or exam questions. Manual cards are treated as Tier 1 (high yield).
+              </div>
+
+              {/* Tabs */}
+              <div style={{ display: 'flex', gap: 4 }}>
+                {(['cards', 'quiz', 'exam'] as const).map(tab => (
+                  <button key={tab} onClick={() => setManualTab(tab)} style={{
+                    padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                    background: manualTab === tab ? '#ef4444' : 'var(--bg-secondary)',
+                    color: manualTab === tab ? '#fff' : 'var(--text-muted)',
+                    fontSize: 12, fontWeight: 600, textTransform: 'capitalize',
+                  }}>
+                    {tab === 'cards' ? 'Flashcards' : tab === 'quiz' ? 'Quiz Questions' : 'Exam Questions'}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                value={manualTab === 'cards' ? manualCardsRaw : manualTab === 'quiz' ? manualQuizRaw : manualExamRaw}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (manualTab === 'cards') setManualCardsRaw(val);
+                  else if (manualTab === 'quiz') setManualQuizRaw(val);
+                  else setManualExamRaw(val);
+                }}
+                onBlur={() => {
+                  if (manualTab === 'cards') setManualCards(parseManualCards(manualCardsRaw));
+                  else if (manualTab === 'quiz') setManualQuizQuestions(parseManualQuizQuestions(manualQuizRaw));
+                  else setManualExamQuestions(parseManualExamQuestions(manualExamRaw));
+                }}
+                placeholder={
+                  manualTab === 'cards' ? 'Paste Q&A pairs, pipe-separated, or JSON array...'
+                  : manualTab === 'quiz' ? 'Paste numbered MC questions with A/B/C/D options...'
+                  : 'Paste numbered questions (MC or free response)...'
+                }
+                style={{
+                  ...S.input, minHeight: 160, fontFamily: 'DM Mono, monospace', fontSize: 12,
+                  lineHeight: 1.6, resize: 'vertical', whiteSpace: 'pre-wrap',
+                }}
+              />
+
+              {/* Parse preview */}
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {manualTab === 'cards' && manualCardsRaw && (
+                  manualCards.length > 0
+                    ? <span style={{ color: '#22c55e' }}>✓ Detected {manualCards.length} card{manualCards.length !== 1 ? 's' : ''}</span>
+                    : <span style={{ color: '#f59e0b' }}>⚠ Could not parse — check format</span>
+                )}
+                {manualTab === 'quiz' && manualQuizRaw && (
+                  manualQuizQuestions.length > 0
+                    ? <span style={{ color: '#22c55e' }}>✓ Detected {manualQuizQuestions.length} question{manualQuizQuestions.length !== 1 ? 's' : ''}</span>
+                    : <span style={{ color: '#f59e0b' }}>⚠ Could not parse — check format</span>
+                )}
+                {manualTab === 'exam' && manualExamRaw && (
+                  manualExamQuestions.length > 0
+                    ? <span style={{ color: '#22c55e' }}>✓ Detected {manualExamQuestions.length} question{manualExamQuestions.length !== 1 ? 's' : ''}</span>
+                    : <span style={{ color: '#f59e0b' }}>⚠ Could not parse — check format</span>
+                )}
+              </div>
+
+              {/* Crisis-specific: Use exam Qs as pre-test toggle */}
+              {manualExamQuestions.length > 0 && manualExamQuestions.some(q => q.type === 'mc') && (
+                <div style={{ ...S.card, borderLeft: '3px solid #ef4444', padding: 12 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12 }}>
+                    <input type="checkbox" checked={useManualPreTest} onChange={e => setUseManualPreTest(e.target.checked)} style={{ accentColor: '#ef4444' }} />
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Use these as my Crisis Pre-Test instead of AI-generated?</span>
+                  </label>
+                </div>
+              )}
+
+              {/* Mode toggle */}
+              {(manualCards.length > 0 || manualQuizQuestions.length > 0 || manualExamQuestions.length > 0) && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {(['supplement', 'replace'] as const).map(mode => (
+                    <button key={mode} onClick={() => setManualContentMode(mode)} style={{
+                      padding: '6px 12px', borderRadius: 6, border: manualContentMode === mode ? '1px solid #ef4444' : '1px solid var(--border)',
+                      background: manualContentMode === mode ? '#ef444415' : 'transparent',
+                      color: manualContentMode === mode ? '#ef4444' : 'var(--text-muted)',
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    }}>
+                      {mode === 'supplement' ? 'Mix with AI content' : 'Use only my content'}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Navigation */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => {
+                  setScreen({ screen: 'crisis-wizard', step: 'C3' });
+                  handleStudyGuideToPreTest();
+                }} style={{ ...S.btn(), flex: 1, fontSize: 12 }}>
+                  Skip →
+                </button>
+                <button onClick={() => {
+                  if (manualCardsRaw) setManualCards(parseManualCards(manualCardsRaw));
+                  if (manualQuizRaw) setManualQuizQuestions(parseManualQuizQuestions(manualQuizRaw));
+                  if (manualExamRaw) setManualExamQuestions(parseManualExamQuestions(manualExamRaw));
+                  setScreen({ screen: 'crisis-wizard', step: 'C3' });
+                  if (!useManualPreTest) handleStudyGuideToPreTest();
+                }} style={{ ...S.btn(true), flex: 1, background: '#ef4444', color: '#fff' }}>
+                  Next →
+                </button>
+              </div>
             </div>
           )}
 

@@ -434,6 +434,11 @@ input::placeholder, textarea::placeholder {
   backdrop-filter: blur(4px);
 }
 
+/* ── Sync toast (Shift+S / Shift+D feedback) ────── */
+.sync-toast { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom,0px)); right: 16px; z-index: 901; background: var(--color-accent); color: #000; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.4); pointer-events: none; animation: syncToastIn .2s ease; }
+@keyframes syncToastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+html.eink .sync-toast { background: #000; color: #fff; box-shadow: none; }
+
 /* ── Focus-visible: clear keyboard focus indicator ────── */
 :focus-visible {
   outline: 2px solid var(--color-accent, #F5A623);
@@ -1395,33 +1400,6 @@ div[data-video-embed] video {
   display: block;
 }
 
-/* ═══════ CONTENT RELAY ═══════ */
-.content-relay-fab { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom,0px)); right: 16px; z-index: 900; width: 44px; height: 44px; border-radius: 50%; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.3); transition: border-color .15s; }
-.content-relay-fab--active { border-color: var(--color-accent); color: var(--color-accent); }
-.content-relay-fab--pulse { animation: relayPulse .6s ease 2; }
-@keyframes relayPulse { 0%,100% { transform: scale(1); box-shadow: 0 2px 8px rgba(0,0,0,.3); } 50% { transform: scale(1.18); box-shadow: 0 0 0 8px rgba(245,166,35,.25); } }
-.content-relay-badge { position: absolute; top: 4px; right: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-accent); border: 2px solid var(--bg-primary); }
-.content-relay-badge-inline { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--color-accent); margin-right: 4px; vertical-align: middle; }
-.content-relay-panel { position: fixed; bottom: 80px; right: 16px; width: 320px; max-width: calc(100vw - 32px); z-index: 901; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.4); display: flex; flex-direction: column; gap: 12px; padding: 16px; animation: slideUp .2s ease; }
-@keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.content-relay-panel__header { display: flex; align-items: center; justify-content: space-between; }
-.content-relay-panel__title { font-weight: 700; font-size: 14px; color: var(--text-primary); }
-.content-relay-panel__close { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 2px 6px; }
-.content-relay-incoming { background: var(--bg-secondary); border: 1px solid var(--color-accent); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.content-relay-incoming__label { font-size: 11px; color: var(--text-muted); }
-.content-relay-incoming__preview { font-size: 13px; color: var(--text-primary); max-height: 80px; overflow: hidden; white-space: pre-wrap; word-break: break-word; }
-.content-relay-incoming__actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.content-relay-send { display: flex; flex-direction: column; gap: 8px; }
-.content-relay-send__type { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); padding: 4px 8px; font-size: 13px; }
-.content-relay-send__textarea { width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 13px; padding: 8px; resize: vertical; font-family: inherit; }
-.content-relay-error { color: #ef4444; font-size: 12px; }
-.content-relay-toast { position: fixed; bottom: calc(140px + env(safe-area-inset-bottom,0px)); right: 16px; z-index: 901; background: var(--color-accent); color: #000; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.4); pointer-events: none; animation: relayToastIn .25s ease; }
-@keyframes relayToastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.content-relay-incoming__size { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
-.content-relay-send__row { display: flex; align-items: center; gap: 8px; }
-.content-relay-send__size-hint { font-size: 11px; color: var(--color-accent); font-family: var(--font-mono); }
-.content-relay-send__slow { font-size: 12px; color: var(--text-secondary); background: var(--bg-secondary); border-radius: 6px; padding: 6px 8px; }
-
 /* ═══════ TYPE-RECALL ═══════ */
 .type-recall-overlay { display: flex; flex-direction: column; gap: 14px; padding: 4px 0; }
 .type-recall-front { font-size: 18px; font-weight: 600; color: var(--text-primary); padding: 12px; background: var(--bg-secondary); border-radius: 8px; line-height: 1.5; }
@@ -1518,5 +1496,4 @@ div[data-video-embed] video {
 
 /* ═══════ E-INK / BOOX EXTRA ═══════ */
 html.eink canvas { image-rendering: pixelated; }
-html.eink .content-relay-fab { background: #fff; border-color: #000; color: #000; box-shadow: none; }
 html.eink .rsvp-card__content { color: #000; }

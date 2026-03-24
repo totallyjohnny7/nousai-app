@@ -14,6 +14,7 @@ import { checkForUpdates, getAppVersion, getStoredUpdate, dismissUpdate, getPlat
 import { signUp, signIn, logOut, onAuthChange, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, saveOmiConfig, type AuthUser } from '../utils/auth'
 // testData is lazy-loaded only when user clicks "Load Test Data" button
 import { SHORTCUT_DEFS, getShortcutKey, setShortcutKey, resetAllShortcuts, formatKey } from '../utils/shortcuts'
+import { scanK20Conflicts } from '../utils/k20ConflictScanner'
 import { getLevel, THEME_PRESETS } from '../utils/gamification'
 import {
   checkAllPermissions, requestMicrophone, requestPersistentStorage,
@@ -472,7 +473,7 @@ function ShortcutRow({ shortcut }: { shortcut: (typeof SHORTCUT_DEFS)[number] })
 
 // ─── Main Component ────────────────────────────────────────
 export default function SettingsPage() {
-  const { data, setData, updatePluginData, importData, exportData, einkMode, setEinkMode, betaMode, setBetaMode, backupNow, startRemoteWatch, stopRemoteWatch } = useStore()
+  const { data, setData, updatePluginData, importData, exportData, einkMode, setEinkMode, betaMode, setBetaMode, backupNow, startRemoteWatch, stopRemoteWatch, deviceSettings, setDeviceSettings } = useStore()
   const fileRef = useRef<HTMLInputElement>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [updateInfo, setUpdateInfo] = useState(getStoredUpdate())
@@ -3543,6 +3544,86 @@ export default function SettingsPage() {
         {expanded.inputdevices && (
           <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+            {/* ── Device Toggles ── */}
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Device Toggles</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {([
+                  { key: 'keyboard' as const, label: 'Keyboard', icon: '⌨️', locked: true, desc: 'Always on' },
+                  { key: 'k20' as const, label: 'HUION K20', icon: '🎛️', locked: false, desc: 'KeyDial Mini hotkeys' },
+                  { key: 'gamepad' as const, label: 'Game Controller', icon: '🎮', locked: false, desc: 'Gamepad API' },
+                  { key: 'streamDeck' as const, label: 'Stream Deck', icon: '⌨️', locked: false, desc: 'Elgato WebHID' },
+                  { key: 'midi' as const, label: 'MIDI Controller', icon: '🎹', locked: false, desc: 'Web MIDI API' },
+                  { key: 'otherHID' as const, label: 'Other HID', icon: '🔌', locked: false, desc: 'Generic HID devices' },
+                ] as const).map(d => (
+                  <div key={d.key} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '8px 12px', background: 'var(--bg-secondary)',
+                    borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)',
+                  }}>
+                    <span style={{ fontSize: 16 }}>{d.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.desc}</div>
+                    </div>
+                    {d.locked ? (
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>ON</span>
+                    ) : (
+                      <label style={{ position: 'relative', width: 40, height: 22, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={deviceSettings[d.key]}
+                          onChange={e => setDeviceSettings({ ...deviceSettings, [d.key]: e.target.checked })}
+                          style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                        />
+                        <span style={{
+                          position: 'absolute', inset: 0, borderRadius: 11,
+                          background: deviceSettings[d.key] ? 'var(--color-accent)' : 'var(--bg-card)',
+                          border: '1px solid var(--border)', transition: 'background 0.2s',
+                        }} />
+                        <span style={{
+                          position: 'absolute', top: 2, left: deviceSettings[d.key] ? 20 : 2,
+                          width: 18, height: 18, borderRadius: '50%',
+                          background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                          transition: 'left 0.2s',
+                        }} />
+                      </label>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* K20 conflict warnings */}
+              {(() => {
+                const conflicts = scanK20Conflicts();
+                if (conflicts.length === 0) return null;
+                return (
+                  <div style={{
+                    marginTop: 10, padding: '10px 12px',
+                    background: 'rgba(239,68,68,0.07)', borderRadius: 'var(--radius)',
+                    border: '1px solid rgba(239,68,68,0.25)', fontSize: 12, color: 'var(--text-secondary)',
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#ef4444', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <AlertTriangle size={14} /> K20 Shortcut Conflicts
+                    </div>
+                    <div>
+                      The following K20 combos conflict with reserved browser shortcuts and may not work:{' '}
+                      {conflicts.map((c, i) => (
+                        <kbd key={c} style={{
+                          background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                          borderRadius: 3, padding: '1px 5px', fontSize: 11,
+                          fontFamily: 'var(--font-mono, monospace)', marginRight: i < conflicts.length - 1 ? 4 : 0,
+                        }}>{c}</kbd>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* ── Divider ── */}
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+
             {/* ── Gamepad / Controller ── */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -3741,7 +3822,7 @@ export default function SettingsPage() {
                       fc_flip: { emoji: '🔄', label: 'FLIP' }, fc_next: { emoji: '➡️', label: 'NEXT' },
                       fc_prev: { emoji: '⬅️', label: 'PREV' }, fc_rsvp: { emoji: '⏩', label: 'RSVP' },
                       fc_cram: { emoji: '⚡', label: 'CRAM' }, fc_type_recall: { emoji: '✍️', label: 'TYPE' },
-                      fc_zen: { emoji: '🧘', label: 'ZEN' }, relay_send: { emoji: '📤', label: 'RELAY' },
+                      fc_zen: { emoji: '🧘', label: 'ZEN' },
                       screen_lasso: { emoji: '✂️', label: 'LASSO' }, notes_speak: { emoji: '🔊', label: 'TTS' },
                       fc_conf1: { emoji: '❌', label: 'AGAIN' }, fc_conf2: { emoji: '😰', label: 'HARD' },
                       fc_conf3: { emoji: '✅', label: 'GOOD' }, fc_conf4: { emoji: '🚀', label: 'EASY' },
@@ -3767,7 +3848,7 @@ export default function SettingsPage() {
                         color: '#F5A623',
                         keys: [
                           'fc_flip', 'fc_next', 'fc_prev', 'fc_rsvp', 'fc_cram',
-                          'fc_type_recall', 'fc_zen', 'relay_send', 'screen_lasso', 'notes_speak',
+                          'fc_type_recall', 'fc_zen', 'screen_lasso', 'notes_speak',
                           'fc_conf1', 'fc_conf2', 'fc_conf3', 'fc_conf4', 'nav_next',
                         ],
                       },
@@ -3952,7 +4033,7 @@ Modes (auto-switch by page):
 • Quiz Mode — on /quiz: Btn 1-4 = select options, Btn 5=SUBMIT, Btn 6=NEXT
 • Drawing Mode — on /draw: Btn 1=UNDO, Btn 2=REDO
 • Navigation Mode — all other pages: Btn 1-15 = jump to any NousAI page
-• Notes Mode — on /library or /learn: Btn 3=RELAY, Btn 4=LASSO
+• Notes Mode — on /library or /learn: Btn 4=LASSO
 
 Remapping: Settings → Input Devices → choose mode → click any button → select new action
 
@@ -4060,28 +4141,6 @@ What happens over time:
 Daily Cap: 50 cards per course per day (configurable in Settings). This prevents overwhelm when you add a large deck all at once.
 
 ⚡ Pro Tip: Grade honestly. Rating "Easy" when it was "Hard" corrupts the schedule. The algorithm only works if your self-ratings are accurate.`,
-  },
-  {
-    id: 'relay',
-    title: 'Content Relay — Step-by-Step Cross-Device',
-    tldr: 'Send text, notes, or URLs from any device to any other device instantly via Firebase.',
-    content: `Method 1 — Screen Lasso (Windows → Boox):
-1. Stream Deck Notes Btn 4, OR: Learn → Screen Lasso tool
-2. Select your screen (browser permission asked once)
-3. Draw a polygon around the text you want
-4. AI extracts the text (OCR)
-5. Click "Send to Relay"
-6. On Boox: amber dot appears → tap → "Save to Notes"
-
-Method 2 — Manual Relay (any device):
-1. Tap the relay button (bottom-right corner, circle icon)
-2. Type or paste content → select type: Text/URL/Note → Send
-3. Other device: amber dot appears within 5 seconds → accept
-
-Requirements: Both devices must be logged in with the same account.
-Works across: Windows, macOS, Boox, iPad, iOS, Android — any browser.
-
-⚡ Pro Tip: Relay works offline-to-online — if your Boox is offline when you send, the message waits in Firestore and delivers when Boox reconnects.`,
   },
   {
     id: 'pretest',

@@ -11,5 +11,32 @@ service cloud.firestore {
     match /notif/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+
+    // ── Study Groups (Phase 3 collaboration) ──────────────
+    // Group document: readable by members, writable by owner
+    match /groups/{groupId} {
+      allow read: if request.auth != null
+        && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null
+        && get(/databases/$(database)/documents/groups/$(groupId)).data.ownerId == request.auth.uid;
+
+      // Members subcollection: readable by any group member
+      match /members/{memberId} {
+        allow read: if request.auth != null
+          && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+        // Owner can add/remove members; users can add themselves (join via invite code)
+        allow create: if request.auth != null;
+        allow delete: if request.auth != null
+          && (request.auth.uid == memberId
+              || get(/databases/$(database)/documents/groups/$(groupId)).data.ownerId == request.auth.uid);
+      }
+
+      // Shared resources: read/write by any group member
+      match /{resource=**} {
+        allow read, write: if request.auth != null
+          && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+      }
+    }
   }
 }

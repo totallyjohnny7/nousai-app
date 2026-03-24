@@ -45,12 +45,21 @@ export function renderMd(text: string): string {
   let processed = text;
 
   // 1. Extract LaTeX (before anything else)
+  //    Supports both $...$ / $$...$$ and \(...\) / \[...\] delimiters
   processed = processed
     .replace(/\$\$([^$]+?)\$\$/g, (_, expr) => {
       try { return stash(katex.renderToString(expr.trim(), { throwOnError: false, displayMode: true })); }
       catch { return stash(expr); }
     })
+    .replace(/\\\[(.+?)\\\]/gs, (_, expr) => {
+      try { return stash(katex.renderToString(expr.trim(), { throwOnError: false, displayMode: true })); }
+      catch { return stash(expr); }
+    })
     .replace(/\$([^$\n]+?)\$/g, (_, expr) => {
+      try { return stash(katex.renderToString(expr.trim(), { throwOnError: false, displayMode: false })); }
+      catch { return stash(expr); }
+    })
+    .replace(/\\\((.+?)\\\)/g, (_, expr) => {
       try { return stash(katex.renderToString(expr.trim(), { throwOnError: false, displayMode: false })); }
       catch { return stash(expr); }
     });

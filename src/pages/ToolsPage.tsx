@@ -27,11 +27,15 @@ import {
 
 type ToolView = 'menu' | 'tts' | 'dictation' | 'speedread' | 'oralquiz' | 'summarizer' | 'notepad' | 'transcribe' | 'converter' | 'matrix' | 'graph' | 'chem' | 'solver' | 'codesandbox';
 
-export default function ToolsPage() {
+interface ToolsPageProps {
+  initialView?: ToolView;
+}
+
+export default function ToolsPage({ initialView }: ToolsPageProps = {}) {
   const { loaded } = useStore();
   // Auto-open transcribe view if a recording is already in progress
   const [view, setView] = useState<ToolView>(() =>
-    getTranscribeState().isRecording ? 'transcribe' : 'menu'
+    initialView ?? (getTranscribeState().isRecording ? 'transcribe' : 'menu')
   );
 
   if (!loaded) {
