@@ -17,6 +17,7 @@ import {
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { useStore } from '../store';
 import { ToolErrorBoundary } from '../components/ToolErrorBoundary';
+import type { ToolSession } from '../types';
 
 // ── Lazy imports — Learn modes ───────────────────────────────────────────────
 import ExamSimMode from '../components/learn/ExamSimMode';
@@ -73,10 +74,10 @@ const PreTestMode          = lazyWithRetry(() => import('../components/learn/Pre
 const OmniProtocol         = lazyWithRetry(() => import('../components/learn/OmniProtocol'));
 
 // ── Lazy imports — ToolsPage (for embedded tools) ───────────────────────────
-const ToolsPage = lazyWithRetry(() => import('./ToolsPage')) as React.LazyExoticComponent<(props: { initialView?: string }) => React.ReactElement | null>;
+const ToolsPage = lazyWithRetry(() => import('./ToolsPage'));
 
 // ── Types ────────────────────────────────────────────────────────────────────
-type Category = 'all' | 'learn' | 'generate' | 'capture' | 'analyze' | 'utilities' | 'specialty';
+type Category = 'all' | 'learn' | 'generate' | 'capture' | 'analyze' | 'utilities' | 'specialty' | 'sessions';
 
 interface ToolEntry {
   id: string;
@@ -206,17 +207,17 @@ const TOOLS: ToolEntry[] = [
   { id: 'connect',    name: 'Connect',      desc: 'Cross-topic links',           icon: Link,           color: '#a855f7', category: 'learn',     render: () => <ConnectMode onBack={() => {}} /> },
   { id: 'match',      name: 'Match',        desc: 'Drag-drop matching',          icon: Layers,         color: '#3b82f6', category: 'learn',     render: () => <MatchMode /> },
   { id: 'spaced',     name: 'Spaced Rep',   desc: 'FSRS review',                 icon: Repeat,         color: '#22c55e', category: 'learn',     render: () => <SpacedRepMode /> },
-  { id: 'tutors',     name: 'Tutors',       desc: 'AI teaching styles',          icon: Users,          color: '#e11d48', category: 'learn',     render: () => <TutorsMode /> },
+  { id: 'tutors',     name: 'Teaching Styles', desc: '5 AI teaching personalities', icon: Users, color: '#e11d48', category: 'learn', render: () => <TutorsMode /> },
   { id: 'solver',     name: 'Solver',       desc: 'Step-by-step help + graphs',  icon: HelpCircle,     color: '#0ea5e9', category: 'learn',     render: () => <SolverMode /> },
   { id: 'reexplain',  name: 'Re-Explain',   desc: 'Simpler breakdown on demand', icon: RefreshCw,      color: '#6366f1', category: 'learn',     render: () => <Suspense fallback={<Loader />}><ReExplainTool /></Suspense> },
   { id: 'analogy',    name: 'Analogy',      desc: 'Concept analogies & bridges', icon: Lightbulb,      color: '#f59e0b', category: 'learn',     render: () => <Suspense fallback={<Loader />}><AnalogyTool /></Suspense> },
   { id: 'aichat',     name: 'AI Chat',      desc: 'Open-ended AI conversation',  icon: MessageSquare,  color: '#8b5cf6', category: 'learn',     render: () => <Suspense fallback={<Loader />}><AIChatTool /></Suspense> },
   { id: 'mindmap',    name: 'Mind Map',     desc: 'Visual topic mind map',       icon: GitBranch,      color: '#10b981', category: 'learn',     render: () => <Suspense fallback={<Loader />}><MindMapTool /></Suspense> },
-  { id: 'speedread',  name: 'Speed Reader', desc: 'Rapid serial visual reading', icon: Zap,            color: '#f59e0b', category: 'learn',     render: () => <Suspense fallback={<Loader />}><ToolsPage initialView="speedread" /></Suspense> },
+  { id: 'speedread',  name: 'Speed Reader', desc: 'Word-by-word RSVP for text and notes', icon: Zap, color: '#f59e0b', category: 'learn', render: () => <Suspense fallback={<Loader />}><ToolsPage initialView="speedread" /></Suspense> },
   { id: 'oralquiz',   name: 'Oral Quiz',    desc: 'Speak answers — hands-free',  icon: MessageSquare,  color: '#ec4899', category: 'learn',     render: () => <Suspense fallback={<Loader />}><ToolsPage initialView="oralquiz" /></Suspense> },
-  { id: 'tutor',      name: 'Tutor',        desc: 'Guided topic explanations',   icon: GraduationCap,  color: '#f97316', category: 'learn',     render: () => <Suspense fallback={<Loader />}><TutorTool /></Suspense> },
+  { id: 'tutor',      name: 'Topic Tutor',  desc: 'AI tutor with proficiency context', icon: GraduationCap, color: '#f97316', category: 'learn', render: () => <Suspense fallback={<Loader />}><TutorTool /></Suspense> },
   { id: 'procedure-quiz', name: 'Procedure Quiz', desc: 'Quiz yourself on step-by-step procedures with AI scoring', icon: ClipboardList, color: '#22c55e', category: 'learn', render: () => <Suspense fallback={<Loader />}><ProcedureQuizTool /></Suspense> },
-  { id: 'rsvp',        name: '⚡ Speed Preview', desc: 'Flash through cards rapidly to build familiarity before deep study', icon: Zap, color: '#f59e0b', category: 'learn', render: () => <RSVPWrapper /> },
+  { id: 'rsvp',        name: '⚡ Speed Preview', desc: 'Rapid flashcard preview — front-only, timed flip', icon: Zap, color: '#f59e0b', category: 'learn', render: () => <RSVPWrapper /> },
   { id: 'pretest',     name: '🎯 Pre-Test Mode', desc: 'Test before learning — hypercorrection effect improves retention 15-20%', icon: CheckCircle, color: '#ef4444', category: 'learn', render: () => <PreTestWrapper /> },
   { id: 'omni-protocol', name: '⚡ Omni Protocol V6', desc: '60min–3hr AI-personalized session: multi-cycle Bloom\'s escalation, arc phase tracking, Feynman gap targeting', icon: Zap, color: '#F5A623', category: 'learn', render: () => <Suspense fallback={<Loader />}><OmniProtocol onComplete={() => window.dispatchEvent(new CustomEvent('nousai-switch-tool', { detail: 'spaced' }))} /></Suspense> },
   // ── Generate ──────────────────────────────────────────────────────────────
@@ -231,14 +232,14 @@ const TOOLS: ToolEntry[] = [
   { id: 'ocr',        name: 'OCR',          desc: 'Extract text from images',     icon: ScanLine,       color: '#06b6d4', category: 'capture',   render: () => <Suspense fallback={<Loader />}><OcrTool /></Suspense> },
   { id: 'pdfocr',     name: 'PDF → Cards',  desc: 'Scan PDF into flashcards',     icon: ScanSearch,     color: '#8b5cf6', category: 'capture',   render: () => <Suspense fallback={<Loader />}><PdfUploaderTool /></Suspense> },
   { id: 'ankiimport', name: 'Anki Import',  desc: 'Import .apkg decks',           icon: Download,       color: '#f97316', category: 'capture',   render: () => <Suspense fallback={<Loader />}><AnkiImportTool /></Suspense> },
-  { id: 'quizletimport',name:'Quizlet Import',desc:'Import Quizlet sets',         icon: FileText,       color: '#ec4899', category: 'capture',   render: () => <Suspense fallback={<Loader />}><QuizletImportTool /></Suspense> },
+  { id: 'quizletimport',name:'Quizlet Import',desc:'Paste Quizlet cards (tab-separated or CSV)', icon: FileText, color: '#ec4899', category: 'capture', render: () => <Suspense fallback={<Loader />}><QuizletImportTool /></Suspense> },
   { id: 'filetools',    name: 'File Tools',  desc: 'Merge, split, compress PDFs & images', icon: Wrench, color: '#64748b', category: 'utilities', render: () => <Suspense fallback={<Loader />}><FileToolsKit /></Suspense> },
   { id: 'notepad',    name: 'Quick Notes',  desc: 'Scratch pad with voice input', icon: PenTool,        color: '#8b5cf6', category: 'capture',   render: () => <Suspense fallback={<Loader />}><ToolsPage initialView="notepad" /></Suspense> },
   { id: 'transcribe', name: 'Transcribe',   desc: 'Record audio → live transcript',icon: Mic,           color: '#0891b2', category: 'capture',   render: () => <Suspense fallback={<Loader />}><ToolsPage initialView="transcribe" /></Suspense> },
   { id: 'video',      name: 'Video Studio', desc: 'Upload, record & annotate videos',icon: Film,         color: '#7c3aed', category: 'capture',   render: () => <Suspense fallback={<Loader />}><VideoTool /></Suspense> },
   { id: 'summarizer', name: 'AI Summarizer',desc: 'Paste text → key points',      icon: Sparkles,       color: '#06b6d4', category: 'capture',   render: () => <Suspense fallback={<Loader />}><ToolsPage initialView="summarizer" /></Suspense> },
   { id: 'big-content',name: '📚 Big Content', desc: 'Convert large text or documents into a reviewed atomic card deck', icon: BookOpen, color: '#8b5cf6', category: 'capture', render: () => <Suspense fallback={<Loader />}><BigContentTool /></Suspense> },
-  { id: 'screen-lasso',name: 'Screen Lasso', desc: 'Capture any screen region → OCR → Notes', icon: ScanSearch, color: '#06b6d4', category: 'capture', render: () => <Suspense fallback={<Loader />}><ScreenLassoTool /></Suspense> },
+  { id: 'screen-lasso',name: 'Screen Lasso', desc: 'Screen capture → OCR → Notes (Chrome/Edge desktop only)', icon: ScanSearch, color: '#06b6d4', category: 'capture', render: () => <Suspense fallback={<Loader />}><ScreenLassoTool /></Suspense> },
 
   // ── Analyze ───────────────────────────────────────────────────────────────
   { id: 'factcheck',  name: 'Fact Check',   desc: 'Verify claims & sources',      icon: CheckCircle,    color: '#22c55e', category: 'analyze',   render: () => <Suspense fallback={<Loader />}><FactCheckTool /></Suspense> },
@@ -261,12 +262,13 @@ const TOOLS: ToolEntry[] = [
   { id: 'japanese-practicum', name: 'Japanese Practicum', desc: 'Quiz · JP Study · Mind Map', icon: Languages, color: '#F5A623', category: 'specialty', render: () => <JpPracticumWrapper /> },
   { id: 'physics-practicum',  name: 'Physics Practicum',  desc: 'Problem sets & AI grading · Mind Map', icon: Atom,  color: '#F5A623', category: 'specialty', render: () => <PhysicsPracticumWrapper /> },
   { id: 'omi',        name: 'Omi',          desc: 'Omi wearable integration',     icon: Headphones,     color: '#3b82f6', category: 'specialty', render: () => <Suspense fallback={<Loader />}><OmiTool /></Suspense> },
-  { id: 'biol-practicum',      name: 'BIOL3020 Practium', desc: 'Molecular Biology — Cooper textbook, all exams', icon: Atom,      color: '#22c55e', category: 'specialty', render: () => <BiolPracticumWrapper /> },
-  { id: 'evolution-practicum', name: 'Evolution Practium', desc: 'Evolution — 7-heading framework, all exams',   icon: GitBranch, color: '#a78bfa', category: 'specialty', render: () => <EvolutionPracticumWrapper /> },
+  { id: 'biol-practicum',      name: 'BIOL3020 Practicum', desc: 'Molecular Biology — Cooper textbook, all exams', icon: Atom,      color: '#22c55e', category: 'specialty', render: () => <BiolPracticumWrapper /> },
+  { id: 'evolution-practicum', name: 'Evolution Practicum', desc: 'Evolution — 7-heading framework, all exams',   icon: GitBranch, color: '#a78bfa', category: 'specialty', render: () => <EvolutionPracticumWrapper /> },
 ];
 
 const CATEGORIES: { id: Category; label: string }[] = [
   { id: 'all',       label: 'All' },
+  { id: 'sessions',  label: 'Sessions' },
   { id: 'learn',     label: 'Learn' },
   { id: 'generate',  label: 'Generate' },
   { id: 'capture',   label: 'Capture' },
@@ -493,8 +495,66 @@ export default function UnifiedLearnPage() {
         ))}
       </div>
 
+      {/* ── Sessions panel ── */}
+      {category === 'sessions' && (() => {
+        const sessions = ((data?.pluginData?.toolSessions ?? []) as ToolSession[])
+          .slice()
+          .sort((a, b) => b.updatedAt - a.updatedAt);
+        const fmt = (ts: number) => {
+          const d = Date.now() - ts;
+          if (d < 60_000) return 'Just now';
+          if (d < 3_600_000) return `${Math.floor(d / 60_000)}m ago`;
+          if (d < 86_400_000) return `${Math.floor(d / 3_600_000)}h ago`;
+          return new Date(ts).toLocaleDateString();
+        };
+        if (sessions.length === 0) return (
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0', fontSize: 13 }}>
+            No sessions yet. Start a tool to create your first session.
+          </div>
+        );
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {sessions.map(s => (
+              <button key={s.id} onClick={() => {
+                // Find the tool and activate it — session will be resumed by the tool
+                const toolId = TOOLS.find(t => t.name === s.toolName)?.id;
+                if (toolId) setActiveTool(toolId);
+              }} className="card" style={{
+                cursor: 'pointer', textAlign: 'left', border: 'none',
+                background: 'var(--bg-secondary)', padding: '12px 14px',
+                display: 'flex', gap: 12, alignItems: 'flex-start',
+              }}>
+                <span style={{ fontSize: 22 }}>{s.toolIcon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{s.toolName}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{fmt(s.updatedAt)}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {s.topic}
+                  </div>
+                  {s.preview && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {s.preview}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                    {s.syncStatus === 'synced' && <span style={{ fontSize: 9, color: '#22c55e' }}>✓ Synced</span>}
+                    {s.syncStatus === 'pending' && <span style={{ fontSize: 9, color: '#eab308' }}>⏳ Pending</span>}
+                    {s.syncStatus === 'failed' && <span style={{ fontSize: 9, color: '#ef4444' }}>⚠ Failed</span>}
+                    {s.sessionState === 'broken' && <span style={{ fontSize: 9, color: '#ef4444' }}>⚠ Had errors</span>}
+                    {s.wasAutoFixed && <span style={{ fontSize: 9, color: '#22c55e' }}>🔧 Auto-fixed</span>}
+                    <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{s.messages.length} msgs</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* ── Tool grid ── */}
-      {visibleTools.length === 0 ? (
+      {category !== 'sessions' && (visibleTools.length === 0 ? (
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0', fontSize: 14 }}>
           {search ? 'No tools match your search.' : 'All tools hidden. Tap Customize to show tools.'}
         </div>
@@ -549,7 +609,7 @@ export default function UnifiedLearnPage() {
             );
           })}
         </div>
-      )}
+      ))}
     </div>
   );
 }

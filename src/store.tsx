@@ -138,6 +138,7 @@ export function normalizeData(d: NousAIData): NousAIData {
       drawings: safeArray(p?.drawings),
       matchSets: safeArray(p?.matchSets),
       aiChatSessions: safeArray(p?.aiChatSessions),
+      toolSessions: safeArray(p?.toolSessions),
       savedVideos: safeArray(p?.savedVideos),
       omniProtocol: p?.omniProtocol ?? undefined,
     } as NousAIData['pluginData'],
@@ -157,13 +158,14 @@ function broadcastDataChanged() {
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'offline';
 
 /* ── Auto-sync scheduler ─────────────────────────────── */
-const AUTO_SYNC_DEBOUNCE_MS = 30 * 1000; // 30 seconds
+const AUTO_SYNC_DEBOUNCE_MS = 10 * 1000; // 10 seconds (was 30s — reduced for faster cross-device sync)
 
 class AutoSyncScheduler {
   private timer: ReturnType<typeof setTimeout> | null = null;
   dirty = false;
   private failCount = 0;           // consecutive failure count for retry backoff
   private dataRef: React.RefObject<NousAIData | null>;
+  lastPushedTimestamp: string | null = null;  // tracks our last sync timestamp for self-trigger guard
   onFlushStart?: () => void;
   onFlushEnd?: (success: boolean) => void;
 
@@ -177,11 +179,18 @@ class AutoSyncScheduler {
     this.timer = setTimeout(() => this.flush(), AUTO_SYNC_DEBOUNCE_MS);
   }
 
-  /** Urgent sync — 5s debounce for critical state changes (card ratings, imports, course create/delete) */
+  /** Urgent sync — 3s debounce for critical state changes (card ratings, imports, course create/delete) */
   markDirtyUrgent() {
     this.dirty = true;
     if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.flush(), 5_000);
+    this.timer = setTimeout(() => this.flush(), 3_000);
+  }
+
+  /** Immediate sync — no debounce, for create/delete/import operations */
+  markDirtyImmediate() {
+    this.dirty = true;
+    if (this.timer) clearTimeout(this.timer);
+    this.flush();
   }
 
   async flush() {
@@ -204,6 +213,7 @@ class AutoSyncScheduler {
       await syncToCloud(uid, this.dataRef.current);
       const now = new Date().toISOString();
       localStorage.setItem('nousai-last-sync', now);
+      this.lastPushedTimestamp = now; // track for self-trigger guard
       this.failCount = 0; // reset on success
       console.log('[AUTO-SYNC] Synced to cloud at', now);
       window.dispatchEvent(new CustomEvent('nousai-synced'));
@@ -264,6 +274,8 @@ interface StoreCtx {
   betaMode: boolean;
   setBetaMode: (v: boolean) => void;
   backupNow: () => Promise<boolean>;
+  triggerSyncToCloud: () => Promise<void>;
+  triggerSyncFromCloud: () => Promise<void>;
   // Data health
   healthReport: HealthReport | null;
   // Sync status
@@ -463,7 +475,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Track online/offline status
   useEffect(() => {
-    const goOnline = () => setSyncStatus(prev => prev === 'offline' ? 'idle' : prev);
+    const goOnline = () => {
+      setSyncStatus(prev => prev === 'offline' ? 'idle' : prev);
+      // Flush any pending changes accumulated while offline
+      if (autoSyncRef.current.dirty) {
+        console.log('[STORE] Back online — flushing pending changes');
+        autoSyncRef.current.flush();
+      }
+    };
     const goOffline = () => setSyncStatus('offline');
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
@@ -478,22 +497,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     subscribeToMetadataChanges(uid, (remoteUpdatedAt: string) => {
       const localLastSync = localStorage.getItem('nousai-last-sync');
       if (!localLastSync || remoteUpdatedAt > localLastSync) {
-        // Skip if we just synced ourselves within 10s to avoid self-triggering
-        if (localLastSync) {
-          const msSinceSync = Date.now() - new Date(localLastSync).getTime();
-          if (msSinceSync < 10_000) return;
-        }
-        // Defer remote load if local has unsynced changes (prevents overwriting local deletions)
+        // Skip if WE caused this update (sync-ID comparison, not time-based)
+        if (autoSyncRef.current.lastPushedTimestamp === remoteUpdatedAt) return;
+        // If local has unsynced changes, flush first then load remote (was: silently defer = deadlock)
         const localModified = localStorage.getItem('nousai-data-modified-at');
         const lastSync = localStorage.getItem('nousai-last-sync');
         if (localModified && lastSync && localModified > lastSync) {
-          console.log('[STORE] Remote update available but local has unsynced changes — deferring');
+          console.log('[STORE] Remote update + local unsynced — flushing local first');
+          autoSyncRef.current.flush().then(() => {
+            window.dispatchEvent(new CustomEvent('nousai-remote-update-available'));
+          });
           return;
         }
         // Auto-load silently — no banner click required
         const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
         if (autoSync) {
-          // Use a ref-safe approach: dispatch event so loadRemoteData can be called
           window.dispatchEvent(new CustomEvent('nousai-remote-update-available'));
         } else {
           setRemoteUpdateAvailable(true);
@@ -539,6 +557,61 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRemoteUpdateAvailable(false);
   }, []);
 
+  // ── Global sync triggers (for Ctrl+S / Ctrl+Shift+S hotkeys) ────
+  const triggerSyncToCloud = useCallback(async () => {
+    const uid = localStorage.getItem('nousai-auth-uid');
+    if (!uid || !data) {
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: !uid ? 'Sign in to sync' : 'No data to sync' }));
+      return;
+    }
+    setSyncStatus('syncing');
+    window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Syncing to cloud...' }));
+    try {
+      await syncToCloud(uid, data);
+      const now = new Date().toISOString();
+      localStorage.setItem('nousai-last-sync', now);
+      setLastSyncAt(now);
+      setSyncStatus('idle');
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: '✓ Synced to cloud!' }));
+    } catch (e: any) {
+      console.error('[STORE] triggerSyncToCloud failed:', e);
+      setSyncStatus('error');
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync failed — ' + (e?.message || 'check connection') }));
+    }
+  }, [data]);
+
+  const triggerSyncFromCloud = useCallback(async () => {
+    const uid = localStorage.getItem('nousai-auth-uid');
+    if (!uid) {
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sign in to sync' }));
+      return;
+    }
+    setSyncStatus('syncing');
+    window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Loading from cloud...' }));
+    try {
+      const cloudData = await syncFromCloud(uid);
+      if (cloudData) {
+        const normalized = normalizeData(cloudData);
+        const merged = mergeLocalCardMeta(dataRef.current, normalized);
+        setData(merged);
+        saveGoldenCopy(merged).catch(() => {});
+        const now = new Date().toISOString();
+        localStorage.setItem('nousai-last-sync', now);
+        localStorage.setItem('nousai-data-modified-at', now);
+        setLastSyncAt(now);
+        setSyncStatus('idle');
+        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: '✓ Loaded from cloud!' }));
+      } else {
+        setSyncStatus('idle');
+        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'No cloud data found' }));
+      }
+    } catch (e: any) {
+      console.error('[STORE] triggerSyncFromCloud failed:', e);
+      setSyncStatus('error');
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync failed — ' + (e?.message || 'check connection') }));
+    }
+  }, [setData]);
+
   useEffect(() => {
     if (!data) return;
     autoSyncRef.current.markDirty();
@@ -562,12 +635,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
     // pagehide: iOS Safari fires this but not always beforeunload
     const handlePageHide = () => { autoSyncRef.current.flush(); };
-    // 60s heartbeat: catch edge cases where debounce timer was cleared
+    // 30s heartbeat: catch edge cases where debounce timer was cleared
     const heartbeat = setInterval(() => {
       if (autoSyncRef.current.dirty && navigator.onLine) {
         autoSyncRef.current.flush();
       }
-    }, 60_000);
+    }, 30_000);
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('pagehide', handlePageHide);
     return () => {
@@ -771,6 +844,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     data, setData, updatePluginData, loaded, importData, exportData, copyToClipboard, exportToFile, importFromFile,
     matchSets, saveMatchSet, events, quizHistory, courses, gamification, proficiency, srData,
     timerState, setTimerState, einkMode, setEinkMode, betaMode, setBetaMode, backupNow,
+    triggerSyncToCloud, triggerSyncFromCloud,
     healthReport,
     syncStatus, lastSyncAt, remoteUpdateAvailable,
     startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
@@ -782,7 +856,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     savedVideos, addVideo, deleteVideo, updateVideoMeta,
   }), [data, loaded, matchSets, savedVideos, events, quizHistory, courses, gamification, proficiency, srData, timerState, einkMode, betaMode, // eslint-disable-line react-hooks/exhaustive-deps
-    setData, updatePluginData, copyToClipboard, exportToFile, backupNow,
+    setData, updatePluginData, copyToClipboard, exportToFile, backupNow, triggerSyncToCloud, triggerSyncFromCloud,
     syncStatus, lastSyncAt, remoteUpdateAvailable,
     startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
     activePageContext, hiddenToolIds, healthReport]);

@@ -19,8 +19,7 @@ import { getDueCount } from './utils/getDueCount'
 import { initFsrsCache } from './utils/fsrsStorage'
 import { detectDeviceProfile } from './utils/deviceDetection'
 import { useAuthUser } from './hooks/useAuthUser'
-import { streamDeckService, StreamDeckService, getDeviceFingerprint } from './utils/streamDeckService'
-import { watchQKAction, syncToCloud, syncFromCloud } from './utils/auth'
+import { streamDeckService, StreamDeckService } from './utils/streamDeckService'
 import './App.css'
 
 /* ── Error Boundary to prevent blank page crashes ──── */
@@ -99,7 +98,10 @@ const Flashcards = lazyWithRetry(() => import('./pages/Flashcards'))
 const Timer = lazyWithRetry(() => import('./pages/Timer'))
 const CalendarPage = lazyWithRetry(() => import('./pages/CalendarPage'))
 const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage'))
+const ToolsPage = lazyWithRetry(() => import('./pages/ToolsPage'))
+const LearnPage = lazyWithRetry(() => import('./pages/LearnPage'))
 const UnifiedLearnPage = lazyWithRetry(() => import('./pages/UnifiedLearnPage'))
+const SharedContentPage = lazyWithRetry(() => import('./pages/SharedContentPage'))
 const LibraryPage = lazyWithRetry(() => import('./pages/LibraryPage'))
 const CoursePage = lazyWithRetry(() => import('./pages/CoursePage'))
 const VideosPage = lazyWithRetry(() => import('./pages/VideosPage'))
@@ -151,12 +153,12 @@ function preloadRoute(to: string) {
 
 // ─── Keyboard Shortcut Overlay (beta) ───────────────
 const SHORTCUTS = [
+  { keys: ['Ctrl', 'S'], description: 'Sync to Cloud' },
+  { keys: ['Ctrl', '⇧', 'S'], description: 'Load from Cloud' },
+  { keys: ['Ctrl', 'F'], description: 'Open search palette' },
   { keys: ['N'], description: 'New note' },
   { keys: ['Q'], description: 'Go to Quiz' },
   { keys: ['F'], description: 'Go to Flashcards' },
-  { keys: ['Shift', 'S'], description: 'Sync to cloud' },
-  { keys: ['Shift', 'D'], description: 'Download from cloud' },
-  { keys: ['Ctrl', 'F'], description: 'Open search palette' },
   { keys: ['?'], description: 'Show this overlay' },
 ]
 
@@ -275,30 +277,17 @@ function FloatingTranscribeIndicator() {
 }
 
 export default function App() {
-  const { loaded, data, setData, srData, updatePluginData, syncStatus, lastSyncAt, remoteUpdateAvailable, loadRemoteData, dismissRemoteBanner, betaMode, backupNow, courses, setEinkMode } = useStore()
+  const { loaded, data, setData, srData, updatePluginData, syncStatus, lastSyncAt, remoteUpdateAvailable, loadRemoteData, dismissRemoteBanner, betaMode, backupNow, triggerSyncToCloud, triggerSyncFromCloud, courses, setEinkMode } = useStore()
   const { uid } = useAuthUser()
   const location = useLocation()
   const initRef = useRef(false)
-  const [syncToast, setSyncToast] = useState<string | null>(null)
-  const syncingRef = useRef(false)
 
   // Auto-connect Quick Keys silently on load (no popup — uses already-granted devices).
-  // Sets uid on service so QK actions from Boox/other devices fire here.
   useEffect(() => {
     streamDeckService.setUid(uid ?? null)
     if (uid && StreamDeckService.isSupported() && !streamDeckService.connected) {
       streamDeckService.autoConnect().catch(() => {})
     }
-    if (!uid) return
-    const myFingerprint = getDeviceFingerprint()
-    const unsub = watchQKAction(uid, (payload) => {
-      // Ignore actions originating from this device (prevents relay loops)
-      if (payload.fromDevice === myFingerprint) return
-      // Ignore stale events older than 5 seconds
-      if (Date.now() - payload.ts > 5000) return
-      streamDeckService.dispatchActionFromRelay(payload.actionId)
-    })
-    return unsub
   }, [uid])
   const [omniSearchOpen, setOmniSearchOpen] = useState(false)
   const [shortcutOverlayOpen, setShortcutOverlayOpen] = useState(false)
@@ -436,6 +425,31 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  // Ctrl+S / Cmd+S — Sync to Cloud; Ctrl+Shift+S / Cmd+Shift+S — Load from Cloud
+  const [syncToast, setSyncToast] = useState<string | null>(null)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault()
+        if (e.shiftKey) triggerSyncFromCloud()
+        else triggerSyncToCloud()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [triggerSyncToCloud, triggerSyncFromCloud])
+
+  // Global toast listener for sync feedback
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const msg = (e as CustomEvent).detail as string
+      setSyncToast(msg)
+      setTimeout(() => setSyncToast(null), 2500)
+    }
+    window.addEventListener('nousai-toast', handler)
+    return () => window.removeEventListener('nousai-toast', handler)
+  }, [])
+
   // Beta keyboard shortcuts: N=new note, Q=quiz, F=flashcards, ?=overlay, F11=focus mode
   const navigate = useNavigate()
   useEffect(() => {
@@ -453,40 +467,6 @@ export default function App() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [betaMode, navigate])
-
-  // Global sync shortcuts: Shift+S = push to cloud, Shift+D = pull from cloud
-  useEffect(() => {
-    const handler = async (e: KeyboardEvent) => {
-      if (!uid || syncingRef.current) return
-      const tag = (e.target as HTMLElement)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
-      if (!e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return
-
-      if (e.key === 'S') {
-        e.preventDefault()
-        if (!data) return
-        syncingRef.current = true
-        setSyncToast('Syncing to cloud…')
-        try {
-          await syncToCloud(uid, data!)
-          setSyncToast('Synced to cloud ✓')
-        } catch { setSyncToast('Sync failed — check connection') }
-        finally { syncingRef.current = false; setTimeout(() => setSyncToast(null), 2500) }
-      } else if (e.key === 'D') {
-        e.preventDefault()
-        syncingRef.current = true
-        setSyncToast('Downloading from cloud…')
-        try {
-          const cloudData = await syncFromCloud(uid)
-          if (cloudData) { setData(cloudData); setSyncToast('Loaded from cloud ✓') }
-          else { setSyncToast('No cloud data found') }
-        } catch { setSyncToast('Download failed — check connection') }
-        finally { syncingRef.current = false; setTimeout(() => setSyncToast(null), 2500) }
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [uid, data, setData])
 
   // Auto dark mode scheduling — check every minute
   useEffect(() => {
@@ -716,6 +696,7 @@ export default function App() {
             <Route path="/quiz" element={<Quizzes />} />
             <Route path="/quizzes" element={<Navigate to="/quiz" replace />} />
             <Route path="/learn" element={<UnifiedLearnPage />} />
+            <Route path="/share/:shareId" element={<SharedContentPage />} />
             <Route path="/flashcards" element={<Flashcards />} />
             <Route path="/timer" element={<Timer />} />
             <Route path="/calendar" element={<CalendarPage />} />
@@ -741,10 +722,6 @@ export default function App() {
       {/* Floating mic indicator — shows on any page while Transcribe is recording */}
       <FloatingTranscribeIndicator />
 
-      {/* Global sync toast — Shift+S / Shift+D feedback */}
-      {syncToast && (
-        <div role="status" aria-live="polite" className="sync-toast">{syncToast}</div>
-      )}
 
       {/* Omni Search palette — triggered by Cmd+F / Ctrl+F */}
       {omniSearchOpen && (
@@ -755,6 +732,25 @@ export default function App() {
 
       {/* Keyboard shortcut overlay (beta) */}
       {shortcutOverlayOpen && <ShortcutOverlay onClose={() => setShortcutOverlayOpen(false)} />}
+
+      {/* Sync toast — triggered by Ctrl+S / Ctrl+Shift+S */}
+      {syncToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            borderRadius: 8, padding: '8px 16px', fontSize: 13,
+            color: 'var(--text-primary)', zIndex: 9999,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            fontFamily: 'var(--font-mono, monospace)',
+            animation: 'fadeIn 0.15s ease-out',
+          }}
+        >
+          {syncToast}
+        </div>
+      )}
 
       {/* Focus mode exit button (beta) */}
       {focusMode && (

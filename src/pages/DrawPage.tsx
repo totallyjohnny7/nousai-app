@@ -10,12 +10,10 @@ import {
   LayoutGrid, Download, Copy, Filter, Minus, BookOpen,
   Save, Trash2, Check,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store';
 import type { Drawing } from '../types';
 import RichTextEditor from '../components/RichTextEditor';
-
-
 
 /* ── Types ──────────────────────────────────────────── */
 type TemplateName = 'blank' | 'cornell' | 'grid' | 'dotgrid' | 'lined';
@@ -79,7 +77,7 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
 export default function DrawPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { loaded, data, setData, updatePluginData } = useStore();
   const navigate = useNavigate();
-
+  const location = useLocation();
 
   const [drawings, setDrawings] = useState<Drawing[]>([]);
   const [view, setView] = useState<'browser' | 'canvas' | 'typed'>('browser');
@@ -104,6 +102,7 @@ export default function DrawPage({ embedded = false }: { embedded?: boolean } = 
       }
     }
   }, [data]);
+
 
   // Persist drawings to store (uses functional updater to prevent stale data overwrites)
   const persistDrawings = useCallback((updated: Drawing[]) => {
@@ -598,7 +597,6 @@ function ExcalidrawEditor({
   const [drawingName, setDrawingName] = useState(drawing.name);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
 
   // Parse initial data — handle both new Excalidraw JSON format and legacy base64 format
   const initialData = useMemo(() => {

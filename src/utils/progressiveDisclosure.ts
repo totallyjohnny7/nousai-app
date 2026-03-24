@@ -28,7 +28,6 @@ const FEATURE_GATES: FeatureGate[] = [
   { id: 'type-recall', name: 'Type-to-Recall', tier: 'day1', description: 'Generation effect' },
   { id: 'stats', name: 'Session Stats', tier: 'day1', description: 'Performance tracking' },
 
-
   // Day 7 — Intermediate
   { id: 'feynman', name: 'Feynman Mode', tier: 'day7', description: 'Explain like teaching' },
   { id: 'dual-coding', name: 'Dual Coding', tier: 'day7', description: 'AI visual per card' },

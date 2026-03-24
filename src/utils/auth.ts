@@ -878,7 +878,7 @@ export function removeLocalPin(): void {
   localStorage.removeItem('nousai-pin');
 }
 
-// ─── Quick Keys Action Relay ──────────────────────────────────────────────────
+// ─── Quick Keys Action Sync ──────────────────────────────────────────────────
 //
 // Ephemeral Firestore doc at users/{uid}/relay/qkAction.
 // Physical Quick Keys on Windows → Firestore → Boox fires same action.
@@ -978,5 +978,54 @@ export async function saveConflictBackup(uid: string, data: NousAIData, label: s
   } catch (e) {
     // Backup failures are non-fatal — log but don't throw
     console.error('[BACKUP] Failed to save conflict backup:', e);
+  }
+}
+
+// ─── Content Sharing ────────────────────────────────────────
+
+export interface ShareableContent {
+  type: 'deck' | 'note' | 'drawing' | 'quiz';
+  data: unknown;
+  title: string;
+  ownerId: string;
+  ownerName: string;
+  courseId: string | null;
+  courseName: string | null;
+  createdAt: string;
+}
+
+/** Publish content to the shared-content collection. Returns the shareId. */
+export async function publishSharedContent(content: ShareableContent): Promise<string | null> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns) return null;
+  const fb = fbFns;
+  const shareId = crypto.randomUUID();
+  try {
+    const docRef = fb.doc(firebaseDb, 'shared-content', shareId);
+    await fb.setDoc(docRef, {
+      ...content,
+      createdAt: new Date().toISOString(),
+    });
+    console.log('[SHARE] Published content:', shareId);
+    return shareId;
+  } catch (e) {
+    console.error('[SHARE] Failed to publish:', e);
+    return null;
+  }
+}
+
+/** Fetch shared content by ID (public read). */
+export async function fetchSharedContent(shareId: string): Promise<ShareableContent | null> {
+  const loaded = await loadFirebase();
+  if (!loaded || !fbFns) return null;
+  const fb = fbFns;
+  try {
+    const docRef = fb.doc(firebaseDb, 'shared-content', shareId);
+    const snap = await fb.getDoc(docRef);
+    if (snap.exists()) return snap.data() as ShareableContent;
+    return null;
+  } catch (e) {
+    console.error('[SHARE] Failed to fetch:', e);
+    return null;
   }
 }

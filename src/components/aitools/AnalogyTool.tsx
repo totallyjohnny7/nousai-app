@@ -16,7 +16,6 @@ function AnalogyTool() {
   const { data, updatePluginData } = useStore();
   const [topic, setTopic] = useState('');
   const [analogies, setAnalogies] = useState<AnalogyCard[]>([]);
-  const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
 
   // Template-based analogy generator (no AI API needed)
@@ -57,22 +56,15 @@ function AnalogyTool() {
 
   function generateAnalogies() {
     if (!topic.trim()) return;
-    setLoading(true);
-
-    // Simulate a brief delay for realism
-    setTimeout(() => {
-      const shuffled = [...analogyTemplates].sort(() => Math.random() - 0.5);
-      const selected = shuffled.slice(0, 4);
-      const newAnalogies: AnalogyCard[] = selected.map((tmpl) => ({
-        id: uid(),
-        concept: topic,
-        analogy: tmpl.pattern(topic),
-        domain: tmpl.domain,
-      }));
-      setAnalogies(newAnalogies);
-      setSaved(false);
-      setLoading(false);
-    }, 600);
+    const shuffled = [...analogyTemplates].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, 4);
+    setAnalogies(selected.map((tmpl) => ({
+      id: uid(),
+      concept: topic,
+      analogy: tmpl.pattern(topic),
+      domain: tmpl.domain,
+    })));
+    setSaved(false);
   }
 
   function saveToLibrary() {
@@ -112,9 +104,9 @@ function AnalogyTool() {
           <button
             className="btn btn-primary"
             onClick={generateAnalogies}
-            disabled={!topic.trim() || loading}
+            disabled={!topic.trim()}
           >
-            {loading ? 'Generating...' : 'Generate'}
+            Generate
           </button>
         </div>
       </div>
@@ -154,7 +146,7 @@ function AnalogyTool() {
         </div>
       )}
 
-      {analogies.length === 0 && !loading && (
+      {analogies.length === 0 && (
         <div className="text-center" style={{ padding: 40, color: 'var(--text-muted)' }}>
           <Lightbulb size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
           <p className="text-sm">Enter a topic to generate helpful analogies</p>

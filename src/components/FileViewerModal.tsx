@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronUp, Loader2, Search, Send, X } from 'lucide-react'
 import type { LinkItem } from '../types'
 import { callAI } from '../utils/ai'
+import { safeRenderMd } from '../utils/renderMd'
 import { runMistralOcr, type OcrStage } from '../utils/mistralOcrService'
 import { loadFile, saveFile } from '../utils/fileStore'
 
@@ -524,7 +525,7 @@ function FileViewerChat({ item, courseId, accentColor }: ChatProps) {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {messages.length === 0 && !isOcrRunning && (
           <div style={{ color: 'var(--text-dim)', fontSize: 12, textAlign: 'center', marginTop: 24 }}>
             Ask anything about <strong>{item.name}</strong>.<br />
@@ -544,10 +545,12 @@ function FileViewerChat({ item, courseId, accentColor }: ChatProps) {
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
           }}>
-            {m.text || (m.role === 'ai' && loading
-              ? <Loader2 size={14} className="spin" />
-              : null
-            )}
+            {m.role === 'ai' && m.text
+              ? <div dangerouslySetInnerHTML={{ __html: safeRenderMd(m.text) }} />
+              : m.text || (m.role === 'ai' && loading
+                ? <Loader2 size={14} className="spin" />
+                : null
+              )}
           </div>
         ))}
         {error && (

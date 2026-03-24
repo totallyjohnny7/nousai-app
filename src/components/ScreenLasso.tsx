@@ -1,5 +1,5 @@
 /**
- * ScreenLasso — Windows Screen Region Capture → OCR → Notes
+ * ScreenLasso — Windows Screen Region Capture → OCR
  *
  * Uses getDisplayMedia to capture one frame, overlays a polygon lasso,
  * OCRs the selection via Mistral, and lets user save the result.
@@ -10,7 +10,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
-
 
 interface Props {
   isOpen: boolean;

@@ -241,7 +241,7 @@ export default function QuizAIChat({ questionText, questionType, options, subjec
           </div>
 
           {/* Messages */}
-          <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
+          <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 8 }}>
             {messages.length === 0 && (
               <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 20 }}>
                 Ask any question about the current problem. I'll help you understand without giving away the answer.

@@ -4,7 +4,7 @@
  * Touch-screen replica of the Elgato Stream Deck MK.2 for devices that don't
  * support WebHID (Boox, iPad, Firefox, etc.).
  *
- * Also acts as the RECEIVER of cross-device Stream Deck relay events:
+ * Virtual Stream Deck panel for touch/click-based button control.
  * - Windows presses a physical key → Firestore → this component fires the action
  * - Tapping a virtual button → Firestore → Windows fires the action
  *
@@ -16,9 +16,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { streamDeckService } from '../utils/streamDeckService';
 import type { StreamDeckMode, StreamDeckModeConfig } from '../utils/streamDeckService';
 import { getActionIcon } from '../utils/streamDeckIcons';
-import { watchQKAction } from '../utils/auth';
-import type { QKActionPayload } from '../utils/auth';
-import { getDeviceFingerprint } from '../utils/streamDeckService';
 
 interface VirtualStreamDeckProps {
   uid: string;
@@ -40,43 +37,22 @@ const MODE_ICONS: Record<StreamDeckMode, string> = {
   notes:      '📝',
 };
 
-const STALE_MS = 5_000; // Ignore relay events older than 5 seconds
-
 export default function VirtualStreamDeck({ uid }: VirtualStreamDeckProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const [config, setConfig] = useState(() => streamDeckService.getConfig());
   const [flashedBtn, setFlashedBtn] = useState<number | null>(null);
-  const myFingerprint = useRef(getDeviceFingerprint());
 
   // Sync config from service
   useEffect(() => {
     return streamDeckService.subscribe(() => setConfig(streamDeckService.getConfig()));
   }, []);
 
-  // Relay receiver — fire actions from other devices
-  useEffect(() => {
-    const unsub = watchQKAction(uid, (payload: QKActionPayload) => {
-      // Ignore our own relay events (echo prevention)
-      if (payload.fromDevice === myFingerprint.current) return;
-      // Ignore stale events
-      if (Date.now() - payload.ts > STALE_MS) return;
-      streamDeckService.dispatchActionFromRelay(payload.actionId);
-      // Flash the matching button in the virtual panel
-      const modeConfig = config.modes[config.currentMode];
-      const idx = modeConfig.buttons.findIndex((b) => b.actionId === payload.actionId);
-      if (idx >= 0) {
-        setFlashedBtn(idx);
-        setTimeout(() => setFlashedBtn(null), 400);
-      }
-    });
-    return unsub;
-  }, [uid, config]);
 
   const handleButtonPress = useCallback((buttonIndex: number, actionId: string) => {
     // Flash feedback
     setFlashedBtn(buttonIndex);
     setTimeout(() => setFlashedBtn(null), 200);
-    // Dispatch locally and relay to other devices
+    // Dispatch locally
     streamDeckService.dispatchActionFromVirtual(actionId);
   }, []);
 
@@ -197,10 +173,6 @@ export default function VirtualStreamDeck({ uid }: VirtualStreamDeckProps): Reac
             ))}
           </div>
 
-          {/* Relay status */}
-          <div style={{ marginTop: 8, fontSize: 10, color: '#555', textAlign: 'center' }}>
-            Cross-device relay active · actions sync instantly
-          </div>
         </div>
       )}
     </div>

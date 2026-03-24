@@ -19,19 +19,8 @@
  */
 
 import { setStreamDeckConnected } from './deviceDetection';
-import { writeQKAction, saveQKConfig, loadQKConfig } from './auth';
+import { saveQKConfig, loadQKConfig } from './auth';
 import { renderKeyIcon, renderEmptyKey } from './streamDeckIcons';
-
-/** Short, session-stable fingerprint to prevent echoing QK actions back to sender */
-export function getDeviceFingerprint(): string {
-  const raw = navigator.userAgent.slice(0, 60) + screen.width + screen.height;
-  let hash = 0;
-  for (let i = 0; i < raw.length; i++) {
-    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36);
-}
 
 export type StreamDeckMode = 'flashcard' | 'quiz' | 'drawing' | 'navigation' | 'notes';
 
@@ -66,8 +55,7 @@ const MODE_COLORS: Record<StreamDeckMode, [number, number, number]> = {
 // Design principles applied:
 //   Row 3 (buttons 10-14) is ALWAYS the grading row (Again/Hard/Good/Easy + utility) across all
 //   modes — Fitts's Law muscle memory, no visual search needed for the most frequent action.
-//   Relay (relay_send) and Lasso (screen_lasso) appear in every mode — Windows↔BOOX content
-//   relay is a universal workflow, always reachable without mode-switching.
+//   Lasso (screen_lasso) appears in every mode — always reachable without mode-switching.
 //   Drawing tools (Pen/Highlight/Erase) appear in both drawing AND notes modes — students
 //   annotate everywhere, not just in the dedicated drawing canvas.
 //   TTS Read (notes_speak) appears in flashcard, navigation, and notes — auditory encoding
@@ -91,7 +79,6 @@ const DEFAULT_CONFIGS: Record<StreamDeckMode, StreamDeckModeConfig> = {
       // Row 2 — Advanced study modes + utilities
       { actionId: 'fc_type_recall', label: 'Type-Recall' },
       { actionId: 'fc_zen',         label: 'Zen Mode' },
-      { actionId: 'relay_send',     label: 'Relay' },
       { actionId: 'screen_lasso',   label: 'Lasso' },
       { actionId: 'notes_speak',    label: 'TTS Read' },
       // Row 3 — FSRS grading (muscle memory row, constant across all modes)
@@ -119,7 +106,6 @@ const DEFAULT_CONFIGS: Record<StreamDeckMode, StreamDeckModeConfig> = {
       // Row 2 — Submit/continue flow + utilities
       { actionId: 'qz_submit',    label: 'Submit' },
       { actionId: 'qz_continue',  label: 'Next Q' },
-      { actionId: 'relay_send',   label: 'Relay' },
       { actionId: 'screen_lasso', label: 'Lasso' },
       { actionId: 'notes_speak',  label: 'TTS Read' },
       // Row 3 — Grading row (muscle memory)
@@ -149,7 +135,6 @@ const DEFAULT_CONFIGS: Record<StreamDeckMode, StreamDeckModeConfig> = {
       { actionId: 'draw_redo',      label: 'Redo' },
       { actionId: 'draw_save',      label: 'Save' },
       { actionId: 'screen_lasso',   label: 'Lasso' },
-      { actionId: 'relay_send',     label: 'Relay' },
       // Row 3 — Grading row (muscle memory)
       { actionId: 'fc_conf1',       label: 'Again' },
       { actionId: 'fc_conf2',       label: 'Hard' },
@@ -176,7 +161,6 @@ const DEFAULT_CONFIGS: Record<StreamDeckMode, StreamDeckModeConfig> = {
       { actionId: 'nav_timer',      label: 'Timer' },
       { actionId: 'nav_calendar',   label: 'Calendar' },
       { actionId: 'nav_settings',   label: 'Settings' },
-      { actionId: 'relay_send',     label: 'Relay' },
       { actionId: 'screen_lasso',   label: 'Lasso' },
       // Row 3 — Grading row (muscle memory)
       { actionId: 'fc_conf1',       label: 'Again' },
@@ -205,7 +189,6 @@ const DEFAULT_CONFIGS: Record<StreamDeckMode, StreamDeckModeConfig> = {
       { actionId: 'draw_highlight', label: 'Highlight' },
       { actionId: 'draw_erase',     label: 'Erase' },
       { actionId: 'screen_lasso',   label: 'Lasso' },
-      { actionId: 'relay_send',     label: 'Relay' },
       // Row 3 — Grading row (muscle memory)
       { actionId: 'fc_conf1',       label: 'Again' },
       { actionId: 'fc_conf2',       label: 'Hard' },
@@ -258,7 +241,6 @@ export const ALL_STREAM_DECK_ACTIONS = [
   // Notes
   { id: 'notes_new', label: 'New Note', category: 'notes' },
   { id: 'notes_search', label: 'Search Notes', category: 'notes' },
-  { id: 'relay_send', label: 'Send to Relay', category: 'notes' },
   { id: 'screen_lasso', label: 'Screen Lasso', category: 'notes' },
   { id: 'notes_bold', label: 'Bold Text', category: 'notes' },
   { id: 'notes_italic', label: 'Italic Text', category: 'notes' },
@@ -285,7 +267,6 @@ export class StreamDeckService {
   private _requestFn: ((opts?: any) => Promise<any[]>) | null = null;
   private _getFn: ((opts?: any) => Promise<any[]>) | null = null;
   private preloadPromise: Promise<void> | null = null;
-  // Authenticated user ID for cross-device action relay
   private uid: string | null = null;
 
   constructor() {
@@ -303,7 +284,7 @@ export class StreamDeckService {
     return this._connected;
   }
 
-  /** Set user ID for cross-device relay. Call after sign-in. */
+  /** Set user ID. Call after sign-in. */
   setUid(uid: string | null): void {
     this.uid = uid;
     if (uid) {
@@ -414,10 +395,6 @@ export class StreamDeckService {
     this.notify();
   }
 
-  /** Fire a relayed action received from another device. */
-  dispatchActionFromRelay(actionId: string): void {
-    window.dispatchEvent(new CustomEvent('nousai-action', { detail: actionId }));
-  }
 
   /** Dispatch action from virtual Stream Deck panel. */
   dispatchActionFromVirtual(actionId: string): void {
@@ -456,20 +433,13 @@ export class StreamDeckService {
     });
   }
 
-  /** Dispatch action locally AND relay to other devices. */
+  /** Dispatch action locally. */
   private _dispatchAction(actionId: string): void {
     window.dispatchEvent(new CustomEvent('nousai-action', { detail: actionId }));
     const modeConfig = this.config.modes[this.config.currentMode];
     const keyIndex = modeConfig.buttons.findIndex((b) => b.actionId === actionId);
     if (keyIndex >= 0) {
       this.buttonHandlers.get(keyIndex)?.forEach((h) => h(actionId));
-    }
-    if (this.uid) {
-      writeQKAction(this.uid, {
-        actionId,
-        fromDevice: getDeviceFingerprint(),
-        ts: Date.now(),
-      }).catch(() => {});
     }
   }
 
