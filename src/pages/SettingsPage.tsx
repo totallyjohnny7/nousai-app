@@ -7,8 +7,6 @@ import {
   AlertTriangle, Settings, Shield, Clock, Minus, Plus, ExternalLink, FolderPlus,
   Bell, Mic, Sun, Clipboard, HardDrive, FileText, Wifi, Headphones, Keyboard
 } from 'lucide-react'
-import { streamDeckService, StreamDeckService, ALL_STREAM_DECK_ACTIONS, type StreamDeckMode } from '../utils/streamDeckService'
-import { gamepadService, GamepadService, GAMEPAD_BUTTON_LABELS, type GamepadConfig, type GamepadModeConfig } from '../utils/gamepadService'
 import { useStore, saveBackupHandle, loadBackupHandle, clearBackupHandle } from '../store'
 import { checkForUpdates, getAppVersion, getStoredUpdate, dismissUpdate, getPlatform } from '../utils/updater'
 import { signUp, signIn, logOut, onAuthChange, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, saveOmiConfig, type AuthUser } from '../utils/auth'
@@ -471,138 +469,163 @@ function ShortcutRow({ shortcut }: { shortcut: (typeof SHORTCUT_DEFS)[number] })
   );
 }
 
-// ─── Stream Deck 3-Page Layout Component ─────────────────────
-const SD_ICON: Record<string, { emoji: string; label: string }> = {
-  fc_flip: { emoji: '🔄', label: 'FLIP' }, fc_next: { emoji: '➡️', label: 'NEXT' },
-  fc_prev: { emoji: '⬅️', label: 'PREV' }, fc_rsvp: { emoji: '⏩', label: 'RSVP' },
-  fc_cram: { emoji: '⚡', label: 'CRAM' }, fc_type_recall: { emoji: '✍️', label: 'TYPE' },
-  fc_zen: { emoji: '🧘', label: 'ZEN' },
-  screen_lasso: { emoji: '✂️', label: 'LASSO' }, notes_speak: { emoji: '🔊', label: 'TTS' },
-  fc_conf1: { emoji: '❌', label: 'AGAIN' }, fc_conf2: { emoji: '😰', label: 'HARD' },
-  fc_conf3: { emoji: '✅', label: 'GOOD' }, fc_conf4: { emoji: '🚀', label: 'EASY' },
-  nav_next: { emoji: '▶', label: 'NEXT→' }, nav_prev: { emoji: '◀', label: '←PREV' },
-  draw_pen: { emoji: '🖊️', label: 'PEN' }, draw_highlight: { emoji: '🖍️', label: 'HILITE' },
-  draw_erase: { emoji: '🧽', label: 'ERASE' }, draw_color: { emoji: '🎨', label: 'COLOR' },
-  draw_clear: { emoji: '🗑️', label: 'CLEAR' }, draw_undo: { emoji: '↩️', label: 'UNDO' },
-  draw_redo: { emoji: '↪️', label: 'REDO' }, draw_save: { emoji: '💾', label: 'SAVE' },
-  notes_bold: { emoji: '𝐁', label: 'BOLD' }, notes_italic: { emoji: '𝐼', label: 'ITALIC' },
-  omni_start: { emoji: '⚡', label: 'OMNI' }, focus_lock: { emoji: '🔒', label: 'FOCUS' },
-  interleave: { emoji: '🔀', label: 'MIX' }, phase_encode: { emoji: '🧠', label: 'ENCODE' },
-  phase_test: { emoji: '🔍', label: 'TEST' }, nav_home: { emoji: '🏠', label: 'HOME' },
-  nav_cards: { emoji: '🃏', label: 'CARDS' }, nav_quiz: { emoji: '📝', label: 'QUIZ' },
-  nav_learn: { emoji: '🧠', label: 'LEARN' }, nav_settings: { emoji: '⚙️', label: 'SETTINGS' },
-  nav_timer: { emoji: '⏱️', label: 'TIMER' }, nav_calendar: { emoji: '📅', label: 'CALENDAR' },
-  nav_notes: { emoji: '📚', label: 'LIBRARY' }, notes_save: { emoji: '💾', label: 'SAVE' },
-}
-
-const SD_PAGES = [
-  {
-    name: 'Page 1 — Study Mode',
-    color: '#F5A623',
-    keys: [
-      'fc_flip', 'fc_next', 'fc_prev', 'fc_rsvp', 'fc_cram',
-      'fc_type_recall', 'fc_zen', 'screen_lasso', 'notes_speak',
-      'fc_conf1', 'fc_conf2', 'fc_conf3', 'fc_conf4', 'nav_next',
-    ],
-  },
-  {
-    name: 'Page 2 — Tools',
-    color: '#22C55E',
-    keys: [
-      'draw_pen', 'draw_highlight', 'draw_erase', 'draw_color', 'draw_clear',
-      'draw_undo', 'draw_redo', 'draw_save', 'notes_bold', 'notes_italic',
-      'nav_prev', 'fc_conf1', 'fc_conf2', 'fc_conf3', 'nav_next',
-    ],
-  },
-  {
-    name: 'Page 3 — Navigation + Omni',
-    color: '#3B82F6',
-    keys: [
-      'omni_start', 'focus_lock', 'interleave', 'phase_encode', 'phase_test',
-      'nav_home', 'nav_cards', 'nav_quiz', 'nav_learn', 'nav_settings',
-      'nav_prev', 'nav_timer', 'nav_calendar', 'nav_notes', 'notes_save',
-    ],
-  },
+// ─── HUION K20 KeyDial Mini Layout Component ─────────────────
+// Layout: dial knob at top-left, 4 columns x 5 rows of keys
+const K20_KEYS: { label: string; shortcut: string; color?: string }[][] = [
+  // Row 1 — native browser shortcuts (Ctrl+Z/Y/C/V)
+  [
+    { label: 'UNDO',  shortcut: 'Ctrl+Z', color: '#888' },
+    { label: 'REDO',  shortcut: 'Ctrl+Y', color: '#888' },
+    { label: 'COPY',  shortcut: 'Ctrl+C', color: '#888' },
+    { label: 'PASTE', shortcut: 'Ctrl+V', color: '#888' },
+  ],
+  // Row 2 — FSRS ratings (active during review)
+  [
+    { label: 'AGAIN', shortcut: '1', color: '#EF4444' },
+    { label: 'HARD',  shortcut: '2', color: '#F97316' },
+    { label: 'GOOD',  shortcut: '3', color: '#22C55E' },
+    { label: 'EASY',  shortcut: '4', color: '#3B82F6' },
+  ],
+  // Row 3 — AI modes
+  [
+    { label: 'VISUAL',  shortcut: 'Ctrl+Shift+V', color: '#A78BFA' },
+    { label: 'EXPLAIN', shortcut: 'Ctrl+Shift+E', color: '#A78BFA' },
+    { label: 'QUIZ',    shortcut: 'Ctrl+Shift+Q', color: '#A78BFA' },
+    { label: 'SEND AI', shortcut: 'Ctrl+Enter',   color: '#F5A623' },
+  ],
+  // Row 4 — Card actions
+  [
+    { label: 'FLIP',       shortcut: 'Ctrl+Shift+Space', color: '#22D3EE' },
+    { label: 'POMODORO',   shortcut: 'Ctrl+Shift+P',     color: '#F43F5E' },
+    { label: 'TRANSCRIBE', shortcut: 'Ctrl+Shift+T',     color: '#34D399' },
+    { label: 'SEARCH',     shortcut: 'Ctrl+Shift+F',     color: '#60A5FA' },
+  ],
+  // Row 5 — Bottom
+  [
+    { label: 'ESC / BACK', shortcut: 'Escape',       color: '#888' },
+    { label: 'NEW CARD',   shortcut: 'Ctrl+Shift+N', color: '#F5A623' },
+    { label: '', shortcut: '' },
+    { label: '', shortcut: '' },
+  ],
 ]
 
-function StreamDeckLayout() {
-  const [sdPage, setSdPage] = useState(0)
-  const page = SD_PAGES[sdPage]
+const K20_DIAL = [
+  { label: 'Zoom In',      shortcut: 'Ctrl+=' },
+  { label: 'Zoom Out',     shortcut: 'Ctrl+-' },
+  { label: 'Cycle AI Mode', shortcut: 'Ctrl+Tab' },
+]
 
+function HuionK20Layout() {
   return (
-    <div style={{ marginBottom: 12 }}>
-      {/* Page tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-        {SD_PAGES.map((p, idx) => (
-          <button
-            key={idx}
-            onClick={() => setSdPage(idx)}
-            style={{
-              flex: 1,
-              padding: '8px 4px',
-              fontSize: 11,
-              fontWeight: sdPage === idx ? 700 : 500,
-              color: sdPage === idx ? '#fff' : '#888',
-              background: sdPage === idx ? `${p.color}22` : 'transparent',
-              border: sdPage === idx ? `2px solid ${p.color}` : '2px solid #333',
-              borderRadius: 8,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            {p.name}
-          </button>
-        ))}
-      </div>
+    <div>
+      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>HUION K20 KeyDial Mini — Key Map</div>
 
-      {/* Device body */}
-      <div style={{
-        background: '#111',
-        borderRadius: 20,
-        padding: 16,
-        border: `2px solid ${page.color}40`,
-        maxWidth: 480,
-        boxShadow: `0 0 20px ${page.color}10`,
-      }}>
-        {/* 5x3 button grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
-          {page.keys.map((actionId, i) => {
-            const icon = SD_ICON[actionId] ?? { emoji: '🔲', label: actionId }
-            const isNav = actionId === 'nav_next' || actionId === 'nav_prev'
-            const isGrade = actionId.startsWith('fc_conf')
-            return (
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+        {/* Device visual */}
+        <div style={{
+          background: '#111',
+          borderRadius: 20,
+          padding: 20,
+          border: '2px solid #33333380',
+          maxWidth: 320,
+          flexShrink: 0,
+        }}>
+          {/* Dial knob */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: 'radial-gradient(circle at 35% 35%, #555, #222)',
+              border: '3px solid #444',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#888' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#aaa', letterSpacing: 1 }}>HUION</div>
+              <div style={{ fontSize: 9, color: '#666' }}>KeyDial Mini</div>
+            </div>
+          </div>
+
+          {/* 4x5 key grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+            {K20_KEYS.flat().map((k, i) => (
               <div
-                key={`${sdPage}-${i}`}
+                key={i}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 4,
-                  padding: '10px 4px 8px',
-                  background: isNav ? '#333' : isGrade
-                    ? actionId === 'fc_conf1' ? '#EF444422' : actionId === 'fc_conf2' ? '#F9731622' : actionId === 'fc_conf3' ? '#22C55E22' : '#3B82F622'
-                    : '#1e1e1e',
-                  borderRadius: 12,
-                  border: isNav ? '1px solid #555' : `1px solid ${page.color}30`,
-                  minHeight: 68,
+                  gap: 2,
+                  padding: '8px 4px 6px',
+                  background: k.label ? '#1a1a1a' : 'transparent',
+                  borderRadius: 8,
+                  border: k.label ? `1px solid ${k.color || '#333'}30` : 'none',
+                  minHeight: 52,
                   cursor: 'default',
-                  transition: 'transform 0.1s',
+                  transition: 'background 0.15s',
                 }}
               >
-                <span style={{ fontSize: 24, lineHeight: 1 }}>{icon.emoji}</span>
-                <span style={{
-                  fontSize: 9,
-                  fontWeight: 700,
-                  color: isNav ? '#999' : isGrade ? '#ddd' : page.color,
-                  letterSpacing: 0.5,
-                  textAlign: 'center',
-                }}>
-                  {icon.label}
-                </span>
+                {k.label && (
+                  <>
+                    <span style={{
+                      fontSize: 9, fontWeight: 700,
+                      color: k.color || '#aaa',
+                      letterSpacing: 0.3,
+                      textAlign: 'center',
+                      lineHeight: 1.2,
+                    }}>
+                      {k.label}
+                    </span>
+                    <span style={{
+                      fontSize: 7, color: '#555',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      textAlign: 'center',
+                      lineHeight: 1.1,
+                    }}>
+                      {k.shortcut}
+                    </span>
+                  </>
+                )}
               </div>
-            )
-          })}
+            ))}
+          </div>
+        </div>
+
+        {/* Legend panel */}
+        <div style={{ flex: 1, minWidth: 200 }}>
+          {/* Dial functions */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent)', marginBottom: 6 }}>Dial Knob</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {K20_DIAL.map(d => (
+                <div key={d.shortcut} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
+                  <kbd style={{
+                    background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                    borderRadius: 3, padding: '1px 6px', fontSize: 10,
+                    fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-muted)',
+                    whiteSpace: 'nowrap',
+                  }}>{d.shortcut}</kbd>
+                  <span style={{ color: 'var(--text-secondary)' }}>{d.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Row legend */}
+          {[
+            { title: 'Row 1 — System', desc: 'Native browser shortcuts (always active)', color: '#888' },
+            { title: 'Row 2 — FSRS Ratings', desc: 'Active during flashcard review only', color: '#22C55E' },
+            { title: 'Row 3 — AI Modes', desc: 'Switch AI tool mode or send prompt', color: '#A78BFA' },
+            { title: 'Row 4 — Actions', desc: 'Flip card, pomodoro, transcribe, search', color: '#22D3EE' },
+            { title: 'Row 5 — Navigation', desc: 'Escape/back, create new card', color: '#F5A623' },
+          ].map(row => (
+            <div key={row.title} style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: row.color }}>{row.title}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{row.desc}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -616,18 +639,6 @@ export default function SettingsPage() {
   const [toast, setToast] = useState<string | null>(null)
   const [updateInfo, setUpdateInfo] = useState(getStoredUpdate())
 
-  // Stream Deck state
-  const [sdConnected, setSdConnected] = useState(streamDeckService.connected)
-  const [sdConfig, setSdConfig] = useState(() => streamDeckService.getConfig())
-  const [sdActiveMode, setSdActiveMode] = useState<StreamDeckMode>('flashcard')
-  const [qkConnecting, setQkConnecting] = useState(false)
-  const [qkLastPressed, setQkLastPressed] = useState<{ btn: number; action: string } | null>(null)
-
-  // Gamepad state
-  const [gpConnected, setGpConnected] = useState(gamepadService.connected)
-  const [gpDeviceName, setGpDeviceName] = useState<string | null>(gamepadService.connectedDeviceName)
-  const [gpConfig, setGpConfig] = useState<GamepadConfig>(() => gamepadService.getConfig())
-  const [gpActiveMode, setGpActiveMode] = useState<StreamDeckMode>('flashcard')
   const [checking, setChecking] = useState(false)
   // Update URL is now hardcoded in updater.ts for security
   const platform = getPlatform()
@@ -870,24 +881,6 @@ export default function SettingsPage() {
     saveDisplayPrefs(displayPrefs)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Stream Deck subscription
-  useEffect(() => {
-    const unsub = streamDeckService.subscribe(() => {
-      setSdConnected(streamDeckService.connected)
-      setSdConfig(streamDeckService.getConfig())
-    })
-    return unsub
-  }, [])
-
-  // Gamepad subscription
-  useEffect(() => {
-    const unsub = gamepadService.subscribe(() => {
-      setGpConnected(gamepadService.connected)
-      setGpDeviceName(gamepadService.connectedDeviceName)
-      setGpConfig(gamepadService.getConfig())
-    })
-    return unsub
-  }, [])
 
   // ─── Helpers ───────────────────────────────────────────
   function showToast(msg: string) {
@@ -3678,287 +3671,70 @@ export default function SettingsPage() {
 
       {/* ──────────── Input Devices ──────────── */}
       <div className="settings-section">
-        <SectionHeader id="inputdevices" icon={<Keyboard size={16} />} title="Input Devices" subtitle="Gamepad, Stream Deck, hardware shortcuts" />
+        <SectionHeader id="inputdevices" icon={<Keyboard size={16} />} title="Input Devices" subtitle="HUION K20 KeyDial Mini" />
         {expanded.inputdevices && (
           <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* ── Device Toggles ── */}
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Device Toggles</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {([
-                  { key: 'keyboard' as const, label: 'Keyboard', icon: '⌨️', locked: true, desc: 'Always on' },
-                  { key: 'k20' as const, label: 'HUION K20', icon: '🎛️', locked: false, desc: 'KeyDial Mini hotkeys' },
-                  { key: 'gamepad' as const, label: 'Game Controller', icon: '🎮', locked: false, desc: 'Gamepad API' },
-                  { key: 'streamDeck' as const, label: 'Stream Deck', icon: '⌨️', locked: false, desc: 'Elgato WebHID' },
-                  { key: 'midi' as const, label: 'MIDI Controller', icon: '🎹', locked: false, desc: 'Web MIDI API' },
-                  { key: 'otherHID' as const, label: 'Other HID', icon: '🔌', locked: false, desc: 'Generic HID devices' },
-                ] as const).map(d => (
-                  <div key={d.key} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '8px 12px', background: 'var(--bg-secondary)',
-                    borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)',
-                  }}>
-                    <span style={{ fontSize: 16 }}>{d.icon}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.desc}</div>
-                    </div>
-                    {d.locked ? (
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>ON</span>
-                    ) : (
-                      <label style={{ position: 'relative', width: 40, height: 22, cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={deviceSettings[d.key]}
-                          onChange={e => setDeviceSettings({ ...deviceSettings, [d.key]: e.target.checked })}
-                          style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
-                        />
-                        <span style={{
-                          position: 'absolute', inset: 0, borderRadius: 11,
-                          background: deviceSettings[d.key] ? 'var(--color-accent)' : 'var(--bg-card)',
-                          border: '1px solid var(--border)', transition: 'background 0.2s',
-                        }} />
-                        <span style={{
-                          position: 'absolute', top: 2, left: deviceSettings[d.key] ? 20 : 2,
-                          width: 18, height: 18, borderRadius: '50%',
-                          background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                          transition: 'left 0.2s',
-                        }} />
-                      </label>
-                    )}
-                  </div>
-                ))}
+            {/* ── HUION K20 Toggle ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: 18 }}>🎛️</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>HUION K20 KeyDial Mini</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>20 programmable keys + dial knob</div>
               </div>
-
-              {/* K20 conflict warnings */}
-              {(() => {
-                const conflicts = scanK20Conflicts();
-                if (conflicts.length === 0) return null;
-                return (
-                  <div style={{
-                    marginTop: 10, padding: '10px 12px',
-                    background: 'rgba(239,68,68,0.07)', borderRadius: 'var(--radius)',
-                    border: '1px solid rgba(239,68,68,0.25)', fontSize: 12, color: 'var(--text-secondary)',
-                  }}>
-                    <div style={{ fontWeight: 700, color: '#ef4444', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <AlertTriangle size={14} /> K20 Shortcut Conflicts
-                    </div>
-                    <div>
-                      The following K20 combos conflict with reserved browser shortcuts and may not work:{' '}
-                      {conflicts.map((c, i) => (
-                        <kbd key={c} style={{
-                          background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                          borderRadius: 3, padding: '1px 5px', fontSize: 11,
-                          fontFamily: 'var(--font-mono, monospace)', marginRight: i < conflicts.length - 1 ? 4 : 0,
-                        }}>{c}</kbd>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+              <label style={{ position: 'relative', width: 40, height: 22, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={deviceSettings.k20}
+                  onChange={e => setDeviceSettings({ ...deviceSettings, k20: e.target.checked })}
+                  style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
+                  position: 'absolute', inset: 0, borderRadius: 11,
+                  background: deviceSettings.k20 ? 'var(--color-accent)' : 'var(--bg-card)',
+                  border: '1px solid var(--border)', transition: 'background 0.2s',
+                }} />
+                <span style={{
+                  position: 'absolute', top: 2, left: deviceSettings.k20 ? 20 : 2,
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                  transition: 'left 0.2s',
+                }} />
+              </label>
             </div>
 
-            {/* ── Divider ── */}
-            <div style={{ borderTop: '1px solid var(--border)' }} />
-
-            {/* ── Gamepad / Controller ── */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>🎮 Gamepad / Controller</span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '2px 7px', borderRadius: 20 }}>
-                  Works everywhere · no permissions
-                </span>
-              </div>
-
-              {!GamepadService.isSupported() ? (
-                <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
-                  Gamepad API not available in this browser.
-                </div>
-              ) : (
-                <div>
-                  {/* Status row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '10px 12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: gpConnected ? '#22c55e' : 'var(--text-muted)', flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{gpConnected ? 'Controller Connected' : 'No Controller Detected'}</div>
-                      {gpConnected && gpDeviceName && (
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
-                          {gpDeviceName}
-                        </div>
-                      )}
-                      {!gpConnected && (
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                          Plug in any USB gamepad or press a button on a Bluetooth controller
-                        </div>
-                      )}
-                    </div>
+            {/* K20 conflict warnings */}
+            {(() => {
+              const conflicts = scanK20Conflicts();
+              if (conflicts.length === 0) return null;
+              return (
+                <div style={{
+                  marginTop: 10, padding: '10px 12px',
+                  background: 'rgba(239,68,68,0.07)', borderRadius: 'var(--radius)',
+                  border: '1px solid rgba(239,68,68,0.25)', fontSize: 12, color: 'var(--text-secondary)',
+                }}>
+                  <div style={{ fontWeight: 700, color: '#ef4444', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <AlertTriangle size={14} /> K20 Shortcut Conflicts
                   </div>
-
-                  {/* Recommended devices callout */}
-                  {!gpConnected && (
-                    <div style={{ padding: '10px 12px', background: 'rgba(245,166,35,0.07)', borderRadius: 'var(--radius)', border: '1px solid rgba(245,166,35,0.25)', marginBottom: 12, fontSize: 12, lineHeight: 1.6 }}>
-                      <div style={{ fontWeight: 700, color: 'var(--color-accent)', marginBottom: 4 }}>⚡ Recommended: Same shape as Stream Deck</div>
-                      <div style={{ color: 'var(--text-secondary)' }}>
-                        <strong>8BitDo Zero 2</strong> — $20, palm-sized, 8 buttons + d-pad, USB-C / Bluetooth<br />
-                        <strong>8BitDo Macro 3 Pad</strong> — dedicated macro pad, 12 buttons, compact<br />
-                        <strong>Xbox / PS5 controller</strong> — any standard gamepad works
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Mode tabs */}
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
-                    {(['flashcard', 'quiz', 'drawing', 'navigation', 'notes'] as StreamDeckMode[]).map(m => (
-                      <button
-                        key={m}
-                        className={`btn btn-sm${gpActiveMode === m ? '' : ' btn-ghost'}`}
-                        style={{ textTransform: 'capitalize', fontSize: 11 }}
-                        onClick={() => {
-                          setGpActiveMode(m)
-                          gamepadService.setMode(m)
-                          setGpConfig(gamepadService.getConfig())
-                        }}
-                      >
-                        {m}
-                      </button>
+                  <div>
+                    The following K20 combos conflict with reserved browser shortcuts and may not work:{' '}
+                    {conflicts.map((c, i) => (
+                      <kbd key={c} style={{
+                        background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                        borderRadius: 3, padding: '1px 5px', fontSize: 11,
+                        fontFamily: 'var(--font-mono, monospace)', marginRight: i < conflicts.length - 1 ? 4 : 0,
+                      }}>{c}</kbd>
                     ))}
                   </div>
-
-                  {/* Button mapping grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 10 }}>
-                    {gpConfig.modes[gpActiveMode].buttons.map((mapping, i) => (
-                      <div key={i} style={{ padding: '8px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-accent)' }}>Slot {i + 1}</span>
-                          <select
-                            style={{ flex: 1, fontSize: 10, background: 'var(--bg-input)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 3, padding: '1px 3px' }}
-                            value={mapping.gamepadIndex}
-                            onChange={e => {
-                              const newConfig = { ...gpConfig, modes: { ...gpConfig.modes } }
-                              newConfig.modes[gpActiveMode] = { ...newConfig.modes[gpActiveMode], buttons: [...newConfig.modes[gpActiveMode].buttons] }
-                              newConfig.modes[gpActiveMode].buttons[i] = { ...mapping, gamepadIndex: Number(e.target.value) }
-                              gamepadService.saveConfig(newConfig)
-                              setGpConfig(newConfig)
-                            }}
-                          >
-                            {Object.entries(GAMEPAD_BUTTON_LABELS).map(([idx, label]) => (
-                              <option key={idx} value={idx}>{label}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <select
-                          style={{ width: '100%', fontSize: 10, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 3, padding: '2px 4px' }}
-                          value={mapping.actionId}
-                          onChange={e => {
-                            const action = ALL_STREAM_DECK_ACTIONS.find(a => a.id === e.target.value)
-                            if (!action) return
-                            const newConfig = { ...gpConfig, modes: { ...gpConfig.modes } }
-                            newConfig.modes[gpActiveMode] = { ...newConfig.modes[gpActiveMode], buttons: [...newConfig.modes[gpActiveMode].buttons] }
-                            newConfig.modes[gpActiveMode].buttons[i] = { ...mapping, actionId: action.id }
-                            gamepadService.saveConfig(newConfig)
-                            setGpConfig(newConfig)
-                          }}
-                        >
-                          {ALL_STREAM_DECK_ACTIONS.map(a => (
-                            <option key={a.id} value={a.id}>{a.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Dial axis selector */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '8px 10px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Dial / scroll axis:</span>
-                    <select
-                      style={{ flex: 1, fontSize: 11, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 6px' }}
-                      value={gpConfig.modes[gpActiveMode].dialAxis}
-                      onChange={e => {
-                        const newConfig = { ...gpConfig, modes: { ...gpConfig.modes } }
-                        newConfig.modes[gpActiveMode] = { ...newConfig.modes[gpActiveMode], dialAxis: Number(e.target.value) }
-                        gamepadService.saveConfig(newConfig)
-                        setGpConfig(newConfig)
-                      }}
-                    >
-                      <option value={0}>Left Stick Horizontal</option>
-                      <option value={1}>Left Stick Vertical</option>
-                      <option value={2}>Right Stick Horizontal</option>
-                      <option value={3}>Right Stick Vertical</option>
-                      <option value={4}>Left Trigger (L2)</option>
-                      <option value={5}>Right Trigger (R2)</option>
-                    </select>
-                  </div>
-
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => {
-                      gamepadService.resetToDefaults()
-                      setGpConfig(gamepadService.getConfig())
-                      showToast('Gamepad reset to defaults')
-                    }}
-                  >
-                    Reset Gamepad to Defaults
-                  </button>
                 </div>
-              )}
-            </div>
+              );
+            })()}
 
             {/* ── Divider ── */}
-            <div style={{ borderTop: '1px solid var(--border)' }} />
+            <div style={{ borderTop: '1px solid var(--border)', marginTop: 8 }} />
 
-            {/* ── Elgato Stream Deck (WebHID) ── */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>⌨️ Elgato Stream Deck</span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '2px 7px', borderRadius: 20 }}>
-                  Chrome/Edge on Windows/macOS only
-                </span>
-              </div>
-
-              {!StreamDeckService.isSupported() ? (
-                <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
-                  WebHID not available. Use <strong>Chrome or Edge</strong> on Windows or macOS.<br />
-                  Not supported on iPad, Boox, Firefox, Safari, or mobile.
-                </div>
-              ) : (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: sdConnected ? '#22c55e' : 'var(--text-muted)' }} />
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>{sdConnected ? 'Connected' : 'Disconnected'}</span>
-                    </div>
-                    <button
-                      className="btn btn-sm"
-                      style={{ marginLeft: 'auto' }}
-                      disabled={qkConnecting}
-                      onClick={async () => {
-                        if (sdConnected) {
-                          await streamDeckService.disconnect()
-                          setSdConnected(false)
-                        } else {
-                          setQkConnecting(true)
-                          try {
-                            await streamDeckService.connect()
-                            setSdConnected(streamDeckService.connected)
-                          }
-                          catch (e: any) {
-                            console.error('[StreamDeck] connect failed:', e)
-                            showToast(e?.message || 'Could not connect — check device and browser permission')
-                          }
-                          finally { setQkConnecting(false) }
-                        }
-                      }}
-                    >
-                      {qkConnecting ? 'Connecting…' : sdConnected ? 'Disconnect' : 'Connect Stream Deck'}
-                    </button>
-                  </div>
-
-                  {/* ── 3-Page Stream Deck Layout ── */}
-                  <StreamDeckLayout />
-                </div>
-              )}
-            </div>
+            {/* ── HUION K20 Layout ── */}
+            {deviceSettings.k20 && <HuionK20Layout />}
 
           </div>
         )}
