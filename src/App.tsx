@@ -1,7 +1,7 @@
 import { Routes, Route, NavLink, useLocation, useParams, Navigate, useNavigate } from 'react-router-dom'
 import type { CourseSpace } from './types'
 import { Suspense, Component, useEffect, useMemo, useRef, useState, type ReactNode, type ErrorInfo } from 'react'
-import { Home, Trophy, BookOpen, Clock, Calendar, Settings, Upload, Brain, Sparkles, Library, Mic, RefreshCw, AlertTriangle, Search, PanelLeftClose, PanelLeftOpen, Keyboard, X, MoreHorizontal, Menu, Film, Telescope } from 'lucide-react'
+import { Home, Trophy, BookOpen, Clock, Calendar, Settings, Upload, Brain, Sparkles, Library, Mic, RefreshCw, AlertTriangle, Search, PanelLeftClose, PanelLeftOpen, Keyboard, X, MoreHorizontal, Menu, Film, Telescope, FileOutput } from 'lucide-react'
 import { lazyWithRetry, markAppLoaded, isChunkLoadError, clearCachesAndReload } from './utils/lazyWithRetry'
 import { useStore } from './store'
 import { resetDailyIfNeeded, getLevel, getLevelProgress, getTitle } from './utils/gamification'
@@ -110,6 +110,7 @@ const AIToolsPage = lazyWithRetry(() => import('./pages/AIToolsPage'))
 const CoursePage = lazyWithRetry(() => import('./pages/CoursePage'))
 const VideosPage = lazyWithRetry(() => import('./pages/VideosPage'))
 const MicroMacroPage = lazyWithRetry(() => import('./features/micromacro/MicroMacro'))
+const StudyGeneratorPage = lazyWithRetry(() => import('./features/study-generator/NousaiStudyGenerator'))
 
 
 /* ── Navigation ───── */
@@ -124,6 +125,7 @@ const NAV = [
 const MORE_NAV = [
   { to: '/videos', icon: Film, label: 'VIDEOS' },
   { to: '/micromacro', icon: Telescope, label: 'MICROMACRO' },
+  { to: '/study-gen', icon: FileOutput, label: 'STUDY GEN' },
   { to: '/timer', icon: Clock, label: 'TIMER' },
   { to: '/calendar', icon: Calendar, label: 'CALENDAR' },
   { to: '/settings', icon: Settings, label: 'SETTINGS' },
@@ -140,6 +142,7 @@ const SIDEBAR_NAV = [
   { to: '/timer', icon: Clock, label: 'TIMER' },
   { to: '/calendar', icon: Calendar, label: 'CALENDAR' },
   { to: '/micromacro', icon: Telescope, label: 'MICROMACRO' },
+  { to: '/study-gen', icon: FileOutput, label: 'STUDY GEN' },
   { to: '/settings', icon: Settings, label: 'SETTINGS' },
 ]
 
@@ -154,6 +157,7 @@ const PRELOAD_MAP: Record<string, () => Promise<unknown>> = {
   '/calendar': () => import('./pages/CalendarPage'),
   '/settings': () => import('./pages/SettingsPage'),
   '/micromacro': () => import('./features/micromacro/MicroMacro'),
+  '/study-gen': () => import('./features/study-generator/NousaiStudyGenerator'),
 }
 function preloadRoute(to: string) {
   PRELOAD_MAP[to]?.()
@@ -703,6 +707,7 @@ export default function App() {
             <Route path="/course/:id" element={<CourseRedirect />} />
             <Route path="/videos" element={<VideosPage />} />
             <Route path="/micromacro" element={<MicroMacroPage />} />
+            <Route path="/study-gen" element={<StudyGeneratorPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
