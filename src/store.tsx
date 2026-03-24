@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
-import type { NousAIData, FlashcardItem, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext, SavedVideo, VideoCaption, VideoNote, VideoNoteCategory, VideoNoteTemplate } from './types';
+import type { NousAIData, FlashcardItem, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext, SavedVideo, VideoCaption, VideoNote, VideoNoteCategory, VideoNoteTemplate, DeviceSettings } from './types';
 import { writeClipboard, saveFilePicker, openFilePicker, getPermPref } from './utils/permissions';
 import { syncToCloud, syncFromCloud, subscribeToMetadataChanges } from './utils/auth';
 import { runMigrations } from './utils/migrations';
@@ -7,6 +7,8 @@ import { validateBeforeWrite, countCards, logWrite } from './utils/writeGuard';
 import { saveSnapshot } from './utils/snapshotManager';
 import { dataHealthCheck, type HealthReport } from './utils/dataHealthCheck';
 import { saveGoldenCopy } from './utils/goldenCopy';
+import { initLeaderElection, destroyLeaderElection, broadcast, isLeader, getRole, TAB_ID, type TabRole } from './utils/tabLeader';
+import { initRxStore, loadFromRxDB, saveToRxDB, subscribeToRxChanges } from './db/useRxStore';
 
 /* ── Default empty state ──────────────────────────────── */
 const emptyGamification: GamificationData = {
@@ -121,6 +123,10 @@ export function mergeLocalCardMeta(local: NousAIData | null, cloud: NousAIData):
   const mergedToolSessions = mergeById(localPD.toolSessions, cloudPD.toolSessions);
   const mergedProcedures = mergeById(localPD.savedProcedures, cloudPD.savedProcedures);
   const mergedDrawings = mergeById(localPD.drawings, cloudPD.drawings);
+  // Previously missing — offline-created entities in these arrays were being dropped
+  const mergedMatchSets = mergeById(localPD.matchSets, cloudPD.matchSets);
+  const mergedQuizHistory = mergeById(localPD.quizHistory, cloudPD.quizHistory);
+  const mergedSavedVideos = mergeById(localPD.savedVideos, cloudPD.savedVideos);
 
   return {
     ...cloud,
@@ -136,6 +142,9 @@ export function mergeLocalCardMeta(local: NousAIData | null, cloud: NousAIData):
       ...(mergedToolSessions !== undefined && { toolSessions: mergedToolSessions }),
       ...(mergedProcedures !== undefined && { savedProcedures: mergedProcedures }),
       ...(mergedDrawings !== undefined && { drawings: mergedDrawings }),
+      ...(mergedMatchSets !== undefined && { matchSets: mergedMatchSets }),
+      ...(mergedQuizHistory !== undefined && { quizHistory: mergedQuizHistory }),
+      ...(mergedSavedVideos !== undefined && { savedVideos: mergedSavedVideos }),
     },
   };
 }
@@ -189,13 +198,19 @@ export function normalizeData(d: NousAIData): NousAIData {
   };
 }
 
-/* ── Cross-tab sync via BroadcastChannel ──────────────── */
-const TAB_ID = crypto.randomUUID();
-let syncChannel: BroadcastChannel | null = null;
-try { syncChannel = new BroadcastChannel('nousai-data-sync'); } catch { /* unsupported */ }
+/* ── Cross-tab sync via leader election ──────────────── */
+// Leader tab owns all IDB writes. Follower tabs proxy mutations through
+// the BroadcastChannel → leader applies → broadcasts updated state back.
+// Re-export TAB_ID from tabLeader (was previously defined here)
+export { TAB_ID };
 
 function broadcastDataChanged() {
-  syncChannel?.postMessage({ type: 'data-changed', tabId: TAB_ID });
+  broadcast({ type: 'data-changed' });
+}
+
+// Follower tabs send their state updates to the leader via this message type
+function sendMutationToLeader(data: NousAIData) {
+  broadcast({ type: 'follower-mutation', payload: data });
 }
 
 /* ── Sync status type ────────────────────────────────── */
@@ -239,6 +254,10 @@ class AutoSyncScheduler {
 
   async flush() {
     if (!this.dirty) return;
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync.
+    // Clearing dirty flag prevents retries/heartbeats from re-entering.
+    this.dirty = false;
+    return;
     const uid = localStorage.getItem('nousai-auth-uid');
     const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
     if (!uid || !autoSync || !this.dataRef.current) return;
@@ -341,6 +360,16 @@ interface StoreCtx {
   addVideo: (video: SavedVideo) => void
   deleteVideo: (videoId: string) => void
   updateVideoMeta: (videoId: string, updates: Partial<Pick<SavedVideo, 'title' | 'captions' | 'defaultSpeed' | 'courseId' | 'downloadUrl' | 'thumbnailBase64' | 'notes' | 'noteTemplates' | 'duration'>>) => void
+  // Device settings (Input Devices — K20, Stream Deck, Gamepad, etc.)
+  deviceSettings: DeviceSettings
+  setDeviceSettings: (settings: DeviceSettings) => void
+  // UI state flags for K20 hotkey system
+  isReviewActive: boolean
+  setIsReviewActive: (v: boolean) => void
+  modalOpen: boolean
+  setModalOpen: (v: boolean) => void
+  annotationPanelOpen: boolean
+  setAnnotationPanelOpen: (v: boolean) => void
 }
 
 const Ctx = createContext<StoreCtx>({} as StoreCtx);
@@ -369,6 +398,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   });
   const snapshotUnsubRef = useRef<(() => void) | null>(null);
 
+  // ── Device settings (K20, Stream Deck, Gamepad, etc.) ──
+  const [deviceSettings, setDeviceSettingsRaw] = useState<DeviceSettings>(() => {
+    try {
+      const raw = localStorage.getItem('nousai_device_settings');
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<DeviceSettings>;
+        return { k20: true, streamDeck: false, gamepad: false, midi: false, otherHID: false, ...parsed, keyboard: true } as DeviceSettings;
+      }
+    } catch { /* corrupt */ }
+    return { keyboard: true, k20: true, streamDeck: false, gamepad: false, midi: false, otherHID: false };
+  });
+  const setDeviceSettings = useCallback((s: DeviceSettings) => {
+    const safe = { ...s, keyboard: true as const };
+    setDeviceSettingsRaw(safe);
+    try { localStorage.setItem('nousai_device_settings', JSON.stringify(safe)); } catch { /* full */ }
+  }, []);
+
+  // ── UI state flags for K20 hotkey system ──
+  const [isReviewActive, setIsReviewActive] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
+
   // Keep ref in sync so functional updaters always read latest
   useEffect(() => { dataRef.current = data; }, [data]);
 
@@ -388,16 +439,53 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDataRaw(prev => prev ? { ...prev, pluginData: { ...prev.pluginData, ...partial } } : prev);
   }, []);
 
-  // Load from IndexedDB on mount (run migrations + normalization to fill missing fields)
+  // Load from RxDB on mount — runs migration from old blob on first load.
+  // Falls back to legacy IDB if RxDB fails (safety net during transition).
   useEffect(() => {
-    loadFromIDB().then(d => {
+    (async () => {
+      let d: NousAIData | null = null;
+      let source = 'rxdb';
+
+      try {
+        // Initialize RxDB + run migration from old blob if needed
+        await initRxStore();
+        d = await loadFromRxDB();
+        // If RxDB returned null but old IDB has data, reset migration flag and use legacy
+        if (!d) {
+          const legacyData = await loadFromIDB();
+          if (legacyData) {
+            console.warn('[STORE] RxDB returned null but legacy IDB has data — using legacy, will retry migration');
+            localStorage.removeItem('nousai-rxdb-migrated');
+            d = legacyData;
+            source = 'idb-fallback';
+          }
+        }
+      } catch (rxErr) {
+        console.error('[STORE] RxDB load failed, falling back to legacy IDB:', rxErr);
+        source = 'idb-fallback';
+        d = await loadFromIDB();
+      }
+
+      // Check crash-recovery data from a follower tab that closed
+      const crashRecovery = localStorage.getItem('nousai-crash-recovery');
+      const crashAt = localStorage.getItem('nousai-crash-recovery-at');
+      const idbModified = localStorage.getItem('nousai-data-modified-at');
+      if (crashRecovery && crashAt && (!idbModified || crashAt > idbModified)) {
+        try {
+          const recovered = JSON.parse(crashRecovery) as NousAIData;
+          if (recovered?.pluginData?.coachData) {
+            d = recovered;
+            source = 'crash-recovery';
+            console.log('[STORE] Restored from crash-recovery (follower tab that closed)');
+          }
+        } catch { /* corrupt crash recovery data — ignore */ }
+      }
+      localStorage.removeItem('nousai-crash-recovery');
+      localStorage.removeItem('nousai-crash-recovery-at');
+
       if (d) {
         const migrated = runMigrations(d);
         const normalized = normalizeData(migrated);
-        // NOTE: No longer auto-removing quizzes by subject — previously removed entries
-        // where subject === 'Imported', but this was deleting valid user-imported quizzes
-        // whose subject defaulted to 'Imported' when no course was selected at import time.
-        // Boot health check — detect corruption before displaying
         const { report, repairedData } = dataHealthCheck(normalized);
         const final = report.autoRepaired.length > 0 ? repairedData : normalized;
         if (!report.healthy) {
@@ -409,34 +497,50 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           console.log('[HEALTH CHECK] Auto-repaired:', report.autoRepaired.join('; '));
         }
         setHealthReport(report);
-        console.log('[STORE] Loaded from IDB:', final.pluginData?.coachData?.courses?.length ?? 0, 'courses,', final.pluginData?.quizHistory?.length ?? 0, 'quiz entries');
-        lastSavedData = final; // Initialize write guard baseline
-        saveSnapshot(final, 'boot').catch(() => {}); // Boot snapshot for recovery
+        console.log(`[STORE] Loaded from ${source}:`, final.pluginData?.coachData?.courses?.length ?? 0, 'courses,', final.pluginData?.quizHistory?.length ?? 0, 'quiz entries');
+        lastSavedData = final;
+        saveSnapshot(final, 'boot').catch(() => {});
         setDataRaw(final);
       }
       setLoaded(true);
-    });
+    })();
   }, []);
 
   // Persist to IndexedDB on change — debounced to avoid redundant writes during rapid updates
+  // LEADER ELECTION: Only the leader tab writes to IDB. Follower tabs send mutations to the leader.
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!data) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
       // Safety: don't save before initial IDB load completes (state is still default/empty)
-      // Previously checked courses.length === 0 which blocked saving legitimate deletions
       if (!loaded) {
         console.warn('[STORE] Blocked save: initial IDB load not yet complete');
         return;
       }
+
+      // Follower tabs: send mutation to leader instead of writing IDB directly
+      if (!isLeader()) {
+        if (!fromSyncRef.current) {
+          sendMutationToLeader(data);
+        } else {
+          fromSyncRef.current = false;
+        }
+        localDirtyRef.current = false;
+        return;
+      }
+
+      // Leader tab: write to RxDB (per-document, only changed collections)
       const MAX_QUIZ_HISTORY = 500;
       const qh = data.pluginData?.quizHistory;
-      if (qh && qh.length > MAX_QUIZ_HISTORY) {
-        const trimmed = qh.slice(-MAX_QUIZ_HISTORY);
-        saveToIDB({ ...data, pluginData: { ...data.pluginData, quizHistory: trimmed } });
-      } else {
-        saveToIDB(data);
+      const dataToSave = (qh && qh.length > MAX_QUIZ_HISTORY)
+        ? { ...data, pluginData: { ...data.pluginData, quizHistory: qh.slice(-MAX_QUIZ_HISTORY) } }
+        : data;
+      try {
+        await saveToRxDB(dataToSave);
+      } catch (rxErr) {
+        console.error('[STORE] RxDB save failed, falling back to legacy IDB:', rxErr);
+        saveToIDB(dataToSave);
       }
       localDirtyRef.current = false;
       localStorage.setItem('nousai-data-modified-at', new Date().toISOString());
@@ -450,33 +554,55 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [data]);
 
-  // Cross-tab sync: reload from IDB when another tab broadcasts a change
+  // Cross-tab sync via leader election
+  // Leader: handles follower-mutation messages by merging into its own state → writes IDB → broadcasts
+  // Follower: handles data-changed messages by reloading from IDB
+  const tabRoleRef = useRef<TabRole>('undecided');
+
   useEffect(() => {
-    if (!syncChannel) return;
     let debounce: ReturnType<typeof setTimeout> | null = null;
-    const handler = (e: MessageEvent) => {
-      if (e.data?.tabId === TAB_ID) return; // ignore own broadcasts
-      if (debounce) clearTimeout(debounce);
-      debounce = setTimeout(async () => {
-        // If this tab has unsaved local changes, save them to IDB first before loading remote data
-        if (localDirtyRef.current && dataRef.current) {
-          await saveToIDB(dataRef.current);
-          localDirtyRef.current = false;
-          localStorage.setItem('nousai-data-modified-at', new Date().toISOString());
+
+    initLeaderElection({
+      onBecomeLeader: () => {
+        tabRoleRef.current = 'leader';
+        console.log('[STORE] Became leader — owning RxDB writes');
+        // Force-write current state to RxDB to establish baseline
+        if (dataRef.current && loaded) {
+          saveToRxDB(dataRef.current).catch(() => saveToIDB(dataRef.current!));
         }
-        const fresh = await loadFromIDB();
-        if (fresh) {
-          fromSyncRef.current = true; // prevent broadcast echo
-          setDataRaw(normalizeData(fresh));
+      },
+      onLoseLeadership: () => {
+        tabRoleRef.current = 'follower';
+        console.log('[STORE] Lost leadership — switching to read-only');
+      },
+      onMessage: (msg: any) => {
+        if (msg?.type === 'data-changed') {
+          // Another tab (leader) updated RxDB — reload
+          if (debounce) clearTimeout(debounce);
+          debounce = setTimeout(async () => {
+            const fresh = await loadFromRxDB() || await loadFromIDB();
+            if (fresh) {
+              fromSyncRef.current = true;
+              setDataRaw(normalizeData(fresh));
+            }
+          }, 300);
+        } else if (msg?.type === 'follower-mutation' && isLeader()) {
+          // A follower tab sent us its updated state — merge it
+          const followerData = msg.payload as NousAIData;
+          if (followerData) {
+            const merged = mergeLocalCardMeta(dataRef.current, normalizeData(followerData));
+            fromSyncRef.current = false; // this IS a real change, broadcast after saving
+            setDataRaw(merged);
+          }
         }
-      }, 1000);
-    };
-    syncChannel.addEventListener('message', handler);
+      },
+    });
+
     return () => {
-      syncChannel?.removeEventListener('message', handler);
       if (debounce) clearTimeout(debounce);
+      destroyLeaderElection();
     };
-  }, []);
+  }, [loaded]);
 
   // Auto-sync to cloud (debounced 2min) when data changes + flush on tab hidden
   const autoSyncRef = useRef(new AutoSyncScheduler(dataRef));
@@ -536,9 +662,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const startRemoteWatch = useCallback((uid: string) => {
+  const startRemoteWatch = useCallback((_uid: string) => {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles remote changes
+    return;
     snapshotUnsubRef.current?.();
-    subscribeToMetadataChanges(uid, (remoteUpdatedAt: string) => {
+    subscribeToMetadataChanges(_uid, (remoteUpdatedAt: string) => {
       const localLastSync = localStorage.getItem('nousai-last-sync');
       if (!localLastSync || remoteUpdatedAt > localLastSync) {
         // Skip if WE caused this update (sync-ID comparison, not time-based)
@@ -570,6 +698,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadRemoteData = useCallback(async () => {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
+    return;
     const uid = localStorage.getItem('nousai-auth-uid');
     if (!uid) return;
     setSyncStatus('syncing');
@@ -603,6 +733,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // ── Global sync triggers (for Ctrl+S / Ctrl+Shift+S hotkeys) ────
   const triggerSyncToCloud = useCallback(async () => {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
+    window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync is automatic via RxDB' }));
+    return;
     const uid = localStorage.getItem('nousai-auth-uid');
     if (!uid || !data) {
       window.dispatchEvent(new CustomEvent('nousai-toast', { detail: !uid ? 'Sign in to sync' : 'No data to sync' }));
@@ -625,6 +758,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [data]);
 
   const triggerSyncFromCloud = useCallback(async () => {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
+    window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync is automatic via RxDB' }));
+    return;
     const uid = localStorage.getItem('nousai-auth-uid');
     if (!uid) {
       window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sign in to sync' }));
@@ -671,17 +807,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        autoSyncRef.current.flush();
+        // Leader: force-flush to IDB immediately (no debounce) + cloud sync
+        if (isLeader()) {
+          if (dataRef.current) {
+            saveToRxDB(dataRef.current).catch(() => saveToIDB(dataRef.current!));
+          }
+          autoSyncRef.current.flush();
+        } else if (dataRef.current && localDirtyRef.current) {
+          // Follower: stash unsaved state to localStorage before tab goes hidden
+          try {
+            localStorage.setItem('nousai-crash-recovery', JSON.stringify(dataRef.current));
+            localStorage.setItem('nousai-crash-recovery-at', new Date().toISOString());
+          } catch { /* quota exceeded */ }
+        }
       } else if (document.visibilityState === 'visible') {
-        // Pull latest from cloud when tab becomes visible (cross-device freshness)
+        // Pull latest from cloud/IDB when tab becomes visible
         loadRemoteData();
       }
     };
     // pagehide: iOS Safari fires this but not always beforeunload
-    const handlePageHide = () => { autoSyncRef.current.flush(); };
-    // 30s heartbeat: catch edge cases where debounce timer was cleared
+    const handlePageHide = () => {
+      if (isLeader()) autoSyncRef.current.flush();
+    };
+    // 30s heartbeat: catch edge cases where debounce timer was cleared (leader only)
     const heartbeat = setInterval(() => {
-      if (autoSyncRef.current.dirty && navigator.onLine) {
+      if (isLeader() && autoSyncRef.current.dirty && navigator.onLine) {
         autoSyncRef.current.flush();
       }
     }, 30_000);
@@ -696,20 +846,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [loadRemoteData]);
 
   // Flush to IDB immediately on tab close so no data is lost
-  // Also warn the user if the auto-sync has pending changes that haven't reached the cloud
+  // Leader: writes to IDB directly. Follower: writes crash-recovery key to localStorage.
   useEffect(() => {
     const flush = (e: BeforeUnloadEvent) => {
-      if (dataRef.current) saveToIDB(dataRef.current);
+      if (dataRef.current) {
+        if (isLeader()) {
+          // Leader: best-effort write (RxDB with IDB fallback)
+          saveToRxDB(dataRef.current).catch(() => saveToIDB(dataRef.current!));
+        } else {
+          // Follower: stash to localStorage as crash-recovery backup
+          // (localStorage is synchronous — guaranteed to complete before tab closes)
+          try {
+            const compressed = JSON.stringify(dataRef.current);
+            localStorage.setItem('nousai-crash-recovery', compressed);
+            localStorage.setItem('nousai-crash-recovery-at', new Date().toISOString());
+          } catch { /* localStorage quota exceeded — can't save, data was in IDB anyway */ }
+        }
+      }
 
       // If auto-sync is dirty (pending cloud write), warn the user
       if (autoSyncRef.current.dirty) {
         e.preventDefault();
-        // Modern browsers show a generic "Leave site?" dialog when returnValue is set
         e.returnValue = 'You have unsaved changes that haven\'t synced to the cloud yet. Leave anyway?';
       }
 
       // Best-effort cloud sync on page hide (no guarantee it completes)
-      autoSyncRef.current.flush();
+      if (isLeader()) autoSyncRef.current.flush();
     };
     window.addEventListener('beforeunload', flush);
     return () => window.removeEventListener('beforeunload', flush);
@@ -899,11 +1061,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('nousai-hidden-tools', JSON.stringify(ids));
     },
     savedVideos, addVideo, deleteVideo, updateVideoMeta,
+    deviceSettings, setDeviceSettings,
+    isReviewActive, setIsReviewActive,
+    modalOpen, setModalOpen,
+    annotationPanelOpen, setAnnotationPanelOpen,
   }), [data, loaded, matchSets, savedVideos, events, quizHistory, courses, gamification, proficiency, srData, timerState, einkMode, betaMode, // eslint-disable-line react-hooks/exhaustive-deps
     setData, updatePluginData, copyToClipboard, exportToFile, backupNow, triggerSyncToCloud, triggerSyncFromCloud,
     syncStatus, lastSyncAt, remoteUpdateAvailable,
     startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
-    activePageContext, hiddenToolIds, healthReport]);
+    activePageContext, hiddenToolIds, healthReport,
+    deviceSettings, setDeviceSettings,
+    isReviewActive, setIsReviewActive, modalOpen, setModalOpen, annotationPanelOpen, setAnnotationPanelOpen]);
 
   return (
     <Ctx.Provider value={ctxValue}>

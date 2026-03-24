@@ -14,6 +14,7 @@ import { checkForUpdates, getAppVersion, getStoredUpdate, dismissUpdate, getPlat
 import { signUp, signIn, logOut, onAuthChange, syncToCloud, syncFromCloud, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, saveOmiConfig, type AuthUser } from '../utils/auth'
 // testData is lazy-loaded only when user clicks "Load Test Data" button
 import { SHORTCUT_DEFS, getShortcutKey, setShortcutKey, resetAllShortcuts, formatKey } from '../utils/shortcuts'
+import { scanK20Conflicts } from '../utils/k20ConflictScanner'
 import { getLevel, THEME_PRESETS } from '../utils/gamification'
 import {
   checkAllPermissions, requestMicrophone, requestPersistentStorage,
@@ -471,7 +472,7 @@ function ShortcutRow({ shortcut }: { shortcut: (typeof SHORTCUT_DEFS)[number] })
 
 // ─── Main Component ────────────────────────────────────────
 export default function SettingsPage() {
-  const { data, setData, updatePluginData, importData, exportData, einkMode, setEinkMode, betaMode, setBetaMode, backupNow, startRemoteWatch, stopRemoteWatch } = useStore()
+  const { data, setData, updatePluginData, importData, exportData, einkMode, setEinkMode, betaMode, setBetaMode, backupNow, startRemoteWatch, stopRemoteWatch, deviceSettings, setDeviceSettings } = useStore()
   const fileRef = useRef<HTMLInputElement>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [updateInfo, setUpdateInfo] = useState(getStoredUpdate())
@@ -843,6 +844,9 @@ export default function SettingsPage() {
   }
 
   async function handleSyncToCloud() {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
+    showToast('Sync is now automatic — changes sync in real-time via RxDB.')
+    return
     console.log('[SYNC] handleSyncToCloud called', { authUser: !!authUser, data: !!data })
     if (!authUser || !data) {
       console.warn('[SYNC] Early return — authUser:', !!authUser, 'data:', !!data)
@@ -883,6 +887,9 @@ export default function SettingsPage() {
   }
 
   async function handleSyncFromCloud() {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
+    showToast('Sync is now automatic — changes sync in real-time via RxDB.')
+    return
     console.log('[SYNC] handleSyncFromCloud called', { authUser: !!authUser })
     if (!authUser) {
       console.warn('[SYNC] Early return — no authUser')
@@ -3696,6 +3703,86 @@ export default function SettingsPage() {
         <SectionHeader id="inputdevices" icon={<Keyboard size={16} />} title="Input Devices" subtitle="Gamepad, Stream Deck, hardware shortcuts" />
         {expanded.inputdevices && (
           <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* ── Device Toggles ── */}
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Device Toggles</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {([
+                  { key: 'keyboard' as const, label: 'Keyboard', icon: '⌨️', locked: true, desc: 'Always on' },
+                  { key: 'k20' as const, label: 'HUION K20', icon: '🎛️', locked: false, desc: 'KeyDial Mini hotkeys' },
+                  { key: 'gamepad' as const, label: 'Game Controller', icon: '🎮', locked: false, desc: 'Gamepad API' },
+                  { key: 'streamDeck' as const, label: 'Stream Deck', icon: '⌨️', locked: false, desc: 'Elgato WebHID' },
+                  { key: 'midi' as const, label: 'MIDI Controller', icon: '🎹', locked: false, desc: 'Web MIDI API' },
+                  { key: 'otherHID' as const, label: 'Other HID', icon: '🔌', locked: false, desc: 'Generic HID devices' },
+                ] as const).map(d => (
+                  <div key={d.key} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '8px 12px', background: 'var(--bg-secondary)',
+                    borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)',
+                  }}>
+                    <span style={{ fontSize: 16 }}>{d.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.desc}</div>
+                    </div>
+                    {d.locked ? (
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>ON</span>
+                    ) : (
+                      <label style={{ position: 'relative', width: 40, height: 22, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={deviceSettings[d.key]}
+                          onChange={e => setDeviceSettings({ ...deviceSettings, [d.key]: e.target.checked })}
+                          style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                        />
+                        <span style={{
+                          position: 'absolute', inset: 0, borderRadius: 11,
+                          background: deviceSettings[d.key] ? 'var(--color-accent)' : 'var(--bg-card)',
+                          border: '1px solid var(--border)', transition: 'background 0.2s',
+                        }} />
+                        <span style={{
+                          position: 'absolute', top: 2, left: deviceSettings[d.key] ? 20 : 2,
+                          width: 18, height: 18, borderRadius: '50%',
+                          background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                          transition: 'left 0.2s',
+                        }} />
+                      </label>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* K20 conflict warnings */}
+              {(() => {
+                const conflicts = scanK20Conflicts();
+                if (conflicts.length === 0) return null;
+                return (
+                  <div style={{
+                    marginTop: 10, padding: '10px 12px',
+                    background: 'rgba(239,68,68,0.07)', borderRadius: 'var(--radius)',
+                    border: '1px solid rgba(239,68,68,0.25)', fontSize: 12, color: 'var(--text-secondary)',
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#ef4444', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <AlertTriangle size={14} /> K20 Shortcut Conflicts
+                    </div>
+                    <div>
+                      The following K20 combos conflict with reserved browser shortcuts and may not work:{' '}
+                      {conflicts.map((c, i) => (
+                        <kbd key={c} style={{
+                          background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                          borderRadius: 3, padding: '1px 5px', fontSize: 11,
+                          fontFamily: 'var(--font-mono, monospace)', marginRight: i < conflicts.length - 1 ? 4 : 0,
+                        }}>{c}</kbd>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* ── Divider ── */}
+            <div style={{ borderTop: '1px solid var(--border)' }} />
 
             {/* ── Gamepad / Controller ── */}
             <div>
