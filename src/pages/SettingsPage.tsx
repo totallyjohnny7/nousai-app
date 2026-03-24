@@ -471,6 +471,144 @@ function ShortcutRow({ shortcut }: { shortcut: (typeof SHORTCUT_DEFS)[number] })
   );
 }
 
+// ─── Stream Deck 3-Page Layout Component ─────────────────────
+const SD_ICON: Record<string, { emoji: string; label: string }> = {
+  fc_flip: { emoji: '🔄', label: 'FLIP' }, fc_next: { emoji: '➡️', label: 'NEXT' },
+  fc_prev: { emoji: '⬅️', label: 'PREV' }, fc_rsvp: { emoji: '⏩', label: 'RSVP' },
+  fc_cram: { emoji: '⚡', label: 'CRAM' }, fc_type_recall: { emoji: '✍️', label: 'TYPE' },
+  fc_zen: { emoji: '🧘', label: 'ZEN' },
+  screen_lasso: { emoji: '✂️', label: 'LASSO' }, notes_speak: { emoji: '🔊', label: 'TTS' },
+  fc_conf1: { emoji: '❌', label: 'AGAIN' }, fc_conf2: { emoji: '😰', label: 'HARD' },
+  fc_conf3: { emoji: '✅', label: 'GOOD' }, fc_conf4: { emoji: '🚀', label: 'EASY' },
+  nav_next: { emoji: '▶', label: 'NEXT→' }, nav_prev: { emoji: '◀', label: '←PREV' },
+  draw_pen: { emoji: '🖊️', label: 'PEN' }, draw_highlight: { emoji: '🖍️', label: 'HILITE' },
+  draw_erase: { emoji: '🧽', label: 'ERASE' }, draw_color: { emoji: '🎨', label: 'COLOR' },
+  draw_clear: { emoji: '🗑️', label: 'CLEAR' }, draw_undo: { emoji: '↩️', label: 'UNDO' },
+  draw_redo: { emoji: '↪️', label: 'REDO' }, draw_save: { emoji: '💾', label: 'SAVE' },
+  notes_bold: { emoji: '𝐁', label: 'BOLD' }, notes_italic: { emoji: '𝐼', label: 'ITALIC' },
+  omni_start: { emoji: '⚡', label: 'OMNI' }, focus_lock: { emoji: '🔒', label: 'FOCUS' },
+  interleave: { emoji: '🔀', label: 'MIX' }, phase_encode: { emoji: '🧠', label: 'ENCODE' },
+  phase_test: { emoji: '🔍', label: 'TEST' }, nav_home: { emoji: '🏠', label: 'HOME' },
+  nav_cards: { emoji: '🃏', label: 'CARDS' }, nav_quiz: { emoji: '📝', label: 'QUIZ' },
+  nav_learn: { emoji: '🧠', label: 'LEARN' }, nav_settings: { emoji: '⚙️', label: 'SETTINGS' },
+  nav_timer: { emoji: '⏱️', label: 'TIMER' }, nav_calendar: { emoji: '📅', label: 'CALENDAR' },
+  nav_notes: { emoji: '📚', label: 'LIBRARY' }, notes_save: { emoji: '💾', label: 'SAVE' },
+}
+
+const SD_PAGES = [
+  {
+    name: 'Page 1 — Study Mode',
+    color: '#F5A623',
+    keys: [
+      'fc_flip', 'fc_next', 'fc_prev', 'fc_rsvp', 'fc_cram',
+      'fc_type_recall', 'fc_zen', 'screen_lasso', 'notes_speak',
+      'fc_conf1', 'fc_conf2', 'fc_conf3', 'fc_conf4', 'nav_next',
+    ],
+  },
+  {
+    name: 'Page 2 — Tools',
+    color: '#22C55E',
+    keys: [
+      'draw_pen', 'draw_highlight', 'draw_erase', 'draw_color', 'draw_clear',
+      'draw_undo', 'draw_redo', 'draw_save', 'notes_bold', 'notes_italic',
+      'nav_prev', 'fc_conf1', 'fc_conf2', 'fc_conf3', 'nav_next',
+    ],
+  },
+  {
+    name: 'Page 3 — Navigation + Omni',
+    color: '#3B82F6',
+    keys: [
+      'omni_start', 'focus_lock', 'interleave', 'phase_encode', 'phase_test',
+      'nav_home', 'nav_cards', 'nav_quiz', 'nav_learn', 'nav_settings',
+      'nav_prev', 'nav_timer', 'nav_calendar', 'nav_notes', 'notes_save',
+    ],
+  },
+]
+
+function StreamDeckLayout() {
+  const [sdPage, setSdPage] = useState(0)
+  const page = SD_PAGES[sdPage]
+
+  return (
+    <div style={{ marginBottom: 12 }}>
+      {/* Page tabs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        {SD_PAGES.map((p, idx) => (
+          <button
+            key={idx}
+            onClick={() => setSdPage(idx)}
+            style={{
+              flex: 1,
+              padding: '8px 4px',
+              fontSize: 11,
+              fontWeight: sdPage === idx ? 700 : 500,
+              color: sdPage === idx ? '#fff' : '#888',
+              background: sdPage === idx ? `${p.color}22` : 'transparent',
+              border: sdPage === idx ? `2px solid ${p.color}` : '2px solid #333',
+              borderRadius: 8,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Device body */}
+      <div style={{
+        background: '#111',
+        borderRadius: 20,
+        padding: 16,
+        border: `2px solid ${page.color}40`,
+        maxWidth: 480,
+        boxShadow: `0 0 20px ${page.color}10`,
+      }}>
+        {/* 5x3 button grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+          {page.keys.map((actionId, i) => {
+            const icon = SD_ICON[actionId] ?? { emoji: '🔲', label: actionId }
+            const isNav = actionId === 'nav_next' || actionId === 'nav_prev'
+            const isGrade = actionId.startsWith('fc_conf')
+            return (
+              <div
+                key={`${sdPage}-${i}`}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  padding: '10px 4px 8px',
+                  background: isNav ? '#333' : isGrade
+                    ? actionId === 'fc_conf1' ? '#EF444422' : actionId === 'fc_conf2' ? '#F9731622' : actionId === 'fc_conf3' ? '#22C55E22' : '#3B82F622'
+                    : '#1e1e1e',
+                  borderRadius: 12,
+                  border: isNav ? '1px solid #555' : `1px solid ${page.color}30`,
+                  minHeight: 68,
+                  cursor: 'default',
+                  transition: 'transform 0.1s',
+                }}
+              >
+                <span style={{ fontSize: 24, lineHeight: 1 }}>{icon.emoji}</span>
+                <span style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: isNav ? '#999' : isGrade ? '#ddd' : page.color,
+                  letterSpacing: 0.5,
+                  textAlign: 'center',
+                }}>
+                  {icon.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Component ────────────────────────────────────────
 export default function SettingsPage() {
   const { data, setData, updatePluginData, importData, exportData, einkMode, setEinkMode, betaMode, setBetaMode, backupNow, startRemoteWatch, stopRemoteWatch, deviceSettings, setDeviceSettings } = useStore()
@@ -3817,143 +3955,7 @@ export default function SettingsPage() {
                   </div>
 
                   {/* ── 3-Page Stream Deck Layout ── */}
-                  {(() => {
-                    const SD_ICON: Record<string, { emoji: string; label: string }> = {
-                      fc_flip: { emoji: '🔄', label: 'FLIP' }, fc_next: { emoji: '➡️', label: 'NEXT' },
-                      fc_prev: { emoji: '⬅️', label: 'PREV' }, fc_rsvp: { emoji: '⏩', label: 'RSVP' },
-                      fc_cram: { emoji: '⚡', label: 'CRAM' }, fc_type_recall: { emoji: '✍️', label: 'TYPE' },
-                      fc_zen: { emoji: '🧘', label: 'ZEN' },
-                      screen_lasso: { emoji: '✂️', label: 'LASSO' }, notes_speak: { emoji: '🔊', label: 'TTS' },
-                      fc_conf1: { emoji: '❌', label: 'AGAIN' }, fc_conf2: { emoji: '😰', label: 'HARD' },
-                      fc_conf3: { emoji: '✅', label: 'GOOD' }, fc_conf4: { emoji: '🚀', label: 'EASY' },
-                      nav_next: { emoji: '▶', label: 'NEXT→' }, nav_prev: { emoji: '◀', label: '←PREV' },
-                      draw_pen: { emoji: '🖊️', label: 'PEN' }, draw_highlight: { emoji: '🖍️', label: 'HILITE' },
-                      draw_erase: { emoji: '🧽', label: 'ERASE' }, draw_color: { emoji: '🎨', label: 'COLOR' },
-                      draw_clear: { emoji: '🗑️', label: 'CLEAR' }, draw_undo: { emoji: '↩️', label: 'UNDO' },
-                      draw_redo: { emoji: '↪️', label: 'REDO' }, draw_save: { emoji: '💾', label: 'SAVE' },
-                      notes_bold: { emoji: '𝐁', label: 'BOLD' }, notes_italic: { emoji: '𝐼', label: 'ITALIC' },
-                      omni_start: { emoji: '⚡', label: 'OMNI' }, focus_lock: { emoji: '🔒', label: 'FOCUS' },
-                      interleave: { emoji: '🔀', label: 'MIX' }, phase_encode: { emoji: '🧠', label: 'ENCODE' },
-                      phase_test: { emoji: '🔍', label: 'TEST' }, nav_home: { emoji: '🏠', label: 'HOME' },
-                      nav_cards: { emoji: '🃏', label: 'CARDS' }, nav_quiz: { emoji: '📝', label: 'QUIZ' },
-                      nav_learn: { emoji: '🧠', label: 'LEARN' }, nav_settings: { emoji: '⚙️', label: 'SETTINGS' },
-                      nav_timer: { emoji: '⏱️', label: 'TIMER' }, nav_calendar: { emoji: '📅', label: 'CALENDAR' },
-                      nav_notes: { emoji: '📚', label: 'LIBRARY' }, notes_save: { emoji: '💾', label: 'SAVE' },
-                    }
-
-                    // 3 fixed pages — no repeats except ←/→ nav arrows
-                    const PAGES = [
-                      {
-                        name: 'Page 1 — Study Mode',
-                        color: '#F5A623',
-                        keys: [
-                          'fc_flip', 'fc_next', 'fc_prev', 'fc_rsvp', 'fc_cram',
-                          'fc_type_recall', 'fc_zen', 'screen_lasso', 'notes_speak',
-                          'fc_conf1', 'fc_conf2', 'fc_conf3', 'fc_conf4', 'nav_next',
-                        ],
-                      },
-                      {
-                        name: 'Page 2 — Tools',
-                        color: '#22C55E',
-                        keys: [
-                          'draw_pen', 'draw_highlight', 'draw_erase', 'draw_color', 'draw_clear',
-                          'draw_undo', 'draw_redo', 'draw_save', 'notes_bold', 'notes_italic',
-                          'nav_prev', 'fc_conf1', 'fc_conf2', 'fc_conf3', 'nav_next',
-                        ],
-                      },
-                      {
-                        name: 'Page 3 — Navigation + Omni',
-                        color: '#3B82F6',
-                        keys: [
-                          'omni_start', 'focus_lock', 'interleave', 'phase_encode', 'phase_test',
-                          'nav_home', 'nav_cards', 'nav_quiz', 'nav_learn', 'nav_settings',
-                          'nav_prev', 'nav_timer', 'nav_calendar', 'nav_notes', 'notes_save',
-                        ],
-                      },
-                    ]
-
-                    const [sdPage, setSdPage] = useState(0)
-                    const page = PAGES[sdPage]
-
-                    return (
-                      <div style={{ marginBottom: 12 }}>
-                        {/* Page tabs */}
-                        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                          {PAGES.map((p, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => setSdPage(idx)}
-                              style={{
-                                flex: 1,
-                                padding: '8px 4px',
-                                fontSize: 11,
-                                fontWeight: sdPage === idx ? 700 : 500,
-                                color: sdPage === idx ? '#fff' : '#888',
-                                background: sdPage === idx ? `${p.color}22` : 'transparent',
-                                border: sdPage === idx ? `2px solid ${p.color}` : '2px solid #333',
-                                borderRadius: 8,
-                                cursor: 'pointer',
-                                transition: 'all 0.15s',
-                              }}
-                            >
-                              {p.name}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Device body */}
-                        <div style={{
-                          background: '#111',
-                          borderRadius: 20,
-                          padding: 16,
-                          border: `2px solid ${page.color}40`,
-                          maxWidth: 480,
-                          boxShadow: `0 0 20px ${page.color}10`,
-                        }}>
-                          {/* 5×3 button grid */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
-                            {page.keys.map((actionId, i) => {
-                              const icon = SD_ICON[actionId] ?? { emoji: '🔲', label: actionId }
-                              const isNav = actionId === 'nav_next' || actionId === 'nav_prev'
-                              const isGrade = actionId.startsWith('fc_conf')
-                              return (
-                                <div
-                                  key={`${sdPage}-${i}`}
-                                  style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: 4,
-                                    padding: '10px 4px 8px',
-                                    background: isNav ? '#333' : isGrade
-                                      ? actionId === 'fc_conf1' ? '#EF444422' : actionId === 'fc_conf2' ? '#F9731622' : actionId === 'fc_conf3' ? '#22C55E22' : '#3B82F622'
-                                      : '#1e1e1e',
-                                    borderRadius: 12,
-                                    border: isNav ? '1px solid #555' : `1px solid ${page.color}30`,
-                                    minHeight: 68,
-                                    cursor: 'default',
-                                    transition: 'transform 0.1s',
-                                  }}
-                                >
-                                  <span style={{ fontSize: 24, lineHeight: 1 }}>{icon.emoji}</span>
-                                  <span style={{
-                                    fontSize: 9,
-                                    fontWeight: 700,
-                                    color: isNav ? '#999' : isGrade ? '#ddd' : page.color,
-                                    letterSpacing: 0.5,
-                                    textAlign: 'center',
-                                  }}>
-                                    {icon.label}
-                                  </span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })()}
+                  <StreamDeckLayout />
                 </div>
               )}
             </div>
