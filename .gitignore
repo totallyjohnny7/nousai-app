@@ -25,3 +25,10 @@ dist-ssr
 
 .vercel
 .worktrees/
+
+# Build artifacts & debug logs
+build-*.txt
+deploy-*.txt
+ts-check.txt
+test-results/
+.claude/worktrees/

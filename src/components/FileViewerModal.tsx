@@ -9,8 +9,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronUp, Loader2, Search, Send, X } from 'lucide-react'
 import type { LinkItem } from '../types'
 import { callAI } from '../utils/ai'
+import { safeRenderMd } from '../utils/renderMd'
 import { runMistralOcr, type OcrStage } from '../utils/mistralOcrService'
 import { loadFile, saveFile } from '../utils/fileStore'
+import mammoth from 'mammoth'
+import JSZip from 'jszip'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -316,12 +319,167 @@ export function FileViewerModal({ item, courseId, accentColor, onClose }: Props)
 
 // ─── File preview renderer ─────────────────────────────────────────────────
 
+// ─── HTML preview ──────────────────────────────────────────────────────────
+
+function HtmlPreview({ dataUrl, name }: { dataUrl: string; name: string }) {
+  const [html, setHtml] = useState<string | null>(null)
+
+  useEffect(() => {
+    try {
+      const raw = atob(dataUrl.split(',')[1] ?? '')
+      setHtml(raw)
+    } catch {
+      setHtml('<p>Could not decode HTML file.</p>')
+    }
+  }, [dataUrl])
+
+  if (html === null) return <CenteredMsg>Loading HTML…</CenteredMsg>
+
+  return (
+    <iframe
+      srcDoc={html}
+      title={name}
+      sandbox="allow-same-origin"
+      style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }}
+    />
+  )
+}
+
+// ─── DOCX preview (mammoth → iframe) ─────────────────────────────────────
+
+function DocxPreview({ dataUrl, name }: { dataUrl: string; name: string }) {
+  const [html, setHtml] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(dataUrl)
+        const buf = await res.arrayBuffer()
+        const result = await mammoth.convertToHtml({ arrayBuffer: buf })
+        if (!cancelled) setHtml(result.value)
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to convert DOCX')
+      }
+    })()
+    return () => { cancelled = true }
+  }, [dataUrl])
+
+  if (error) return <CenteredMsg>DOCX error: {error}</CenteredMsg>
+  if (html === null) return <CenteredMsg>Converting document…</CenteredMsg>
+
+  const wrappedHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+       padding: 24px 32px; line-height: 1.6; color: #1a1a1a; max-width: 800px; margin: 0 auto; }
+img { max-width: 100%; height: auto; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+td, th { border: 1px solid #ddd; padding: 8px; }
+</style></head><body>${html}</body></html>`
+
+  return (
+    <iframe
+      srcDoc={wrappedHtml}
+      title={name}
+      sandbox="allow-same-origin"
+      style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }}
+    />
+  )
+}
+
+// ─── PPTX preview (JSZip slide extraction) ────────────────────────────────
+
+interface SlideData { index: number; texts: string[] }
+
+function PptxPreview({ dataUrl, name, accentColor }: { dataUrl: string; name: string; accentColor: string }) {
+  const [slides, setSlides] = useState<SlideData[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(dataUrl)
+        const buf = await res.arrayBuffer()
+        const zip = await JSZip.loadAsync(buf)
+
+        const slideFiles = Object.keys(zip.files)
+          .filter(n => /^ppt\/slides\/slide\d+\.xml$/i.test(n))
+          .sort((a, b) => {
+            const na = parseInt(a.match(/slide(\d+)/i)?.[1] ?? '0')
+            const nb = parseInt(b.match(/slide(\d+)/i)?.[1] ?? '0')
+            return na - nb
+          })
+
+        const parsed: SlideData[] = []
+        for (let i = 0; i < slideFiles.length; i++) {
+          const xml = await zip.files[slideFiles[i]].async('text')
+          const doc = new DOMParser().parseFromString(xml, 'application/xml')
+          const tNodes = doc.getElementsByTagName('a:t')
+          const texts: string[] = []
+          for (let j = 0; j < tNodes.length; j++) {
+            const t = tNodes[j].textContent?.trim()
+            if (t) texts.push(t)
+          }
+          parsed.push({ index: i + 1, texts })
+        }
+
+        if (!cancelled) setSlides(parsed)
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to parse PPTX')
+      }
+    })()
+    return () => { cancelled = true }
+  }, [dataUrl])
+
+  if (error) return <CenteredMsg>PPTX error: {error}</CenteredMsg>
+  if (slides === null) return <CenteredMsg>Extracting slides…</CenteredMsg>
+  if (slides.length === 0) return <CenteredMsg>No slides found in this presentation.</CenteredMsg>
+
+  return (
+    <div style={{ width: '100%', height: '100%', overflow: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>
+        {name} — {slides.length} slide{slides.length !== 1 ? 's' : ''}
+      </div>
+      {slides.map(s => (
+        <div key={s.index} style={{
+          padding: '14px 18px', borderRadius: 10,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+        }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700, color: accentColor,
+            fontFamily: 'DM Mono, monospace', marginBottom: 6,
+          }}>
+            Slide {s.index}
+          </div>
+          {s.texts.length > 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {s.texts.join('\n')}
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', fontStyle: 'italic' }}>
+              (no text content)
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── File preview renderer ─────────────────────────────────────────────────
+
 function FilePreview({ item, blobUrl, accentColor }: { item: LinkItem; blobUrl: string | null; accentColor: string }) {
   if (!item.dataUrl) {
     return <CenteredMsg>File data unavailable — try re-uploading.</CenteredMsg>
   }
 
-  if (item.fileType === 'application/pdf') {
+  const ft = item.fileType ?? ''
+  const ext = item.name.split('.').pop()?.toLowerCase() ?? ''
+
+  // PDF
+  if (ft === 'application/pdf') {
     if (!blobUrl) return <CenteredMsg>Loading PDF…</CenteredMsg>
     return (
       <iframe
@@ -332,7 +490,8 @@ function FilePreview({ item, blobUrl, accentColor }: { item: LinkItem; blobUrl: 
     )
   }
 
-  if (item.fileType?.startsWith('image/')) {
+  // Images
+  if (ft.startsWith('image/')) {
     return (
       <div style={{ width: '100%', height: '100%', overflow: 'auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16 }}>
         <img src={item.dataUrl} alt={item.name} style={{ maxWidth: '100%', borderRadius: 8 }} />
@@ -340,7 +499,23 @@ function FilePreview({ item, blobUrl, accentColor }: { item: LinkItem; blobUrl: 
     )
   }
 
-  if (item.fileType?.startsWith('text/') || item.fileType?.includes('json') || item.fileType?.includes('xml')) {
+  // HTML
+  if (ft === 'text/html' || ext === 'html' || ext === 'htm') {
+    return <HtmlPreview dataUrl={item.dataUrl} name={item.name} />
+  }
+
+  // DOCX
+  if (ft.includes('wordprocessingml') || ft.includes('msword') || ext === 'docx' || ext === 'doc') {
+    return <DocxPreview dataUrl={item.dataUrl} name={item.name} />
+  }
+
+  // PPTX
+  if (ft.includes('presentationml') || ft.includes('powerpoint') || ext === 'pptx' || ext === 'ppt') {
+    return <PptxPreview dataUrl={item.dataUrl} name={item.name} accentColor={accentColor} />
+  }
+
+  // Text / JSON / XML
+  if (ft.startsWith('text/') || ft.includes('json') || ft.includes('xml')) {
     let text = ''
     try { text = atob(item.dataUrl.split(',')[1] ?? '') } catch { text = '(could not decode file)' }
     return (
@@ -352,6 +527,7 @@ function FilePreview({ item, blobUrl, accentColor }: { item: LinkItem; blobUrl: 
     )
   }
 
+  // Unsupported fallback
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
       <span style={{ fontSize: 40 }}>📎</span>
@@ -524,7 +700,7 @@ function FileViewerChat({ item, courseId, accentColor }: ChatProps) {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ flex: 1, overflow: 'auto', minHeight: 0, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {messages.length === 0 && !isOcrRunning && (
           <div style={{ color: 'var(--text-dim)', fontSize: 12, textAlign: 'center', marginTop: 24 }}>
             Ask anything about <strong>{item.name}</strong>.<br />
@@ -544,10 +720,12 @@ function FileViewerChat({ item, courseId, accentColor }: ChatProps) {
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
           }}>
-            {m.text || (m.role === 'ai' && loading
-              ? <Loader2 size={14} className="spin" />
-              : null
-            )}
+            {m.role === 'ai' && m.text
+              ? <div dangerouslySetInnerHTML={{ __html: safeRenderMd(m.text) }} />
+              : m.text || (m.role === 'ai' && loading
+                ? <Loader2 size={14} className="spin" />
+                : null
+              )}
           </div>
         ))}
         {error && (
