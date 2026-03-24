@@ -7,6 +7,7 @@ import { validateBeforeWrite, countCards, logWrite } from './utils/writeGuard';
 import { saveSnapshot } from './utils/snapshotManager';
 import { dataHealthCheck, type HealthReport } from './utils/dataHealthCheck';
 import { saveGoldenCopy } from './utils/goldenCopy';
+import { initLeaderElection, destroyLeaderElection, broadcast, isLeader, getRole, TAB_ID, type TabRole } from './utils/tabLeader';
 
 /* ── Default empty state ──────────────────────────────── */
 const emptyGamification: GamificationData = {
@@ -121,6 +122,10 @@ export function mergeLocalCardMeta(local: NousAIData | null, cloud: NousAIData):
   const mergedToolSessions = mergeById(localPD.toolSessions, cloudPD.toolSessions);
   const mergedProcedures = mergeById(localPD.savedProcedures, cloudPD.savedProcedures);
   const mergedDrawings = mergeById(localPD.drawings, cloudPD.drawings);
+  // Previously missing — offline-created entities in these arrays were being dropped
+  const mergedMatchSets = mergeById(localPD.matchSets, cloudPD.matchSets);
+  const mergedQuizHistory = mergeById(localPD.quizHistory, cloudPD.quizHistory);
+  const mergedSavedVideos = mergeById(localPD.savedVideos, cloudPD.savedVideos);
 
   return {
     ...cloud,
@@ -136,6 +141,9 @@ export function mergeLocalCardMeta(local: NousAIData | null, cloud: NousAIData):
       ...(mergedToolSessions !== undefined && { toolSessions: mergedToolSessions }),
       ...(mergedProcedures !== undefined && { savedProcedures: mergedProcedures }),
       ...(mergedDrawings !== undefined && { drawings: mergedDrawings }),
+      ...(mergedMatchSets !== undefined && { matchSets: mergedMatchSets }),
+      ...(mergedQuizHistory !== undefined && { quizHistory: mergedQuizHistory }),
+      ...(mergedSavedVideos !== undefined && { savedVideos: mergedSavedVideos }),
     },
   };
 }
@@ -189,13 +197,19 @@ export function normalizeData(d: NousAIData): NousAIData {
   };
 }
 
-/* ── Cross-tab sync via BroadcastChannel ──────────────── */
-const TAB_ID = crypto.randomUUID();
-let syncChannel: BroadcastChannel | null = null;
-try { syncChannel = new BroadcastChannel('nousai-data-sync'); } catch { /* unsupported */ }
+/* ── Cross-tab sync via leader election ──────────────── */
+// Leader tab owns all IDB writes. Follower tabs proxy mutations through
+// the BroadcastChannel → leader applies → broadcasts updated state back.
+// Re-export TAB_ID from tabLeader (was previously defined here)
+export { TAB_ID };
 
 function broadcastDataChanged() {
-  syncChannel?.postMessage({ type: 'data-changed', tabId: TAB_ID });
+  broadcast({ type: 'data-changed' });
+}
+
+// Follower tabs send their state updates to the leader via this message type
+function sendMutationToLeader(data: NousAIData) {
+  broadcast({ type: 'follower-mutation', payload: data });
 }
 
 /* ── Sync status type ────────────────────────────────── */
@@ -389,15 +403,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Load from IndexedDB on mount (run migrations + normalization to fill missing fields)
+  // Also checks for crash-recovery data from a follower tab that closed without syncing
   useEffect(() => {
     loadFromIDB().then(d => {
+      let source = 'idb';
+
+      // Check if a follower tab stashed crash-recovery data that's newer than IDB
+      const crashRecovery = localStorage.getItem('nousai-crash-recovery');
+      const crashAt = localStorage.getItem('nousai-crash-recovery-at');
+      const idbModified = localStorage.getItem('nousai-data-modified-at');
+      if (crashRecovery && crashAt && (!idbModified || crashAt > idbModified)) {
+        try {
+          const recovered = JSON.parse(crashRecovery) as NousAIData;
+          // Validate it has basic structure before using it
+          if (recovered?.pluginData?.coachData) {
+            d = recovered;
+            source = 'crash-recovery';
+            console.log('[STORE] Restored from crash-recovery (follower tab that closed)');
+          }
+        } catch { /* corrupt crash recovery data — ignore */ }
+      }
+      // Clean up crash-recovery data regardless
+      localStorage.removeItem('nousai-crash-recovery');
+      localStorage.removeItem('nousai-crash-recovery-at');
+
       if (d) {
         const migrated = runMigrations(d);
         const normalized = normalizeData(migrated);
-        // NOTE: No longer auto-removing quizzes by subject — previously removed entries
-        // where subject === 'Imported', but this was deleting valid user-imported quizzes
-        // whose subject defaulted to 'Imported' when no course was selected at import time.
-        // Boot health check — detect corruption before displaying
         const { report, repairedData } = dataHealthCheck(normalized);
         const final = report.autoRepaired.length > 0 ? repairedData : normalized;
         if (!report.healthy) {
@@ -409,9 +441,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           console.log('[HEALTH CHECK] Auto-repaired:', report.autoRepaired.join('; '));
         }
         setHealthReport(report);
-        console.log('[STORE] Loaded from IDB:', final.pluginData?.coachData?.courses?.length ?? 0, 'courses,', final.pluginData?.quizHistory?.length ?? 0, 'quiz entries');
-        lastSavedData = final; // Initialize write guard baseline
-        saveSnapshot(final, 'boot').catch(() => {}); // Boot snapshot for recovery
+        console.log(`[STORE] Loaded from ${source}:`, final.pluginData?.coachData?.courses?.length ?? 0, 'courses,', final.pluginData?.quizHistory?.length ?? 0, 'quiz entries');
+        lastSavedData = final;
+        saveSnapshot(final, 'boot').catch(() => {});
         setDataRaw(final);
       }
       setLoaded(true);
@@ -419,17 +451,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Persist to IndexedDB on change — debounced to avoid redundant writes during rapid updates
+  // LEADER ELECTION: Only the leader tab writes to IDB. Follower tabs send mutations to the leader.
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!data) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
       // Safety: don't save before initial IDB load completes (state is still default/empty)
-      // Previously checked courses.length === 0 which blocked saving legitimate deletions
       if (!loaded) {
         console.warn('[STORE] Blocked save: initial IDB load not yet complete');
         return;
       }
+
+      // Follower tabs: send mutation to leader instead of writing IDB directly
+      if (!isLeader()) {
+        if (!fromSyncRef.current) {
+          sendMutationToLeader(data);
+        } else {
+          fromSyncRef.current = false;
+        }
+        localDirtyRef.current = false;
+        return;
+      }
+
+      // Leader tab: write to IDB as before
       const MAX_QUIZ_HISTORY = 500;
       const qh = data.pluginData?.quizHistory;
       if (qh && qh.length > MAX_QUIZ_HISTORY) {
@@ -450,33 +495,55 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [data]);
 
-  // Cross-tab sync: reload from IDB when another tab broadcasts a change
+  // Cross-tab sync via leader election
+  // Leader: handles follower-mutation messages by merging into its own state → writes IDB → broadcasts
+  // Follower: handles data-changed messages by reloading from IDB
+  const tabRoleRef = useRef<TabRole>('undecided');
+
   useEffect(() => {
-    if (!syncChannel) return;
     let debounce: ReturnType<typeof setTimeout> | null = null;
-    const handler = (e: MessageEvent) => {
-      if (e.data?.tabId === TAB_ID) return; // ignore own broadcasts
-      if (debounce) clearTimeout(debounce);
-      debounce = setTimeout(async () => {
-        // If this tab has unsaved local changes, save them to IDB first before loading remote data
-        if (localDirtyRef.current && dataRef.current) {
-          await saveToIDB(dataRef.current);
-          localDirtyRef.current = false;
-          localStorage.setItem('nousai-data-modified-at', new Date().toISOString());
+
+    initLeaderElection({
+      onBecomeLeader: () => {
+        tabRoleRef.current = 'leader';
+        console.log('[STORE] Became leader — owning IDB writes');
+        // Force-write current state to IDB to establish baseline
+        if (dataRef.current && loaded) {
+          saveToIDB(dataRef.current);
         }
-        const fresh = await loadFromIDB();
-        if (fresh) {
-          fromSyncRef.current = true; // prevent broadcast echo
-          setDataRaw(normalizeData(fresh));
+      },
+      onLoseLeadership: () => {
+        tabRoleRef.current = 'follower';
+        console.log('[STORE] Lost leadership — switching to read-only');
+      },
+      onMessage: (msg: any) => {
+        if (msg?.type === 'data-changed') {
+          // Another tab (leader) updated IDB — reload
+          if (debounce) clearTimeout(debounce);
+          debounce = setTimeout(async () => {
+            const fresh = await loadFromIDB();
+            if (fresh) {
+              fromSyncRef.current = true;
+              setDataRaw(normalizeData(fresh));
+            }
+          }, 300);
+        } else if (msg?.type === 'follower-mutation' && isLeader()) {
+          // A follower tab sent us its updated state — merge it
+          const followerData = msg.payload as NousAIData;
+          if (followerData) {
+            const merged = mergeLocalCardMeta(dataRef.current, normalizeData(followerData));
+            fromSyncRef.current = false; // this IS a real change, broadcast after saving
+            setDataRaw(merged);
+          }
         }
-      }, 1000);
-    };
-    syncChannel.addEventListener('message', handler);
+      },
+    });
+
     return () => {
-      syncChannel?.removeEventListener('message', handler);
       if (debounce) clearTimeout(debounce);
+      destroyLeaderElection();
     };
-  }, []);
+  }, [loaded]);
 
   // Auto-sync to cloud (debounced 2min) when data changes + flush on tab hidden
   const autoSyncRef = useRef(new AutoSyncScheduler(dataRef));
@@ -671,17 +738,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        autoSyncRef.current.flush();
+        // Leader: force-flush to IDB immediately (no debounce) + cloud sync
+        if (isLeader()) {
+          if (dataRef.current) saveToIDB(dataRef.current);
+          autoSyncRef.current.flush();
+        } else if (dataRef.current && localDirtyRef.current) {
+          // Follower: stash unsaved state to localStorage before tab goes hidden
+          try {
+            localStorage.setItem('nousai-crash-recovery', JSON.stringify(dataRef.current));
+            localStorage.setItem('nousai-crash-recovery-at', new Date().toISOString());
+          } catch { /* quota exceeded */ }
+        }
       } else if (document.visibilityState === 'visible') {
-        // Pull latest from cloud when tab becomes visible (cross-device freshness)
+        // Pull latest from cloud/IDB when tab becomes visible
         loadRemoteData();
       }
     };
     // pagehide: iOS Safari fires this but not always beforeunload
-    const handlePageHide = () => { autoSyncRef.current.flush(); };
-    // 30s heartbeat: catch edge cases where debounce timer was cleared
+    const handlePageHide = () => {
+      if (isLeader()) autoSyncRef.current.flush();
+    };
+    // 30s heartbeat: catch edge cases where debounce timer was cleared (leader only)
     const heartbeat = setInterval(() => {
-      if (autoSyncRef.current.dirty && navigator.onLine) {
+      if (isLeader() && autoSyncRef.current.dirty && navigator.onLine) {
         autoSyncRef.current.flush();
       }
     }, 30_000);
@@ -696,20 +775,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [loadRemoteData]);
 
   // Flush to IDB immediately on tab close so no data is lost
-  // Also warn the user if the auto-sync has pending changes that haven't reached the cloud
+  // Leader: writes to IDB directly. Follower: writes crash-recovery key to localStorage.
   useEffect(() => {
     const flush = (e: BeforeUnloadEvent) => {
-      if (dataRef.current) saveToIDB(dataRef.current);
+      if (dataRef.current) {
+        if (isLeader()) {
+          // Leader: synchronous IDB write (best-effort, may not complete)
+          saveToIDB(dataRef.current);
+        } else {
+          // Follower: stash to localStorage as crash-recovery backup
+          // (localStorage is synchronous — guaranteed to complete before tab closes)
+          try {
+            const compressed = JSON.stringify(dataRef.current);
+            localStorage.setItem('nousai-crash-recovery', compressed);
+            localStorage.setItem('nousai-crash-recovery-at', new Date().toISOString());
+          } catch { /* localStorage quota exceeded — can't save, data was in IDB anyway */ }
+        }
+      }
 
       // If auto-sync is dirty (pending cloud write), warn the user
       if (autoSyncRef.current.dirty) {
         e.preventDefault();
-        // Modern browsers show a generic "Leave site?" dialog when returnValue is set
         e.returnValue = 'You have unsaved changes that haven\'t synced to the cloud yet. Leave anyway?';
       }
 
       // Best-effort cloud sync on page hide (no guarantee it completes)
-      autoSyncRef.current.flush();
+      if (isLeader()) autoSyncRef.current.flush();
     };
     window.addEventListener('beforeunload', flush);
     return () => window.removeEventListener('beforeunload', flush);
