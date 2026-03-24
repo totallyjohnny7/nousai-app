@@ -14,6 +14,9 @@ import { checkForUpdates, getAppVersion, getStoredUpdate, dismissUpdate, getPlat
 import { signUp, signIn, logOut, onAuthChange, syncToCloud, syncFromCloud, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, saveOmiConfig, type AuthUser } from '../utils/auth'
 // testData is lazy-loaded only when user clicks "Load Test Data" button
 import { SHORTCUT_DEFS, getShortcutKey, setShortcutKey, resetAllShortcuts, formatKey } from '../utils/shortcuts'
+import { K20_KEYS, K20_ACTIONS, K20_ACTION_ICONS, K20_DEFAULT_BINDINGS, type K20ActionId } from '../utils/k20Types'
+import { useK20Bindings } from '../hooks/useK20Bindings'
+import { useK20Hotkeys } from '../hooks/useK20Hotkeys'
 import { getLevel, THEME_PRESETS } from '../utils/gamification'
 import {
   checkAllPermissions, requestMicrophone, requestPersistentStorage,
@@ -4030,6 +4033,174 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+
+            {/* ── Divider ── */}
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+
+            {/* ── HUION K20 KeyDial Mini ── */}
+            {(() => {
+              const k20 = useK20Bindings();
+              useK20Hotkeys(true, k20.version);
+
+              // Group keys by row for visual layout
+              const rows = new Map<number, typeof K20_KEYS>();
+              for (const key of K20_KEYS) {
+                if (!rows.has(key.row)) rows.set(key.row, []);
+                rows.get(key.row)!.push(key);
+              }
+              const sortedRows = [...rows.entries()].sort(([a], [b]) => a - b);
+
+              // Build conflict lookup: keyId → conflict messages
+              const conflictsByKey = new Map<string, string[]>();
+              for (const c of k20.conflicts) {
+                const existing = conflictsByKey.get(c.keyId) ?? [];
+                existing.push(c.message);
+                conflictsByKey.set(c.keyId, existing);
+              }
+
+              return (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>🎛️ HUION K20 KeyDial Mini</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '2px 7px', borderRadius: 20 }}>
+                      Keyboard shortcuts · fully remappable
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+                    Click any key to reassign its action. The K20 sends keyboard shortcuts that NousAI intercepts.
+                  </div>
+
+                  {/* Conflict warnings */}
+                  {k20.conflicts.length > 0 && (
+                    <div style={{ marginBottom: 12, padding: '8px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius)', fontSize: 11 }}>
+                      <div style={{ fontWeight: 700, color: '#EF4444', marginBottom: 4 }}>⚠ Binding Conflicts</div>
+                      {[...new Set(k20.conflicts.map(c => c.message))].map((msg, i) => (
+                        <div key={i} style={{ color: 'var(--text-secondary)', marginTop: 2 }}>• {msg}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Visual key map */}
+                  <div style={{
+                    background: '#111',
+                    borderRadius: 20,
+                    padding: 16,
+                    border: '2px solid rgba(245,166,35,0.25)',
+                    maxWidth: 420,
+                    boxShadow: '0 0 20px rgba(245,166,35,0.05)',
+                  }}>
+                    {sortedRows.map(([rowIdx, keys]) => (
+                      <div
+                        key={rowIdx}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          gap: 6,
+                          marginBottom: rowIdx < sortedRows.length - 1 ? 6 : 0,
+                        }}
+                      >
+                        {keys.map(keyDef => {
+                          const actionId = k20.bindings[keyDef.id] ?? 'none';
+                          const actionDef = K20_ACTIONS.find(a => a.id === actionId);
+                          const icon = K20_ACTION_ICONS[actionId] ?? '⬜';
+                          const hasConflict = conflictsByKey.has(keyDef.id);
+                          const isDial = keyDef.isDial;
+
+                          return (
+                            <div
+                              key={keyDef.id}
+                              style={{
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 2,
+                                padding: isDial ? '8px 6px 6px' : '8px 6px 4px',
+                                background: isDial ? '#1a1a2e' : '#1e1e1e',
+                                borderRadius: isDial ? '50%' : 10,
+                                border: hasConflict
+                                  ? '2px solid #EF4444'
+                                  : isDial
+                                    ? '2px solid #F5A62340'
+                                    : '1px solid #333',
+                                minWidth: isDial ? 56 : 80,
+                                minHeight: isDial ? 56 : 68,
+                                cursor: 'pointer',
+                                transition: 'border-color 0.15s, transform 0.1s',
+                              }}
+                            >
+                              {/* Conflict badge */}
+                              {hasConflict && (
+                                <div
+                                  title={conflictsByKey.get(keyDef.id)?.join('\n')}
+                                  style={{
+                                    position: 'absolute', top: -4, right: -4,
+                                    width: 14, height: 14, borderRadius: '50%',
+                                    background: '#EF4444', color: '#fff',
+                                    fontSize: 9, fontWeight: 700,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  }}
+                                >
+                                  !
+                                </div>
+                              )}
+
+                              {/* Physical key label */}
+                              <div style={{ fontSize: 8, color: '#666', fontWeight: 600, letterSpacing: 0.5 }}>
+                                {keyDef.label}
+                              </div>
+
+                              {/* Action icon */}
+                              <div style={{ fontSize: isDial ? 16 : 20, lineHeight: 1 }}>{icon}</div>
+
+                              {/* Action dropdown */}
+                              <select
+                                style={{
+                                  width: '100%',
+                                  fontSize: 8,
+                                  fontWeight: 600,
+                                  background: 'transparent',
+                                  color: '#F5A623',
+                                  border: 'none',
+                                  textAlign: 'center',
+                                  cursor: 'pointer',
+                                  appearance: 'none',
+                                  padding: 0,
+                                  outline: 'none',
+                                }}
+                                value={actionId}
+                                onChange={e => k20.updateBinding(keyDef.id, e.target.value as K20ActionId)}
+                              >
+                                {K20_ACTIONS.map(a => (
+                                  <option key={a.id} value={a.id}>{a.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Combo reference + reset */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                      Bindings saved to localStorage · persists across sessions
+                    </span>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        k20.resetToDefaults();
+                        showToast('K20 bindings reset to defaults');
+                      }}
+                    >
+                      Reset to Defaults
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
           </div>
         )}
