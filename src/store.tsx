@@ -84,6 +84,44 @@ export function mergeLocalCardMeta(local: NousAIData | null, cloud: NousAIData):
     }
   }
 
+  // ── Merge pluginData arrays that have id + updatedAt fields ──────────
+  // Without this, a cloud sync overwrites local annotations/notes/sessions
+  // if the cloud snapshot was taken before the local edits.
+  const localPD = local?.pluginData ?? {} as any;
+  const cloudPD = cloud.pluginData ?? {} as any;
+
+  function mergeById<T extends { id: string; updatedAt?: string | number; createdAt?: string | number }>(
+    localArr: T[] | undefined,
+    cloudArr: T[] | undefined,
+  ): T[] | undefined {
+    if (!localArr?.length && !cloudArr?.length) return cloudArr;
+    if (!localArr?.length) return cloudArr;
+    if (!cloudArr?.length) return localArr;
+
+    const map = new Map<string, T>();
+    // Seed with local entries
+    for (const item of localArr) map.set(item.id, item);
+    // Cloud wins if newer or equal; otherwise local keeps its version
+    for (const item of cloudArr) {
+      const existing = map.get(item.id);
+      if (!existing) {
+        map.set(item.id, item);
+      } else {
+        const cloudTime = String(item.updatedAt || item.createdAt || '');
+        const localTime = String(existing.updatedAt || existing.createdAt || '');
+        if (cloudTime >= localTime) map.set(item.id, item);
+      }
+    }
+    return [...map.values()];
+  }
+
+  const mergedAnnotations = mergeById(localPD.annotations, cloudPD.annotations);
+  const mergedNotes = mergeById(localPD.notes, cloudPD.notes);
+  const mergedAiChatSessions = mergeById(localPD.aiChatSessions, cloudPD.aiChatSessions);
+  const mergedToolSessions = mergeById(localPD.toolSessions, cloudPD.toolSessions);
+  const mergedProcedures = mergeById(localPD.savedProcedures, cloudPD.savedProcedures);
+  const mergedDrawings = mergeById(localPD.drawings, cloudPD.drawings);
+
   return {
     ...cloud,
     pluginData: {
@@ -92,6 +130,12 @@ export function mergeLocalCardMeta(local: NousAIData | null, cloud: NousAIData):
         ...cloud.pluginData.coachData,
         courses: mergedCourses,
       },
+      ...(mergedAnnotations !== undefined && { annotations: mergedAnnotations }),
+      ...(mergedNotes !== undefined && { notes: mergedNotes }),
+      ...(mergedAiChatSessions !== undefined && { aiChatSessions: mergedAiChatSessions }),
+      ...(mergedToolSessions !== undefined && { toolSessions: mergedToolSessions }),
+      ...(mergedProcedures !== undefined && { savedProcedures: mergedProcedures }),
+      ...(mergedDrawings !== undefined && { drawings: mergedDrawings }),
     },
   };
 }
