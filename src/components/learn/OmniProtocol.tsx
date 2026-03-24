@@ -1451,7 +1451,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
                             </div>
                           </div>
                           <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 10 }}>{q.q}</div>
-                          {q.options.map((opt, oi) => (
+                          {q.options.map((opt: string, oi: number) => (
                             <label key={oi} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 6, cursor: 'pointer', background: mcAnswers[qi] === oi ? 'var(--accent)15' : 'transparent', border: mcAnswers[qi] === oi ? '1px solid var(--accent)' : '1px solid transparent', marginBottom: 4 }}>
                               <input
                                 type='radio'
@@ -1949,7 +1949,7 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
                         <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: q.difficulty === 'easy' ? '#22c55e20' : q.difficulty === 'hard' ? '#ef444420' : '#f59e0b20', color: q.difficulty === 'easy' ? '#86efac' : q.difficulty === 'hard' ? '#fca5a5' : '#fde68a' }}>{q.difficulty}</span>
                       </div>
                       <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 10 }}>{q.q}</div>
-                      {q.options.map((opt, oi) => (
+                      {q.options.map((opt: string, oi: number) => (
                         <label key={oi} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 6, cursor: 'pointer', background: mcAnswers[qi] === oi ? '#ef444415' : 'transparent', border: mcAnswers[qi] === oi ? '1px solid #ef4444' : '1px solid transparent', marginBottom: 4 }}>
                           <input type='radio' name={`crisis-q-${qi}`} checked={mcAnswers[qi] === oi} onChange={() => setMcAnswers(prev => ({ ...prev, [qi]: oi }))} style={{ accentColor: '#ef4444' }} />
                           <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{String.fromCharCode(65 + oi)}. {opt}</span>

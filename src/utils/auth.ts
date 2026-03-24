@@ -397,7 +397,7 @@ function trimForSync(data: any): any {
       'nousai-pref-pomo-work', 'nousai-pref-pomo-break', 'nousai-pref-language',
       'nousai-pref-difficulty', 'nousai-pref-sound', 'nousai-pref-fontsize',
       'nousai-pref-compact', 'nousai-tts-prefs', 'nousai-stt-prefs',
-      'nousai-palm-rejection', 'nousai-auto-sync',
+      'nousai-palm-rejection',
     ];
     const localData = d.localData as Record<string, string>;
     const remaining = Object.keys(localData).filter(k => !PRIORITY_KEYS.includes(k));
@@ -465,7 +465,7 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
     'nousai-pref-pomo-work', 'nousai-pref-pomo-break', 'nousai-pref-language',
     'nousai-pref-difficulty', 'nousai-pref-sound', 'nousai-pref-fontsize',
     'nousai-pref-compact', 'nousai-tts-prefs', 'nousai-stt-prefs',
-    'nousai-palm-rejection', 'nousai-auto-sync',
+    'nousai-palm-rejection',
   ];
   const localData: Record<string, string> = {};
   for (const key of SYNC_KEYS) {
