@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-export interface UseK20HotkeysOptions {
+export interface UseEscapePriorityOptions {
   modalOpen: boolean
   nousChatOpen: boolean
   closeNousChat?: () => void
@@ -10,7 +10,7 @@ export interface UseK20HotkeysOptions {
 }
 
 /**
- * K20 Escape priority queue:
+ * Escape priority queue (works alongside K20 hardware hotkeys):
  *   1. Close modal (if open)
  *   2. Minimize Nous chat (if open)
  *   3. Close annotation panel (if open)
@@ -18,7 +18,7 @@ export interface UseK20HotkeysOptions {
  *
  * Registers in capture phase so it fires before textarea/input handlers.
  */
-export function useK20Hotkeys(opt: UseK20HotkeysOptions) {
+export function useEscapePriority(opt: UseEscapePriorityOptions) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return

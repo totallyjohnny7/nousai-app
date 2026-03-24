@@ -10,7 +10,7 @@ import Onboarding from './pages/Onboarding'
 import NousLogo from './components/Logo'
 import NousPanel from './components/NousPanel'
 import OmniSearch from './components/OmniSearch'
-import { useK20Hotkeys } from './hooks/useK20Hotkeys'
+import { useEscapePriority } from './hooks/useEscapePriority'
 import SyncStatusBanner from './components/SyncStatusBanner'
 import SyncStatusIndicator from './components/SyncStatusIndicator'
 import {
@@ -319,7 +319,7 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem('nousai-sidebar-collapsed', String(sidebarCollapsed)) } catch {}
   }, [sidebarCollapsed])
-  useK20Hotkeys({
+  useEscapePriority({
     modalOpen: omniSearchOpen || shortcutOverlayOpen,
     nousChatOpen,
     closeNousChat: () => setNousChatOpen(false),
