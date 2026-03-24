@@ -878,39 +878,6 @@ export function removeLocalPin(): void {
   localStorage.removeItem('nousai-pin');
 }
 
-// ─── Quick Keys Action Sync ──────────────────────────────────────────────────
-//
-// Ephemeral Firestore doc at users/{uid}/relay/qkAction.
-// Physical Quick Keys on Windows → Firestore → Boox fires same action.
-// Each action has a unique id to prevent duplicate firing on re-renders.
-
-export interface QKActionPayload {
-  actionId: string;
-  fromDevice: string;
-  ts: number; // epoch ms — receiver ignores events >5s old
-}
-
-export async function writeQKAction(uid: string, payload: QKActionPayload): Promise<void> {
-  const loaded = await loadFirebase();
-  if (!loaded || !fbFns) return;
-  const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'qkAction');
-  await fbFns.setDoc(ref, payload);
-}
-
-export function watchQKAction(uid: string, cb: (payload: QKActionPayload) => void): () => void {
-  let unsub: (() => void) | null = null;
-  let cancelled = false;
-  loadFirebase().then((loaded) => {
-    if (!loaded || !fbFns || cancelled) return;
-    const ref = fbFns.doc(firebaseDb, 'users', uid, 'relay', 'qkAction');
-    unsub = fbFns.onSnapshot(ref, (snap: { exists: () => boolean; data: () => unknown }) => {
-      if (!snap.exists()) return;
-      cb(snap.data() as QKActionPayload);
-    });
-  });
-  return () => { cancelled = true; unsub?.(); };
-}
-
 // ─── Quick Keys Config Sync ───────────────────────────────────────────────────
 //
 // Persists the QK button-mapping config to users/{uid}/relay/qkConfig.
