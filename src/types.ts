@@ -846,6 +846,39 @@ export interface OmniProtocolData {
   lastSessionId?: string;
 }
 
+// ─── MicroMacro ──────────────────────────────────────────────────────────────
+
+export interface ScaleNode {
+  id: string
+  label: string
+  position: number              // 0 (micro) to 100 (macro)
+  emoji: string
+  color: string                 // hex
+  summary: string
+  mechanism: string
+  mnemonic: string
+  analogy: string
+  fast_facts: string[]
+  tags: string[]
+  links_to: string[]            // other node IDs in same set
+  ai_generated: boolean
+  created_at: string
+}
+
+export interface ScaleSet {
+  id: string
+  name: string
+  course_id: string | null      // links to existing Nous AI course
+  subject: string
+  description: string
+  micro_label: string           // axis left end label
+  macro_label: string           // axis right end label
+  color_theme: string           // hex accent for this set
+  nodes: ScaleNode[]
+  created_at: string
+  updated_at: string
+}
+
 // ─── Links & Files ────────────────────────────────────────────────────────────
 
 export interface LinkItem {
