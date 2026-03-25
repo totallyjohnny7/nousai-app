@@ -61,6 +61,8 @@ function PrerequisiteTool() {
       const prompt = `For studying the topic and course below, what prerequisite concepts should I know first?
 <topic>${selectedTopic.name}</topic>
 <course>${selectedCourse?.name ?? ''}</course> List 5-8 specific concepts that are directly needed to understand this topic well.
+Include ALL prerequisite levels — not just top-level prerequisites, but also foundational sub-concepts that feed into them.
+Flag any prerequisites that students commonly lack or underestimate (mark with "[GAP RISK]" prefix).
 
 Return your answer as a simple numbered list, one concept per line. Do not include any other text or explanations.`;
 

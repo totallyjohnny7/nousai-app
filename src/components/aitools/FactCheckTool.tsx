@@ -49,8 +49,8 @@ function FactCheckTool() {
 Each item must have:
 - "claim": the original claim text
 - "verdict": one of "likely-true", "uncertain", or "likely-false"
-- "confidence": number 1-100
-- "reasoning": brief explanation of your verdict (cite sources by [1], [2] etc. when relevant)
+- "confidence": number 1-100 (rate confidence carefully — lower if sources conflict or evidence is weak)
+- "reasoning": brief explanation of your verdict (cite sources by [1], [2] etc. when relevant). Note where sources conflict or disagree with each other.
 
 Claims to check:
 ${claimsToCheck.join('\n')}${contextBlock}

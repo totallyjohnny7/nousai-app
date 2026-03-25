@@ -54,6 +54,7 @@ async function generateCardsFromChunk(
     content: `Generate ${config.maxCardsPerChunk} atomic flashcards from this text.
 ${cardTypeInstruction}
 Focus on: ${config.focusMode} (facts=specific facts, concepts=underlying principles, vocabulary=term definitions, all=everything important)
+Extract ALL terms, definitions, and key concepts from the source material — never skip content. Every distinct concept should get its own card.
 
 Return ONLY a JSON array, no markdown:
 [{"front": "...", "back": "...", "type": "standard"|"cloze"}]

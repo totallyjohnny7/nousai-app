@@ -37,6 +37,9 @@ function ReExplainTool() {
       };
 
       const prompt = `${styleInstructions[selectedStyle]}
+Use multiple explanation strategies where helpful (analogy, visual description, step-by-step breakdown).
+Include common misconceptions students have about this concept and correct them.
+For any technical or specialized terms, include the original term alongside any simplified language.
 
 Concept: ${concept.trim()}`;
 

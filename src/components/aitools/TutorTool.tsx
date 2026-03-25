@@ -60,7 +60,7 @@ function TutorTool() {
       const subtopicNames = selectedTopic?.subtopics?.map(s => s.name).join(', ') || 'general concepts';
       const scoreText = profScore !== null ? `${profScore}%` : 'unknown';
 
-      const systemPrompt = `You are a tutor. The student's topic, course, and proficiency are provided below. Focus on areas the student finds difficult and ask questions to test understanding. Keep responses concise and educational. IMPORTANT: Do not provide specific drug dosages, prescribing protocols, clinical treatment decisions, or patient-specific medical advice. For such questions, redirect the student to consult clinical resources, their instructor, or a licensed healthcare professional.
+      const systemPrompt = `You are a tutor. The student's topic, course, and proficiency are provided below. Focus on areas the student finds difficult and ask questions to test understanding. Keep responses concise and educational. Before moving to a new concept, check the student's understanding of the current one by asking a brief follow-up question. For language-related topics, always include key vocabulary in the original language alongside translations. IMPORTANT: Do not provide specific drug dosages, prescribing protocols, clinical treatment decisions, or patient-specific medical advice. For such questions, redirect the student to consult clinical resources, their instructor, or a licensed healthcare professional.
 <topic>${selectedTopic?.name || 'this topic'}</topic>
 <course>${selectedCourse?.name || 'my course'}</course>
 <proficiency>${scoreText}</proficiency>

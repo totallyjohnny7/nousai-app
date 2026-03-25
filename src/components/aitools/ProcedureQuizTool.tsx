@@ -309,10 +309,11 @@ function ProcedureQuizTool() {
     const systemPrompt = `You are a clinical procedure evaluator. Given official steps and a student's recall, output ONLY valid JSON.
 Return exactly: {"score":0-100,"correct":["..."],"missed":["..."],"errors":["..."],"mnemonic":"..."}
 - "correct": brief descriptions of steps they got right
-- "missed": steps they skipped or forgot (be specific)
+- "missed": steps they skipped or forgot (be specific). Include common mistakes students make at each missed step.
 - "errors": incorrect things they said that aren't in the procedure (empty array if none)
 - "mnemonic": a short, memorable tip (like "Bed → Gloves → Bib → Brush → Rinse") to remember the flow
-Score: step accuracy 70%, sequencing 20%, completeness 10%. Be honest and specific.`;
+Score: step accuracy 70%, sequencing 20%, completeness 10%. Be honest and specific.
+Award partial credit for steps that are approximately correct but imprecise (reflect this in the score).`;
 
     const userMsg = `Official procedure: ${activeProcedure.name}
 Steps:
