@@ -9,7 +9,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { K20_DEFAULT_BINDINGS, type K20BindingsMap, type K20ActionId } from '../utils/k20Types';
-import { scanK20Conflicts, type K20Conflict } from '../utils/k20ConflictScanner';
+import { scanK20Conflicts } from '../utils/k20ConflictScanner';
 
 const LS_KEY = 'k20-key-bindings';
 
@@ -45,7 +45,7 @@ const K20_SYNC_CHANNEL = 'k20-bindings-sync';
 
 export interface UseK20BindingsReturn {
   bindings: K20BindingsMap;
-  conflicts: K20Conflict[];
+  conflicts: string[];
   updateBinding: (keyId: string, actionId: K20ActionId) => void;
   resetToDefaults: () => void;
   /** Version counter — increments on every change, used by useK20Hotkeys to re-register */
@@ -55,7 +55,7 @@ export interface UseK20BindingsReturn {
 export function useK20Bindings(): UseK20BindingsReturn {
   const [bindings, setBindings] = useState<K20BindingsMap>(loadBindings);
   const [version, setVersion] = useState(0);
-  const [conflicts, setConflicts] = useState<K20Conflict[]>(() => scanK20Conflicts(loadBindings()));
+  const [conflicts, setConflicts] = useState<string[]>(() => scanK20Conflicts());
 
   // Cross-tab sync: listen for changes from other tabs
   useEffect(() => {
@@ -65,7 +65,7 @@ export function useK20Bindings(): UseK20BindingsReturn {
       channel.onmessage = () => {
         const fresh = loadBindings();
         setBindings(fresh);
-        setConflicts(scanK20Conflicts(fresh));
+        setConflicts(scanK20Conflicts());
         setVersion(v => v + 1);
       };
     } catch { /* BroadcastChannel not supported */ }
@@ -76,7 +76,7 @@ export function useK20Bindings(): UseK20BindingsReturn {
     setBindings(prev => {
       const next = { ...prev, [keyId]: actionId };
       saveBindings(next);
-      setConflicts(scanK20Conflicts(next));
+      setConflicts(scanK20Conflicts());
       setVersion(v => v + 1);
       // Notify other tabs
       try { new BroadcastChannel(K20_SYNC_CHANNEL).postMessage('updated'); } catch { /* ignore */ }
@@ -88,7 +88,7 @@ export function useK20Bindings(): UseK20BindingsReturn {
     const defaults = { ...K20_DEFAULT_BINDINGS };
     setBindings(defaults);
     saveBindings(defaults);
-    setConflicts(scanK20Conflicts(defaults));
+    setConflicts(scanK20Conflicts());
     setVersion(v => v + 1);
     try { new BroadcastChannel(K20_SYNC_CHANNEL).postMessage('reset'); } catch { /* ignore */ }
   }, []);

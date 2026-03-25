@@ -43,7 +43,7 @@ interface PdfDoc { numPages: number; getPage: (n: number) => Promise<{ getTextCo
 
 export async function extractPDF(file: File, onProgress: (s: string) => void): Promise<string> {
   await loadScript(CDN.pdfjs)
-  const lib = (window as Record<string, unknown>)['pdfjs-dist/build/pdf'] as typeof pdfjsDist
+  const lib = (window as unknown as Record<string, unknown>)['pdfjs-dist/build/pdf'] as typeof pdfjsDist
   lib.GlobalWorkerOptions.workerSrc = CDN.pdfjsW
   const ab = await file.arrayBuffer()
   const pdf = await lib.getDocument({ data: ab }).promise
@@ -62,7 +62,7 @@ export async function extractPDF(file: File, onProgress: (s: string) => void): P
 export async function extractImage(file: File, onProgress: (s: string) => void): Promise<string> {
   onProgress(`OCR: ${file.name}...`)
   await loadScript(CDN.tesseract)
-  const Tesseract = (window as Record<string, unknown>).Tesseract as {
+  const Tesseract = (window as unknown as Record<string, unknown>).Tesseract as {
     recognize: (f: File, lang: string, opts: { logger: (m: { status: string; progress: number }) => void }) => Promise<{ data: { text: string } }>
   }
   const { data: { text } } = await Tesseract.recognize(file, 'eng', {
@@ -74,7 +74,7 @@ export async function extractImage(file: File, onProgress: (s: string) => void):
 export async function extractPPTX(file: File, onProgress: (s: string) => void): Promise<string> {
   onProgress(`Parsing PPTX: ${file.name}...`)
   await loadScript(CDN.jszip)
-  const JSZip = (window as Record<string, unknown>).JSZip as { loadAsync: (d: ArrayBuffer) => Promise<{ files: Record<string, { async: (t: string) => Promise<string> }> }> }
+  const JSZip = (window as unknown as Record<string, unknown>).JSZip as { loadAsync: (d: ArrayBuffer) => Promise<{ files: Record<string, { async: (t: string) => Promise<string> }> }> }
   const ab = await file.arrayBuffer()
   const zip = await JSZip.loadAsync(ab)
   const slideRe = /^ppt\/slides\/slide\d+\.xml$/
@@ -99,7 +99,7 @@ export async function extractPPTX(file: File, onProgress: (s: string) => void): 
 export async function extractDOCX(file: File, onProgress: (s: string) => void): Promise<string> {
   onProgress(`Parsing DOCX: ${file.name}...`)
   await loadScript(CDN.jszip)
-  const JSZip = (window as Record<string, unknown>).JSZip as { loadAsync: (d: ArrayBuffer) => Promise<{ files: Record<string, { async: (t: string) => Promise<string> }> }> }
+  const JSZip = (window as unknown as Record<string, unknown>).JSZip as { loadAsync: (d: ArrayBuffer) => Promise<{ files: Record<string, { async: (t: string) => Promise<string> }> }> }
   const ab = await file.arrayBuffer()
   const zip = await JSZip.loadAsync(ab)
   const docXml = await zip.files['word/document.xml']?.async('string')

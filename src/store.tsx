@@ -257,44 +257,6 @@ class AutoSyncScheduler {
     // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync.
     // Clearing dirty flag prevents retries/heartbeats from re-entering.
     this.dirty = false;
-    return;
-    const uid = localStorage.getItem('nousai-auth-uid');
-    const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
-    if (!uid || !autoSync || !this.dataRef.current) return;
-    // Only skip if the courses array itself is missing (data not yet loaded).
-    // An empty array is a valid user state (all courses deleted) and must be synced.
-    const courses = this.dataRef.current.pluginData?.coachData?.courses;
-    if (!Array.isArray(courses)) {
-      console.warn('[AUTO-SYNC] Skipped: courses is not an array (data not loaded yet)');
-      return;
-    }
-    this.dirty = false;
-    this.onFlushStart?.();
-    try {
-      // Pre-sync snapshot — save "before image" for recovery
-      await saveSnapshot(this.dataRef.current, 'pre-sync').catch(() => {});
-      await syncToCloud(uid, this.dataRef.current);
-      const now = new Date().toISOString();
-      localStorage.setItem('nousai-last-sync', now);
-      this.lastPushedTimestamp = now; // track for self-trigger guard
-      this.failCount = 0; // reset on success
-      console.log('[AUTO-SYNC] Synced to cloud at', now);
-      window.dispatchEvent(new CustomEvent('nousai-synced'));
-      this.onFlushEnd?.(true);
-    } catch (e) {
-      this.failCount++;
-      console.error('[AUTO-SYNC] Failed (attempt', this.failCount, '):', e);
-      this.dirty = true; // retry on next change
-      // Notify UI about the delay — dispatch with retry count so components can show context
-      window.dispatchEvent(new CustomEvent('nousai-sync-delayed', {
-        detail: { attempt: this.failCount, error: e instanceof Error ? e.message : 'Unknown error' }
-      }));
-      // Exponential backoff retry: 30s × 2^(failCount-1), capped at 5 minutes
-      const retryDelay = Math.min(AUTO_SYNC_DEBOUNCE_MS * Math.pow(2, this.failCount - 1), 300_000);
-      if (this.timer) clearTimeout(this.timer);
-      this.timer = setTimeout(() => this.flush(), retryDelay);
-      this.onFlushEnd?.(false);
-    }
   }
 
   stop() {
@@ -711,32 +673,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const loadRemoteData = useCallback(async () => {
     // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
-    return;
-    const uid = localStorage.getItem('nousai-auth-uid');
-    if (!uid) return;
-    setSyncStatus('syncing');
-    try {
-      const cloudData = await syncFromCloud(uid);
-      if (cloudData) {
-        const normalized = normalizeData(cloudData);
-        // Preserve locally-set topic/media that the cloud snapshot may lack
-        const merged = mergeLocalCardMeta(dataRef.current, normalized);
-        setData(merged);
-        saveGoldenCopy(merged).catch(() => {}); // Growth-only golden copy update
-        const now = new Date().toISOString();
-        localStorage.setItem('nousai-last-sync', now);
-        localStorage.setItem('nousai-data-modified-at', now);
-        setLastSyncAt(now);
-        setSyncStatus('synced');
-        setRemoteUpdateAvailable(false);
-        window.dispatchEvent(new CustomEvent('nousai-synced'));
-      } else {
-        setSyncStatus('idle');
-      }
-    } catch (e) {
-      console.error('[STORE] loadRemoteData failed:', e);
-      setSyncStatus('error');
-    }
   }, [setData]);
 
   const dismissRemoteBanner = useCallback(() => {
@@ -747,61 +683,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const triggerSyncToCloud = useCallback(async () => {
     // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
     window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync is automatic via RxDB' }));
-    return;
-    const uid = localStorage.getItem('nousai-auth-uid');
-    if (!uid || !data) {
-      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: !uid ? 'Sign in to sync' : 'No data to sync' }));
-      return;
-    }
-    setSyncStatus('syncing');
-    window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Syncing to cloud...' }));
-    try {
-      await syncToCloud(uid, data);
-      const now = new Date().toISOString();
-      localStorage.setItem('nousai-last-sync', now);
-      setLastSyncAt(now);
-      setSyncStatus('idle');
-      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: '✓ Synced to cloud!' }));
-    } catch (e: any) {
-      console.error('[STORE] triggerSyncToCloud failed:', e);
-      setSyncStatus('error');
-      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync failed — ' + (e?.message || 'check connection') }));
-    }
   }, [data]);
 
   const triggerSyncFromCloud = useCallback(async () => {
     // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
     window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync is automatic via RxDB' }));
-    return;
-    const uid = localStorage.getItem('nousai-auth-uid');
-    if (!uid) {
-      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sign in to sync' }));
-      return;
-    }
-    setSyncStatus('syncing');
-    window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Loading from cloud...' }));
-    try {
-      const cloudData = await syncFromCloud(uid);
-      if (cloudData) {
-        const normalized = normalizeData(cloudData);
-        const merged = mergeLocalCardMeta(dataRef.current, normalized);
-        setData(merged);
-        saveGoldenCopy(merged).catch(() => {});
-        const now = new Date().toISOString();
-        localStorage.setItem('nousai-last-sync', now);
-        localStorage.setItem('nousai-data-modified-at', now);
-        setLastSyncAt(now);
-        setSyncStatus('idle');
-        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: '✓ Loaded from cloud!' }));
-      } else {
-        setSyncStatus('idle');
-        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'No cloud data found' }));
-      }
-    } catch (e: any) {
-      console.error('[STORE] triggerSyncFromCloud failed:', e);
-      setSyncStatus('error');
-      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync failed — ' + (e?.message || 'check connection') }));
-    }
   }, [setData]);
 
   // Debounce markDirty to avoid excessive sync scheduling during rapid updates (e.g. AI streaming)

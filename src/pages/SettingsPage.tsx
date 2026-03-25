@@ -14,7 +14,6 @@ import { signUp, signIn, logOut, onAuthChange, saveFirebaseConfig, getFirebaseCo
 import { SHORTCUT_DEFS, getShortcutKey, setShortcutKey, resetAllShortcuts, formatKey } from '../utils/shortcuts'
 import { K20_KEYS, K20_ACTIONS, K20_ACTION_ICONS, K20_DEFAULT_BINDINGS, type K20ActionId } from '../utils/k20Types'
 import { useK20Bindings } from '../hooks/useK20Bindings'
-import { useK20Hotkeys } from '../hooks/useK20Hotkeys'
 import { scanK20Conflicts } from '../utils/k20ConflictScanner'
 import { getLevel, THEME_PRESETS } from '../utils/gamification'
 import {
@@ -474,7 +473,7 @@ function ShortcutRow({ shortcut }: { shortcut: (typeof SHORTCUT_DEFS)[number] })
 
 // ─── HUION K20 KeyDial Mini Layout Component ─────────────────
 // Layout: dial knob at top-left, 4 columns x 5 rows of keys
-const K20_KEYS: { label: string; shortcut: string; color?: string }[][] = [
+const K20_LAYOUT_KEYS: { label: string; shortcut: string; color?: string }[][] = [
   // Row 1 — native browser shortcuts (Ctrl+Z/Y/C/V)
   [
     { label: 'UNDO',  shortcut: 'Ctrl+Z', color: '#888' },
@@ -552,7 +551,7 @@ function HuionK20Layout() {
 
           {/* 4x5 key grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-            {K20_KEYS.flat().map((k, i) => (
+            {K20_LAYOUT_KEYS.flat().map((k, i) => (
               <div
                 key={i}
                 style={{
@@ -3745,7 +3744,6 @@ export default function SettingsPage() {
             {/* ── HUION K20 KeyDial Mini ── */}
             {(() => {
               const k20 = useK20Bindings();
-              useK20Hotkeys(true, k20.version);
 
               // Group keys by row for visual layout
               const rows = new Map<number, typeof K20_KEYS>();
@@ -3755,13 +3753,8 @@ export default function SettingsPage() {
               }
               const sortedRows = [...rows.entries()].sort(([a], [b]) => a - b);
 
-              // Build conflict lookup: keyId → conflict messages
-              const conflictsByKey = new Map<string, string[]>();
-              for (const c of k20.conflicts) {
-                const existing = conflictsByKey.get(c.keyId) ?? [];
-                existing.push(c.message);
-                conflictsByKey.set(c.keyId, existing);
-              }
+              // Build conflict set from scanner results (combo strings that collide with browser shortcuts)
+              const conflictSet = new Set(k20.conflicts);
 
               return (
                 <div>
@@ -3780,8 +3773,8 @@ export default function SettingsPage() {
                   {k20.conflicts.length > 0 && (
                     <div style={{ marginBottom: 12, padding: '8px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius)', fontSize: 11 }}>
                       <div style={{ fontWeight: 700, color: '#EF4444', marginBottom: 4 }}>⚠ Binding Conflicts</div>
-                      {[...new Set(k20.conflicts.map(c => c.message))].map((msg, i) => (
-                        <div key={i} style={{ color: 'var(--text-secondary)', marginTop: 2 }}>• {msg}</div>
+                      {k20.conflicts.map((combo, i) => (
+                        <div key={i} style={{ color: 'var(--text-secondary)', marginTop: 2 }}>• {combo} conflicts with a browser shortcut</div>
                       ))}
                     </div>
                   )}
@@ -3809,7 +3802,7 @@ export default function SettingsPage() {
                           const actionId = k20.bindings[keyDef.id] ?? 'none';
                           const actionDef = K20_ACTIONS.find(a => a.id === actionId);
                           const icon = K20_ACTION_ICONS[actionId] ?? '⬜';
-                          const hasConflict = conflictsByKey.has(keyDef.id);
+                          const hasConflict = conflictSet.has(keyDef.combo?.toLowerCase?.() ?? '');
                           const isDial = keyDef.isDial;
 
                           return (
@@ -3838,7 +3831,7 @@ export default function SettingsPage() {
                               {/* Conflict badge */}
                               {hasConflict && (
                                 <div
-                                  title={conflictsByKey.get(keyDef.id)?.join('\n')}
+                                  title={`${keyDef.combo} conflicts with a browser shortcut`}
                                   style={{
                                     position: 'absolute', top: -4, right: -4,
                                     width: 14, height: 14, borderRadius: '50%',
