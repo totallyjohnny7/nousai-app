@@ -494,6 +494,48 @@ export default function App() {
     closeAnnotationPanel: () => setAnnotationPanelOpen(false),
   })
 
+  // ── Wire K20 custom events to real app actions (global) ──
+  useEffect(() => {
+    const handlers: Record<string, () => void> = {
+      'k20:zoomIn': () => { document.body.style.zoom = String(Math.min(2, parseFloat(document.body.style.zoom || '1') + 0.1)) },
+      'k20:zoomOut': () => { document.body.style.zoom = String(Math.max(0.5, parseFloat(document.body.style.zoom || '1') - 0.1)) },
+      'k20:cycleAIMode': () => window.dispatchEvent(new CustomEvent('nousai-switch-tool', { detail: 'next' })),
+      'k20:visual': () => window.dispatchEvent(new CustomEvent('nousai-switch-tool', { detail: 'mindmap' })),
+      'k20:explain': () => window.dispatchEvent(new CustomEvent('nousai-switch-tool', { detail: 'reexplain' })),
+      'k20:quiz': () => navigate('/quiz'),
+      'k20:sendAI': () => window.dispatchEvent(new CustomEvent('nousai-ai-send')),
+      'k20:flipCard': () => window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'fc_flip' })),
+      'k20:pomodoro': () => navigate('/timer'),
+      'k20:transcribe': () => window.dispatchEvent(new CustomEvent('nousai-transcribe-toggle')),
+      'k20:search': () => setOmniSearchOpen(true),
+      'k20:newCard': () => navigate('/flashcards'),
+    }
+    const listeners = Object.entries(handlers).map(([event, fn]) => {
+      window.addEventListener(event, fn)
+      return [event, fn] as const
+    })
+    // Also wire nousai-action events to flashcard shortcuts
+    const actionHandler = (e: Event) => {
+      const actionId = (e as CustomEvent).detail as string
+      if (actionId?.startsWith('fc_')) {
+        // Re-dispatch as keyboard event for flashcard page to handle
+        const keyMap: Record<string, string> = {
+          fc_flip: 'Space', fc_next: 'ArrowRight', fc_prev: 'ArrowLeft',
+          fc_star: 's', fc_conf1: '1', fc_conf2: '2', fc_conf3: '3', fc_conf4: '4',
+        }
+        const key = keyMap[actionId]
+        if (key) {
+          document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))
+        }
+      }
+    }
+    window.addEventListener('nousai-action', actionHandler)
+    return () => {
+      listeners.forEach(([event, fn]) => window.removeEventListener(event, fn))
+      window.removeEventListener('nousai-action', actionHandler)
+    }
+  }, [navigate])
+
   useEffect(() => {
     if (!betaMode) return
     const handler = (e: KeyboardEvent) => {

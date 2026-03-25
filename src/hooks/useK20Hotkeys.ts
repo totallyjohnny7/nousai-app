@@ -1,22 +1,18 @@
 /**
  * useK20Hotkeys — HUION K20 KeyDial Mini global hotkey handler
  *
- * Listens for keyboard shortcuts mapped to the K20 layout:
- *   DIAL:   Ctrl+= (zoom in), Ctrl+- (zoom out), Ctrl+Tab (cycle AI mode)
- *   ROW 1:  Ctrl+Z/Y/C/V — browser native, not intercepted
- *   ROW 2:  1-4 = FSRS ratings (only during active review, 300ms debounce)
- *   ROW 3:  Ctrl+Shift+V/E/Q (AI modes), Ctrl+Enter (send AI)
- *   ROW 4:  Ctrl+Shift+Space (flip), Ctrl+Shift+P (pomodoro),
- *           Ctrl+Shift+T (transcribe), Ctrl+Shift+F (search)
- *   BOTTOM: Escape (priority: modal > panel > back), Ctrl+Shift+N (new card)
+ * Reads the user's key bindings (from Settings → K20 remapping UI).
+ * When a K20 key combo is pressed, looks up the bound action and executes it.
  *
- * Also blocks Stream Deck F13-F24 keys when streamDeck device is disabled.
- *
- * Dispatches CustomEvents on `window` for actions that don't have direct
- * store implementations. Components can listen via `window.addEventListener`.
+ * K20 keys send keyboard combos (Ctrl+Shift+1, etc.) to the OS.
+ * The bindings map keyId → actionId. This handler:
+ *   1. Matches the incoming keydown event to a K20 key by its combo
+ *   2. Looks up what action is bound to that key
+ *   3. Executes the action globally (navigate, dispatch event, etc.)
  */
 
 import { useEffect, useRef } from 'react';
+import { K20_KEYS, K20_ACTIONS, type K20ActionId } from '../utils/k20Types';
 
 export interface DeviceSettings {
   keyboard: true;
@@ -55,7 +51,7 @@ export function saveDeviceSettings(settings: DeviceSettings): void {
   } catch { /* storage full */ }
 }
 
-/** Check if the active element is a text input where single keys should not be intercepted */
+/** Check if the active element is a text input */
 function isTyping(): boolean {
   const el = document.activeElement;
   if (!el) return false;
@@ -65,177 +61,144 @@ function isTyping(): boolean {
   return false;
 }
 
-/** Emit a custom event on window for K20 actions */
-function emitK20(name: string, detail?: Record<string, unknown>): void {
-  window.dispatchEvent(new CustomEvent(name, { detail }));
-}
-
-/** F13-F24 key names used by Stream Deck in keyboard emulation mode */
+/** F13-F24 key names used by Stream Deck */
 const STREAM_DECK_FKEYS = new Set([
   'F13', 'F14', 'F15', 'F16', 'F17', 'F18',
   'F19', 'F20', 'F21', 'F22', 'F23', 'F24',
 ]);
 
+/** Load bindings from localStorage */
+function loadBindings(): Record<string, K20ActionId> {
+  try {
+    const raw = localStorage.getItem('k20-key-bindings');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const result: Record<string, K20ActionId> = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          if (typeof v === 'string') result[k] = v as K20ActionId;
+        }
+        return result;
+      }
+    }
+  } catch { /* corrupt */ }
+  return {};
+}
+
+/** Parse a combo string like "Ctrl+Shift+1" into a matcher */
+function matchesCombo(e: KeyboardEvent, combo: string): boolean {
+  const parts = combo.split('+');
+  const key = parts[parts.length - 1];
+  const needCtrl = parts.includes('Ctrl');
+  const needShift = parts.includes('Shift');
+  const needAlt = parts.includes('Alt');
+
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (needCtrl !== ctrl) return false;
+  if (needShift !== e.shiftKey) return false;
+  if (needAlt !== e.altKey) return false;
+
+  // Match key (case-insensitive for letters, exact for symbols)
+  if (key === '=') return e.key === '=' || e.key === '+';
+  if (key === '-') return e.key === '-' || e.key === '_';
+  return e.key === key || e.key.toLowerCase() === key.toLowerCase();
+}
+
+// Default bindings (imported inline to avoid circular dependency)
+const DEFAULT_BINDINGS: Record<string, K20ActionId> = {
+  dial_cw: 'zoomIn', dial_ccw: 'zoomOut',
+  k1: 'cycleAiMode', k2: 'flipCard', k3: 'search',
+  k4: 'fsrsAgain', k5: 'fsrsHard', k6: 'fsrsGood', k7: 'fsrsEasy',
+  k8: 'visualLab', k9: 'explain', k10: 'quiz', k11: 'sendAi',
+  k12: 'pomodoro', k13: 'transcribe', k14: 'navigateBack',
+  k15: 'closeModal', k16: 'closePanel', k17: 'none', k18: 'none',
+};
+
 export interface UseK20HotkeysOptions {
-  /** Whether a flashcard review session is active (enables 1-4 FSRS rating keys) */
   isReviewActive: boolean;
-  /** Whether a modal dialog is currently open */
   modalOpen: boolean;
-  /** Whether the annotation side panel is open */
   annotationPanelOpen: boolean;
-  /** Router navigate function for Escape-back behavior */
   navigateBack: () => void;
-  /** Callback to close modal */
   closeModal?: () => void;
-  /** Callback to close annotation panel */
   closeAnnotationPanel?: () => void;
 }
 
 export function useK20Hotkeys(options: UseK20HotkeysOptions): void {
   const optRef = useRef(options);
   optRef.current = options;
-
-  // Debounce ref for FSRS rating keys (300ms)
   const lastRatingRef = useRef(0);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const settings = loadDeviceSettings();
 
-      // ── Block Stream Deck F13-F24 when streamDeck device is disabled ──
+      // Block Stream Deck F13-F24 when disabled
       if (!settings.streamDeck && STREAM_DECK_FKEYS.has(e.key)) {
         e.preventDefault();
         e.stopImmediatePropagation();
         return;
       }
 
-      // ── K20 shortcuts require k20 to be enabled ──
       if (!settings.k20) return;
 
-      const ctrl = e.ctrlKey || e.metaKey;
-      const shift = e.shiftKey;
-      const key = e.key;
+      // Load user's bindings (merged with defaults)
+      const overrides = loadBindings();
+      const bindings = { ...DEFAULT_BINDINGS, ...overrides };
 
-      // ── DIAL: Ctrl+= (zoom in) ──
-      if (ctrl && !shift && (key === '=' || key === '+')) {
-        e.preventDefault();
-        emitK20('k20:zoomIn');
-        return;
-      }
-
-      // ── DIAL: Ctrl+- (zoom out) ──
-      if (ctrl && !shift && key === '-') {
-        e.preventDefault();
-        emitK20('k20:zoomOut');
-        return;
-      }
-
-      // ── DIAL: Ctrl+Tab (cycle AI mode) ──
-      if (ctrl && !shift && key === 'Tab') {
-        e.preventDefault();
-        emitK20('k20:cycleAIMode');
-        return;
-      }
-
-      // ── ROW 1: Ctrl+Z/Y/C/V — browser native, do NOT intercept ──
-
-      // ── ROW 2: FSRS ratings 1-4 (only when reviewing, not typing, 300ms debounce) ──
-      if (!ctrl && !shift && !e.altKey && ['1', '2', '3', '4'].includes(key)) {
-        if (optRef.current.isReviewActive && !isTyping()) {
-          const now = Date.now();
-          if (now - lastRatingRef.current < 300) return; // debounce
-          lastRatingRef.current = now;
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          // Dispatch as nousai-action to match Stream Deck / Gamepad pattern
-          window.dispatchEvent(new CustomEvent('nousai-action', { detail: `fc_conf${key}` }));
-          return;
+      // Match incoming key event to a K20 physical key
+      let matchedAction: K20ActionId | null = null;
+      for (const keyDef of K20_KEYS) {
+        if (matchesCombo(e, keyDef.combo)) {
+          matchedAction = bindings[keyDef.id] ?? 'none';
+          break;
         }
-        // Not in review — let the key through for normal typing
+      }
+
+      if (!matchedAction || matchedAction === 'none') return;
+
+      // FSRS actions: only during review, not while typing, with debounce
+      const fsrsActions: Record<string, string> = {
+        fsrsAgain: 'fc_conf1', fsrsHard: 'fc_conf2',
+        fsrsGood: 'fc_conf3', fsrsEasy: 'fc_conf4',
+      };
+      if (fsrsActions[matchedAction]) {
+        if (!optRef.current.isReviewActive || isTyping()) return;
+        const now = Date.now();
+        if (now - lastRatingRef.current < 300) return;
+        lastRatingRef.current = now;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        window.dispatchEvent(new CustomEvent('nousai-action', { detail: fsrsActions[matchedAction] }));
         return;
       }
 
-      // ── ROW 3: AI modes ──
-      // Ctrl+Shift+V — Visual mode
-      if (ctrl && shift && (key === 'V' || key === 'v')) {
-        e.preventDefault();
-        emitK20('k20:visual');
-        return;
+      // Navigation actions
+      const opt = optRef.current;
+      if (matchedAction === 'closeModal' && opt.modalOpen && opt.closeModal) {
+        e.preventDefault(); opt.closeModal(); return;
       }
-      // Ctrl+Shift+E — Explain mode
-      if (ctrl && shift && (key === 'E' || key === 'e')) {
-        e.preventDefault();
-        emitK20('k20:explain');
-        return;
+      if (matchedAction === 'closePanel' && opt.annotationPanelOpen && opt.closeAnnotationPanel) {
+        e.preventDefault(); opt.closeAnnotationPanel(); return;
       }
-      // Ctrl+Shift+Q — Quiz mode
-      if (ctrl && shift && (key === 'Q' || key === 'q')) {
-        e.preventDefault();
-        emitK20('k20:quiz');
-        return;
-      }
-      // Ctrl+Enter — Send AI
-      if (ctrl && !shift && key === 'Enter') {
-        e.preventDefault();
-        emitK20('k20:sendAI');
-        return;
+      if (matchedAction === 'navigateBack') {
+        e.preventDefault(); opt.navigateBack(); return;
       }
 
-      // ── ROW 4 ──
-      // Ctrl+Shift+Space — Flip card
-      if (ctrl && shift && key === ' ') {
-        e.preventDefault();
-        emitK20('k20:flipCard');
-        return;
-      }
-      // Ctrl+Shift+P — Pomodoro
-      if (ctrl && shift && (key === 'P' || key === 'p')) {
-        e.preventDefault();
-        emitK20('k20:pomodoro');
-        return;
-      }
-      // Ctrl+Shift+T — Transcribe
-      if (ctrl && shift && (key === 'T' || key === 't')) {
-        e.preventDefault();
-        emitK20('k20:transcribe');
-        return;
-      }
-      // Ctrl+Shift+F — Search
-      if (ctrl && shift && (key === 'F' || key === 'f')) {
-        e.preventDefault();
-        emitK20('k20:search');
-        return;
-      }
-
-      // ── BOTTOM ROW ──
-      // Escape — priority queue: modal → panel → navigate back
-      if (key === 'Escape' && !ctrl && !shift) {
-        const opt = optRef.current;
-        if (opt.modalOpen && opt.closeModal) {
-          e.preventDefault();
-          opt.closeModal();
-          return;
-        }
-        if (opt.annotationPanelOpen && opt.closeAnnotationPanel) {
-          e.preventDefault();
-          opt.closeAnnotationPanel();
-          return;
-        }
-        // Fall through — navigate back
-        e.preventDefault();
-        opt.navigateBack();
-        return;
-      }
-
-      // Ctrl+Shift+N — New card
-      if (ctrl && shift && (key === 'N' || key === 'n')) {
-        e.preventDefault();
-        emitK20('k20:newCard');
-        return;
+      // All other actions: prevent default and dispatch K20 event
+      e.preventDefault();
+      const eventMap: Record<string, string> = {
+        zoomIn: 'k20:zoomIn', zoomOut: 'k20:zoomOut',
+        cycleAiMode: 'k20:cycleAIMode', visualLab: 'k20:visual',
+        explain: 'k20:explain', quiz: 'k20:quiz', sendAi: 'k20:sendAI',
+        flipCard: 'k20:flipCard', pomodoro: 'k20:pomodoro',
+        transcribe: 'k20:transcribe', search: 'k20:search',
+      };
+      const eventName = eventMap[matchedAction];
+      if (eventName) {
+        window.dispatchEvent(new CustomEvent(eventName));
       }
     };
 
-    // Use capture phase to intercept before other handlers
     window.addEventListener('keydown', handler, true);
     return () => window.removeEventListener('keydown', handler, true);
   }, []);
