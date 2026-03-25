@@ -45,6 +45,9 @@ export default function NousaiStudyGenerator() {
   const [regenSec, setRegenSec] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [showHtmlEditor, setShowHtmlEditor] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -177,6 +180,27 @@ export default function NousaiStudyGenerator() {
     }
   }
 
+  // Toggle contentEditable on the iframe document for inline editing
+  const toggleEditMode = () => {
+    const doc = iframeRef.current?.contentDocument
+    if (!doc) return
+    const next = !editMode
+    setEditMode(next)
+    doc.body.contentEditable = next ? 'true' : 'false'
+    doc.body.style.outline = next ? '2px dashed rgba(83,74,183,0.3)' : 'none'
+    doc.body.style.cursor = next ? 'text' : 'default'
+    if (!next) {
+      // Sync edits back to state
+      setGenHTML(doc.documentElement.outerHTML)
+    }
+  }
+
+  // Save edits from HTML editor textarea
+  const saveHtmlEdits = (html: string) => {
+    setGenHTML(html)
+    setShowHtmlEditor(false)
+  }
+
   const regenerateSection = async (secId: string) => {
     if (!apiKey.trim() || regenSec) return
     setRegenSec(secId)
@@ -233,11 +257,21 @@ export default function NousaiStudyGenerator() {
             </button>
             {phase === 'done' && (
               <>
+                <button
+                  className="btn btn-sm"
+                  style={{ background: editMode ? '#22c55e' : 'var(--bg-secondary)', color: editMode ? '#fff' : 'var(--text-primary)', border: editMode ? 'none' : '1px solid var(--border)' }}
+                  onClick={toggleEditMode}
+                >
+                  <Eye size={14} /> {editMode ? 'Save Edits' : 'Edit Mode'}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowHtmlEditor(h => !h)}>
+                  {'</>'} HTML
+                </button>
                 <button className="btn btn-primary btn-sm" onClick={download}><Download size={14} /> Download</button>
                 <button className="btn btn-sm" style={{ background: 'var(--accent-color, #F5A623)', color: '#000', border: 'none' }} onClick={saveToLibrary}>
-                  <FileText size={14} /> Save to Library
+                  <FileText size={14} /> Save
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => { setGenHTML(''); setPhase('idle'); setSections([]) }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setGenHTML(''); setPhase('idle'); setSections([]); setEditMode(false); setShowHtmlEditor(false) }}>
                   <X size={14} /> Reset
                 </button>
               </>
@@ -518,12 +552,53 @@ export default function NousaiStudyGenerator() {
             </div>
           )}
 
+          {/* HTML Source Editor */}
+          {showHtmlEditor && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>
+                  HTML Source — edit directly, then click Save
+                </span>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    const ta = document.getElementById('sg-html-editor') as HTMLTextAreaElement | null
+                    if (ta) saveHtmlEdits(ta.value)
+                  }}
+                >
+                  <Check size={14} /> Save HTML
+                </button>
+              </div>
+              <textarea
+                id="sg-html-editor"
+                defaultValue={genHTML}
+                spellCheck={false}
+                style={{
+                  width: '100%', minHeight: 300, maxHeight: '50vh', padding: 12,
+                  fontFamily: 'DM Mono, Consolas, monospace', fontSize: 12, lineHeight: 1.5,
+                  background: '#0d0d0d', color: '#e0e0e0', border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)', resize: 'vertical', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+          )}
+
+          {editMode && (
+            <div style={{
+              padding: '8px 12px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
+              borderRadius: 'var(--radius-sm)', fontSize: 12, color: '#22c55e', marginBottom: 8,
+            }}>
+              Edit Mode ON — click any text in the preview below to edit it. Click "Save Edits" when done.
+            </div>
+          )}
+
           {/* Preview iframe */}
           <div style={{
             borderRadius: 'var(--radius)', overflow: 'hidden',
-            border: '1px solid var(--border)', background: 'white',
+            border: editMode ? '2px solid #22c55e' : '1px solid var(--border)', background: 'white',
           }}>
             <iframe
+              ref={iframeRef}
               srcDoc={genHTML}
               title="Study Guide Preview"
               sandbox="allow-scripts allow-same-origin"
