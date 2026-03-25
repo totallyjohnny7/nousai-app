@@ -497,3 +497,30 @@ Notes are timestamped annotations tied to a specific second in the video:
 **Chapter bank**: `public/evolquiz/questions.json` — 18 chapters from *Evolution: Making Sense of Life* (Zimmer & Emlen, 2nd Ed.). All chapters auto-load on mount.
 **examTag**: same `'exam1' | 'exam2' | 'exam3'` system; default filter `'all'`.
 **pluginData key**: `evolutionQuizSummary`.
+
+---
+
+## Cursor Cloud specific instructions
+
+### Service overview
+
+NousAI is a single-service frontend SPA. The only service to run locally is the **Vite dev server** (`npm run dev`, port 5173). Firebase (Auth/Firestore/Storage) is remote-only — the client SDK connects directly to the production project `nousai-dc038` with hardcoded config in `src/utils/auth.ts`. No local databases, Docker containers, or backend servers are needed.
+
+### Commands
+
+Per `AGENTS.md` Dev Setup and `package.json` scripts:
+
+| Task | Command |
+|------|---------|
+| Install deps | `npm install` |
+| Dev server | `npm run dev` (Vite, port 5173) |
+| Build | `npm run build` (TypeScript check + Vite production build) |
+| Lint | `npm run lint` (ESLint — pre-existing warnings/errors exist in the codebase) |
+
+### Non-obvious caveats
+
+- **Lint has pre-existing errors**: `npm run lint` exits non-zero due to ~800+ `@typescript-eslint/no-explicit-any` errors already in the codebase. This is expected and does not indicate a broken environment.
+- **Build is the real gate**: `npm run build` must pass with zero errors before any commit (per project guidelines). Use build, not lint, as the pass/fail check.
+- **No `.env` required for basic dev**: Firebase client config is hardcoded. Optional env vars `VITE_VALYU_API_KEY` and `VITE_GOOGLE_CLIENT_ID` enable specific integrations but are not required.
+- **HashRouter**: All routes use `/#/` prefix (e.g., `localhost:5173/#/learn`). Never switch to BrowserRouter.
+- **Vercel serverless functions** (`api/` directory) are not served by `npm run dev` — they only run when deployed to Vercel.
