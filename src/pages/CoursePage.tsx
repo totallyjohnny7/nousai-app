@@ -130,11 +130,11 @@ function clamp(v: number, min: number, max: number): number {
 function JpColorLegend({ content }: { content: string }) {
   if (!content || !content.includes('<mark ')) return null;
   const colors = [
-    { label: 'Verb', color: '#fecaca' }, { label: 'Particle', color: '#bfdbfe' },
-    { label: 'Place', color: '#bbf7d0' }, { label: 'Time', color: '#fef08a' },
-    { label: 'Noun', color: '#ddd6fe' }, { label: 'Adj', color: '#fed7aa' },
-    { label: 'Adverb', color: '#fbcfe8' }, { label: 'Greeting', color: '#99f6e4' },
-    { label: 'Other', color: '#d1d5db' },
+    { label: 'Verb', color: '#be123c' }, { label: 'Particle', color: '#1e3a8a' },
+    { label: 'Place', color: '#14532d' }, { label: 'Time', color: '#78350f' },
+    { label: 'Noun', color: '#581c87' }, { label: 'Adj', color: '#7c2d12' },
+    { label: 'Adverb', color: '#831843' }, { label: 'Greeting', color: '#134e4a' },
+    { label: 'Other', color: '#374151' },
   ];
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', padding: '6px 10px', marginTop: 8,
