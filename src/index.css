@@ -434,6 +434,11 @@ input::placeholder, textarea::placeholder {
   backdrop-filter: blur(4px);
 }
 
+/* ── Sync toast (Shift+S / Shift+D feedback) ────── */
+.sync-toast { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom,0px)); right: 16px; z-index: 901; background: var(--color-accent); color: #000; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.4); pointer-events: none; animation: syncToastIn .2s ease; }
+@keyframes syncToastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+html.eink .sync-toast { background: #000; color: #fff; box-shadow: none; }
+
 /* ── Focus-visible: clear keyboard focus indicator ────── */
 :focus-visible {
   outline: 2px solid var(--color-accent, #F5A623);

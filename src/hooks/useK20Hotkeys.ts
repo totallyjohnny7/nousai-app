@@ -1,185 +1,242 @@
 /**
- * useK20Hotkeys — Keyboard event listener for HUION K20 KeyDial Mini.
+ * useK20Hotkeys — HUION K20 KeyDial Mini global hotkey handler
  *
- * Intercepts keyboard combos sent by the K20 and dispatches NousAI actions.
- * Uses dynamic bindings from useK20Bindings (localStorage-backed).
+ * Listens for keyboard shortcuts mapped to the K20 layout:
+ *   DIAL:   Ctrl+= (zoom in), Ctrl+- (zoom out), Ctrl+Tab (cycle AI mode)
+ *   ROW 1:  Ctrl+Z/Y/C/V — browser native, not intercepted
+ *   ROW 2:  1-4 = FSRS ratings (only during active review, 300ms debounce)
+ *   ROW 3:  Ctrl+Shift+V/E/Q (AI modes), Ctrl+Enter (send AI)
+ *   ROW 4:  Ctrl+Shift+Space (flip), Ctrl+Shift+P (pomodoro),
+ *           Ctrl+Shift+T (transcribe), Ctrl+Shift+F (search)
+ *   BOTTOM: Escape (priority: modal > panel > back), Ctrl+Shift+N (new card)
  *
- * FSRS keys retain special behavior regardless of remapping:
- * - Only active during card review (checks for review panel in DOM)
- * - 300ms debounce to prevent double-presses
- * - Blocked while typing in input/textarea
+ * Also blocks Stream Deck F13-F24 keys when streamDeck device is disabled.
+ *
+ * Dispatches CustomEvents on `window` for actions that don't have direct
+ * store implementations. Components can listen via `window.addEventListener`.
  */
 
 import { useEffect, useRef } from 'react';
-import { K20_KEYS, K20_ACTIONS, type K20BindingsMap, type K20ActionId } from '../utils/k20Types';
-import { getK20Bindings } from './useK20Bindings';
 
-/** Parse a combo string like "Ctrl+Shift+1" into parts for matching */
-interface ParsedCombo {
-  ctrl: boolean;
-  shift: boolean;
-  alt: boolean;
-  meta: boolean;
-  key: string; // lowercase
+export interface DeviceSettings {
+  keyboard: true;
+  k20: boolean;
+  streamDeck: boolean;
+  gamepad: boolean;
+  midi: boolean;
+  otherHID: boolean;
 }
 
-function parseCombo(combo: string): ParsedCombo {
-  const parts = combo.split('+').map(p => p.trim());
-  const result: ParsedCombo = { ctrl: false, shift: false, alt: false, meta: false, key: '' };
-  for (const part of parts) {
-    const lower = part.toLowerCase();
-    if (lower === 'ctrl' || lower === 'control') result.ctrl = true;
-    else if (lower === 'shift') result.shift = true;
-    else if (lower === 'alt') result.alt = true;
-    else if (lower === 'meta' || lower === 'cmd') result.meta = true;
-    else result.key = lower;
-  }
-  return result;
+export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
+  keyboard: true,
+  k20: true,
+  streamDeck: false,
+  gamepad: false,
+  midi: false,
+  otherHID: false,
+};
+
+const LS_KEY = 'nousai_device_settings';
+
+export function loadDeviceSettings(): DeviceSettings {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<DeviceSettings>;
+      return { ...DEFAULT_DEVICE_SETTINGS, ...parsed, keyboard: true };
+    }
+  } catch { /* corrupt — use defaults */ }
+  return { ...DEFAULT_DEVICE_SETTINGS };
 }
 
-function matchesEvent(e: KeyboardEvent, parsed: ParsedCombo): boolean {
-  return (
-    e.ctrlKey === parsed.ctrl &&
-    e.shiftKey === parsed.shift &&
-    e.altKey === parsed.alt &&
-    e.metaKey === parsed.meta &&
-    e.key.toLowerCase() === parsed.key
-  );
+export function saveDeviceSettings(settings: DeviceSettings): void {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ ...settings, keyboard: true }));
+  } catch { /* storage full */ }
 }
 
-/** Check if an element is a text input */
-function isTyping(target: EventTarget | null): boolean {
-  if (!target || !(target instanceof HTMLElement)) return false;
-  const tag = target.tagName;
+/** Check if the active element is a text input where single keys should not be intercepted */
+function isTyping(): boolean {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = (el as HTMLElement).tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
-  if (target.isContentEditable) return true;
+  if ((el as HTMLElement).isContentEditable) return true;
   return false;
 }
 
-/** Check if card review panel is active in the DOM */
-function isReviewActive(): boolean {
-  return !!(
-    document.querySelector('[data-review-panel]') ||
-    document.querySelector('.review-panel') ||
-    document.querySelector('.flashcard-review')
-  );
+/** Emit a custom event on window for K20 actions */
+function emitK20(name: string, detail?: Record<string, unknown>): void {
+  window.dispatchEvent(new CustomEvent(name, { detail }));
 }
 
-/** Dispatch a NousAI action */
-function dispatchAction(actionId: K20ActionId): void {
-  switch (actionId) {
-    case 'zoomIn':
-      document.documentElement.style.zoom = String(
-        Math.min(2, parseFloat(document.documentElement.style.zoom || '1') + 0.1)
-      );
-      break;
-    case 'zoomOut':
-      document.documentElement.style.zoom = String(
-        Math.max(0.5, parseFloat(document.documentElement.style.zoom || '1') - 0.1)
-      );
-      break;
-    case 'flipCard':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'fc_flip' }));
-      break;
-    case 'fsrsAgain':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'fc_conf1' }));
-      break;
-    case 'fsrsHard':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'fc_conf2' }));
-      break;
-    case 'fsrsGood':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'fc_conf3' }));
-      break;
-    case 'fsrsEasy':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'fc_conf4' }));
-      break;
-    case 'quiz':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'nav_quiz' }));
-      break;
-    case 'search':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'notes_search' }));
-      break;
-    case 'sendAi':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'relay_send' }));
-      break;
-    case 'transcribe':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'notes_speak' }));
-      break;
-    case 'navigateBack':
-      window.history.back();
-      break;
-    case 'closeModal':
-      // Press Escape to close any open modal
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      break;
-    case 'closePanel':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'close_panel' }));
-      break;
-    case 'cycleAiMode':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'cycle_ai_mode' }));
-      break;
-    case 'visualLab':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'visual_lab' }));
-      break;
-    case 'explain':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'explain' }));
-      break;
-    case 'pomodoro':
-      window.dispatchEvent(new CustomEvent('nousai-action', { detail: 'nav_timer' }));
-      break;
-    case 'none':
-      break;
-  }
+/** F13-F24 key names used by Stream Deck in keyboard emulation mode */
+const STREAM_DECK_FKEYS = new Set([
+  'F13', 'F14', 'F15', 'F16', 'F17', 'F18',
+  'F19', 'F20', 'F21', 'F22', 'F23', 'F24',
+]);
+
+export interface UseK20HotkeysOptions {
+  /** Whether a flashcard review session is active (enables 1-4 FSRS rating keys) */
+  isReviewActive: boolean;
+  /** Whether a modal dialog is currently open */
+  modalOpen: boolean;
+  /** Whether the annotation side panel is open */
+  annotationPanelOpen: boolean;
+  /** Router navigate function for Escape-back behavior */
+  navigateBack: () => void;
+  /** Callback to close modal */
+  closeModal?: () => void;
+  /** Callback to close annotation panel */
+  closeAnnotationPanel?: () => void;
 }
 
-/**
- * Hook: register K20 keyboard listeners.
- * Re-registers when bindings version changes.
- */
-export function useK20Hotkeys(enabled = true, version = 0): void {
-  const lastFsrsTime = useRef(0);
+export function useK20Hotkeys(options: UseK20HotkeysOptions): void {
+  const optRef = useRef(options);
+  optRef.current = options;
+
+  // Debounce ref for FSRS rating keys (300ms)
+  const lastRatingRef = useRef(0);
 
   useEffect(() => {
-    if (!enabled) return;
+    const handler = (e: KeyboardEvent) => {
+      const settings = loadDeviceSettings();
 
-    const bindings = getK20Bindings();
-
-    // Pre-parse all combos for fast matching
-    const comboMap: { keyId: string; parsed: ParsedCombo; actionId: K20ActionId }[] = [];
-    for (const keyDef of K20_KEYS) {
-      const actionId = bindings[keyDef.id] ?? 'none';
-      if (actionId === 'none') continue;
-      comboMap.push({
-        keyId: keyDef.id,
-        parsed: parseCombo(keyDef.combo),
-        actionId,
-      });
-    }
-
-    function handler(e: KeyboardEvent) {
-      for (const entry of comboMap) {
-        if (!matchesEvent(e, entry.parsed)) continue;
-
-        const actionDef = K20_ACTIONS.find(a => a.id === entry.actionId);
-        const isFsrs = actionDef?.isFsrs ?? false;
-
-        // FSRS constraints: blocked while typing, review-only, 300ms debounce
-        if (isFsrs) {
-          if (isTyping(e.target)) return;
-          if (!isReviewActive()) return;
-          const now = Date.now();
-          if (now - lastFsrsTime.current < 300) return;
-          lastFsrsTime.current = now;
-        }
-
+      // ── Block Stream Deck F13-F24 when streamDeck device is disabled ──
+      if (!settings.streamDeck && STREAM_DECK_FKEYS.has(e.key)) {
         e.preventDefault();
-        e.stopPropagation();
-        dispatchAction(entry.actionId);
+        e.stopImmediatePropagation();
         return;
       }
-    }
 
-    window.addEventListener('keydown', handler, { capture: true });
-    return () => window.removeEventListener('keydown', handler, { capture: true });
-  }, [enabled, version]);
+      // ── K20 shortcuts require k20 to be enabled ──
+      if (!settings.k20) return;
+
+      const ctrl = e.ctrlKey || e.metaKey;
+      const shift = e.shiftKey;
+      const key = e.key;
+
+      // ── DIAL: Ctrl+= (zoom in) ──
+      if (ctrl && !shift && (key === '=' || key === '+')) {
+        e.preventDefault();
+        emitK20('k20:zoomIn');
+        return;
+      }
+
+      // ── DIAL: Ctrl+- (zoom out) ──
+      if (ctrl && !shift && key === '-') {
+        e.preventDefault();
+        emitK20('k20:zoomOut');
+        return;
+      }
+
+      // ── DIAL: Ctrl+Tab (cycle AI mode) ──
+      if (ctrl && !shift && key === 'Tab') {
+        e.preventDefault();
+        emitK20('k20:cycleAIMode');
+        return;
+      }
+
+      // ── ROW 1: Ctrl+Z/Y/C/V — browser native, do NOT intercept ──
+
+      // ── ROW 2: FSRS ratings 1-4 (only when reviewing, not typing, 300ms debounce) ──
+      if (!ctrl && !shift && !e.altKey && ['1', '2', '3', '4'].includes(key)) {
+        if (optRef.current.isReviewActive && !isTyping()) {
+          const now = Date.now();
+          if (now - lastRatingRef.current < 300) return; // debounce
+          lastRatingRef.current = now;
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          // Dispatch as nousai-action to match Stream Deck / Gamepad pattern
+          window.dispatchEvent(new CustomEvent('nousai-action', { detail: `fc_conf${key}` }));
+          return;
+        }
+        // Not in review — let the key through for normal typing
+        return;
+      }
+
+      // ── ROW 3: AI modes ──
+      // Ctrl+Shift+V — Visual mode
+      if (ctrl && shift && (key === 'V' || key === 'v')) {
+        e.preventDefault();
+        emitK20('k20:visual');
+        return;
+      }
+      // Ctrl+Shift+E — Explain mode
+      if (ctrl && shift && (key === 'E' || key === 'e')) {
+        e.preventDefault();
+        emitK20('k20:explain');
+        return;
+      }
+      // Ctrl+Shift+Q — Quiz mode
+      if (ctrl && shift && (key === 'Q' || key === 'q')) {
+        e.preventDefault();
+        emitK20('k20:quiz');
+        return;
+      }
+      // Ctrl+Enter — Send AI
+      if (ctrl && !shift && key === 'Enter') {
+        e.preventDefault();
+        emitK20('k20:sendAI');
+        return;
+      }
+
+      // ── ROW 4 ──
+      // Ctrl+Shift+Space — Flip card
+      if (ctrl && shift && key === ' ') {
+        e.preventDefault();
+        emitK20('k20:flipCard');
+        return;
+      }
+      // Ctrl+Shift+P — Pomodoro
+      if (ctrl && shift && (key === 'P' || key === 'p')) {
+        e.preventDefault();
+        emitK20('k20:pomodoro');
+        return;
+      }
+      // Ctrl+Shift+T — Transcribe
+      if (ctrl && shift && (key === 'T' || key === 't')) {
+        e.preventDefault();
+        emitK20('k20:transcribe');
+        return;
+      }
+      // Ctrl+Shift+F — Search
+      if (ctrl && shift && (key === 'F' || key === 'f')) {
+        e.preventDefault();
+        emitK20('k20:search');
+        return;
+      }
+
+      // ── BOTTOM ROW ──
+      // Escape — priority queue: modal → panel → navigate back
+      if (key === 'Escape' && !ctrl && !shift) {
+        const opt = optRef.current;
+        if (opt.modalOpen && opt.closeModal) {
+          e.preventDefault();
+          opt.closeModal();
+          return;
+        }
+        if (opt.annotationPanelOpen && opt.closeAnnotationPanel) {
+          e.preventDefault();
+          opt.closeAnnotationPanel();
+          return;
+        }
+        // Fall through — navigate back
+        e.preventDefault();
+        opt.navigateBack();
+        return;
+      }
+
+      // Ctrl+Shift+N — New card
+      if (ctrl && shift && (key === 'N' || key === 'n')) {
+        e.preventDefault();
+        emitK20('k20:newCard');
+        return;
+      }
+    };
+
+    // Use capture phase to intercept before other handlers
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, []);
 }
