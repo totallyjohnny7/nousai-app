@@ -5,8 +5,8 @@ import {
 } from 'lucide-react'
 import {
   processFile, estimateTokens, estimateCost, buildSystemPrompt,
-  callOpenRouter, PALETTES, MODELS,
-  type GenSettings,
+  callOpenRouter, PALETTES, fetchOpenRouterModels, getCachedModels,
+  type GenSettings, type ModelOption,
 } from './studyGenUtils'
 
 /* ── Types ──────────────────────────────────────────────── */
@@ -29,7 +29,9 @@ function getStoredApiKey(): string {
 /* ── Component ──────────────────────────────────────────── */
 export default function NousaiStudyGenerator() {
   const [apiKey, setApiKey] = useState(getStoredApiKey)
-  const [model, setModel] = useState('openai/gpt-5.4-mini')
+  const [model, setModel] = useState('openrouter/auto')
+  const [models, setModels] = useState<ModelOption[]>(getCachedModels)
+  const [modelsLoading, setModelsLoading] = useState(false)
   const [files, setFiles] = useState<FileEntry[]>([])
   const [paste, setPaste] = useState('')
   const [settings, setSettings] = useState<GenSettings>({
@@ -50,6 +52,19 @@ export default function NousaiStudyGenerator() {
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Fetch latest models from OpenRouter API when apiKey is available
+  useEffect(() => {
+    let cancelled = false
+    setModelsLoading(true)
+    fetchOpenRouterModels(apiKey || undefined).then(m => {
+      if (!cancelled) {
+        setModels(m)
+        setModelsLoading(false)
+      }
+    })
+    return () => { cancelled = true }
+  }, [apiKey])
 
   const allText = [
     ...files.filter(f => f.status === 'done').map(f => f.text),
@@ -323,10 +338,13 @@ export default function NousaiStudyGenerator() {
 
             {/* Model */}
             <div>
-              <label style={labelSt}>Model</label>
+              <label style={labelSt}>Model {modelsLoading && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>(loading...)</span>}</label>
               <select value={model} onChange={e => setModel(e.target.value)} style={inputSt}>
-                {MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                {models.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
               </select>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
+                {models.length} models · live from OpenRouter API
+              </div>
             </div>
 
             {/* Tone */}
