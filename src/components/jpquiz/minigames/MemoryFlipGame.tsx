@@ -4,7 +4,8 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { getAllVocabulary } from '../../../data/nakama1StudyContent'
-import type { VocabBankItem } from '../types'
+import type { MiniGameStats, VocabBankItem } from '../types'
+import { loadMiniGameStats, saveMiniGameStats } from '../types'
 
 interface Card {
   id: string
@@ -50,13 +51,14 @@ function starRating(flips: number, pairs: number): number {
   return 1
 }
 
-export default function MemoryFlipGame({ onBack, bank = [] }: { onBack: () => void; bank?: VocabBankItem[] }) {
+export default function MemoryFlipGame({ onBack, bank = [], courseId = '' }: { onBack: () => void; bank?: VocabBankItem[]; courseId?: string }) {
   const [cards, setCards] = useState<Card[]>(() => buildCards(8, bank))
   const [selected, setSelected] = useState<string[]>([]) // up to 2 card ids
   const [flips, setFlips] = useState(0)
   const [seconds, setSeconds] = useState(0)
   const [won, setWon] = useState(false)
   const [locked, setLocked] = useState(false)
+  const [stats, setStats] = useState<MiniGameStats | null>(() => loadMiniGameStats('memory-flip', courseId))
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const matchedCount = cards.filter(c => c.matched).length
 
@@ -112,6 +114,24 @@ export default function MemoryFlipGame({ onBack, bank = [] }: { onBack: () => vo
     if (cards.length > 0 && cards.every(c => c.matched)) setWon(true)
   }, [cards])
 
+  // Persist stats on win
+  useEffect(() => {
+    if (!won) return
+    const currentStars = starRating(flips, 8)
+    const prev = loadMiniGameStats('memory-flip', courseId)
+    const updated: MiniGameStats = {
+      highScore: Math.max(currentStars, prev?.highScore ?? 0),
+      totalPlayed: (prev?.totalPlayed ?? 0) + 1,
+      lastPlayed: new Date().toISOString(),
+      totalCorrect: (prev?.totalCorrect ?? 0) + currentStars,
+      totalQuestions: (prev?.totalQuestions ?? 0) + 3,
+      bestFlips: prev?.bestFlips !== undefined ? Math.min(flips, prev.bestFlips) : flips,
+      bestTime: prev?.bestTime !== undefined ? Math.min(seconds, prev.bestTime) : seconds,
+    }
+    saveMiniGameStats('memory-flip', courseId, updated)
+    setStats(updated)
+  }, [won]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const restart = () => {
     setCards(buildCards(8, bank))
     setSelected([])
@@ -126,6 +146,8 @@ export default function MemoryFlipGame({ onBack, bank = [] }: { onBack: () => vo
   const secs = String(seconds % 60).padStart(2, '0')
 
   if (won) {
+    const bestMins = stats?.bestTime !== undefined ? String(Math.floor(stats.bestTime / 60)).padStart(2, '0') : '--'
+    const bestSecs = stats?.bestTime !== undefined ? String(stats.bestTime % 60).padStart(2, '0') : '--'
     return (
       <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: 24 }}>
         <div style={{ fontSize: 64, marginBottom: 8 }}>🎉</div>
@@ -136,6 +158,29 @@ export default function MemoryFlipGame({ onBack, bank = [] }: { onBack: () => vo
         <div style={{ fontSize: 40, marginBottom: 24 }}>
           {'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}
         </div>
+        {stats && (
+          <div style={{
+            display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 24,
+            background: 'var(--bg-secondary)', borderRadius: 12, padding: '12px 20px',
+          }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Best</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{'⭐'.repeat(stats.highScore)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Fewest Flips</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{stats.bestFlips ?? '--'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Best Time</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{bestMins}:{bestSecs}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Played</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{stats.totalPlayed}×</div>
+            </div>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
           <button
             onClick={restart}

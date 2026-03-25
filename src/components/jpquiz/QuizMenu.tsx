@@ -3,11 +3,12 @@
  */
 import React from 'react'
 import type { JpQuizCourseData, JpQuizPreset, MiniGameType, VocabBankItem } from './types'
-import { PRESET_INFO } from './types'
+import { PRESET_INFO, loadMiniGameStats } from './types'
 
 interface Props {
   data: JpQuizCourseData
   bank: VocabBankItem[]
+  courseId: string
   onStart: (preset: JpQuizPreset) => void
   onManage: () => void
   onStartMiniGame: (game: MiniGameType) => void
@@ -28,7 +29,7 @@ function bankCounts(bank: VocabBankItem[]) {
   return { pairs, grammar }
 }
 
-export default function QuizMenu({ data, bank, onStart, onManage, onStartMiniGame, onManageVocab, onGoToCourseQuizzes }: Props) {
+export default function QuizMenu({ data, bank, courseId, onStart, onManage, onStartMiniGame, onManageVocab, onGoToCourseQuizzes }: Props) {
   const counts = bankCounts(bank)
   const qCount = data.questions.length
   const lastSession = data.sessionHistory.length > 0
@@ -141,6 +142,7 @@ export default function QuizMenu({ data, bank, onStart, onManage, onStartMiniGam
           {MINI_GAMES.map(g => {
             const wordCount = g.key === 'sentence-builder' ? counts.grammar : counts.pairs
             const usingBank = wordCount >= (g.key === 'sentence-builder' ? 1 : 4)
+            const gameStats = loadMiniGameStats(g.key, courseId)
             return (
               <button
                 key={g.key}
@@ -175,9 +177,25 @@ export default function QuizMenu({ data, bank, onStart, onManage, onStartMiniGam
                 <div style={{
                   fontSize: 10, fontWeight: 600,
                   color: usingBank ? '#2ecc71' : 'var(--text-muted)',
+                  marginBottom: gameStats ? 6 : 0,
                 }}>
                   {usingBank ? `✓ ${wordCount} custom` : 'Default vocab'}
                 </div>
+                {gameStats && (
+                  <div style={{
+                    fontSize: 10, color: 'var(--text-muted)',
+                    borderTop: '1px solid var(--border-color)',
+                    paddingTop: 6, marginTop: 2,
+                  }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {g.key === 'memory-flip'
+                        ? `Best: ${'⭐'.repeat(gameStats.highScore)}`
+                        : `Best: ${gameStats.highScore}${g.key === 'sentence-builder' ? '/8' : '/10'}`
+                      }
+                    </span>
+                    {' · '}{gameStats.totalPlayed}×
+                  </div>
+                )}
               </button>
             )
           })}

@@ -5,7 +5,8 @@
  */
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { getAllVocabulary } from '../../../data/nakama1StudyContent'
-import type { VocabBankItem } from '../types'
+import type { MiniGameStats, VocabBankItem } from '../types'
+import { loadMiniGameStats, saveMiniGameStats } from '../types'
 
 const ROUND_SIZE = 10
 const OPTION_COUNT = 4
@@ -50,7 +51,7 @@ function speak(word: string) {
 
 type AnswerState = 'idle' | 'correct' | 'wrong'
 
-export default function ListeningQuizGame({ onBack, bank = [] }: { onBack: () => void; bank?: VocabBankItem[] }) {
+export default function ListeningQuizGame({ onBack, bank = [], courseId = '' }: { onBack: () => void; bank?: VocabBankItem[]; courseId?: string }) {
   const pool = useRef<WordPair[]>(buildPool(bank))
   const [round] = useState<WordPair[]>(() => buildRound(pool.current))
   const [idx, setIdx] = useState(0)
@@ -61,6 +62,7 @@ export default function ListeningQuizGame({ onBack, bank = [] }: { onBack: () =>
   const [done, setDone] = useState(false)
   const [missed, setMissed] = useState<WordPair[]>([])
   const [hasSpoken, setHasSpoken] = useState(false)
+  const [stats, setStats] = useState<MiniGameStats | null>(() => loadMiniGameStats('listening-quiz', courseId))
 
   const current = round[idx]
 
@@ -86,6 +88,21 @@ export default function ListeningQuizGame({ onBack, bank = [] }: { onBack: () =>
     }
   }, [idx, round])
 
+  // Persist stats when round ends
+  useEffect(() => {
+    if (!done) return
+    const prev = loadMiniGameStats('listening-quiz', courseId)
+    const updated: MiniGameStats = {
+      highScore: Math.max(score, prev?.highScore ?? 0),
+      totalPlayed: (prev?.totalPlayed ?? 0) + 1,
+      lastPlayed: new Date().toISOString(),
+      totalCorrect: (prev?.totalCorrect ?? 0) + score,
+      totalQuestions: (prev?.totalQuestions ?? 0) + ROUND_SIZE,
+    }
+    saveMiniGameStats('listening-quiz', courseId, updated)
+    setStats(updated)
+  }, [done]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleAnswer = useCallback((opt: string) => {
     if (answerState !== 'idle') return
     setChosen(opt)
@@ -103,6 +120,9 @@ export default function ListeningQuizGame({ onBack, bank = [] }: { onBack: () =>
 
   if (done) {
     const stars = score >= 9 ? 3 : score >= 6 ? 2 : 1
+    const accuracy = stats && stats.totalQuestions > 0
+      ? Math.round((stats.totalCorrect / stats.totalQuestions) * 100)
+      : null
     return (
       <div style={{ maxWidth: 480, margin: '0 auto', padding: 24 }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -114,6 +134,25 @@ export default function ListeningQuizGame({ onBack, bank = [] }: { onBack: () =>
           <div style={{ fontSize: 40, marginBottom: 20 }}>
             {'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}
           </div>
+          {stats && (
+            <div style={{
+              display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 8,
+              background: 'var(--bg-secondary)', borderRadius: 12, padding: '12px 20px',
+            }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Best Score</div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>{stats.highScore}/{ROUND_SIZE}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Accuracy</div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>{accuracy ?? '--'}%</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Played</div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>{stats.totalPlayed}×</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {missed.length > 0 && (

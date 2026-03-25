@@ -173,6 +173,7 @@ export default function JpQuizTab({ course, onGoToCourseQuizzes }: Props) {
         <QuizMenu
           data={data}
           bank={bank}
+          courseId={course.id}
           onStart={startSession}
           onManage={() => setView('editor')}
           onStartMiniGame={startMiniGame}
@@ -219,13 +220,13 @@ export default function JpQuizTab({ course, onGoToCourseQuizzes }: Props) {
         />
       )}
       {view === 'minigame' && miniGame === 'memory-flip' && (
-        <MemoryFlipGame onBack={backToMenu} bank={bank} />
+        <MemoryFlipGame onBack={backToMenu} bank={bank} courseId={course.id} />
       )}
       {view === 'minigame' && miniGame === 'sentence-builder' && (
-        <SentenceBuilderGame onBack={backToMenu} bank={bank} />
+        <SentenceBuilderGame onBack={backToMenu} bank={bank} courseId={course.id} />
       )}
       {view === 'minigame' && miniGame === 'listening-quiz' && (
-        <ListeningQuizGame onBack={backToMenu} bank={bank} />
+        <ListeningQuizGame onBack={backToMenu} bank={bank} courseId={course.id} />
       )}
 
       {view === 'mindmap' && (
