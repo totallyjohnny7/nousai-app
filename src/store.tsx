@@ -196,12 +196,13 @@ class AutoSyncScheduler {
   async flush() {
     if (!this.dirty) return;
     const uid = localStorage.getItem('nousai-auth-uid');
-    if (!uid || !this.dataRef.current) return;
-    // Safety: don't sync if courses is not an array (truly unloaded/corrupt state)
-    // Empty array IS valid — user may have deleted all courses intentionally
+    const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
+    if (!uid || !autoSync || !this.dataRef.current) return;
+    // Only skip if the courses array itself is missing (data not yet loaded).
+    // An empty array is a valid user state (all courses deleted) and must be synced.
     const courses = this.dataRef.current.pluginData?.coachData?.courses;
     if (!Array.isArray(courses)) {
-      console.warn('[AUTO-SYNC] Skipped: courses is not an array (unloaded state)');
+      console.warn('[AUTO-SYNC] Skipped: courses is not an array (data not loaded yet)');
       return;
     }
     this.dirty = false;
@@ -309,6 +310,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const dataRef = useRef<NousAIData | null>(null);
   const fromSyncRef = useRef(false); // true when data was loaded from cross-tab sync (skip broadcast)
   const localDirtyRef = useRef(false); // true when local changes haven't been saved to IDB yet
+  const loadedRef = useRef(false); // true after initial IDB load completes (guards against pre-load saves)
 
   // ── Sync status state ───────────────────────────────────
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() =>
@@ -369,6 +371,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         saveSnapshot(final, 'boot').catch(() => {}); // Boot snapshot for recovery
         setDataRaw(final);
       }
+      loadedRef.current = true;
       setLoaded(true);
     });
   }, []);
@@ -379,9 +382,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!data) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
-      // Safety: don't save before initial IDB load completes (state is still default/empty)
-      // Previously checked courses.length === 0 which blocked saving legitimate deletions
-      if (!loaded) {
+      // Safety: don't save to IDB before the initial load has completed (prevents race condition
+      // where a pre-load state transition could wipe persisted data). After loadedRef is true, any
+      // state (including 0 courses) represents an intentional user action and must be persisted.
+      if (!loadedRef.current) {
         console.warn('[STORE] Blocked save: initial IDB load not yet complete');
         return;
       }
@@ -506,6 +510,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           autoSyncRef.current.flush().then(() => {
             window.dispatchEvent(new CustomEvent('nousai-remote-update-available'));
           });
+          return;
+        }
+        // Skip if local data has changes not yet uploaded to cloud.
+        // This prevents remote load from overwriting local deletions (e.g. deleting all cards
+        // from a course) before the 30s auto-sync debounce has had a chance to upload them.
+        const localModifiedAt = localStorage.getItem('nousai-data-modified-at');
+        if (localLastSync && localModifiedAt && localModifiedAt > localLastSync) {
+          console.log('[STORE] Remote update available but local has unsynced changes — deferring remote load to protect local deletions');
           return;
         }
         // Auto-load silently — no banner click required
