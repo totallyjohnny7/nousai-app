@@ -203,11 +203,16 @@ HTML PAGE ARCHITECTURE:
     .card { border: 1.5px solid #ccc; border-radius: 6px; margin-bottom: 18px; overflow: hidden; background: white; }
     .card-header { background: var(--accent); color: white; font-family: 'Courier New', monospace; font-weight: bold; font-size: 13px; padding: 6px 12px; letter-spacing: 1px; }
     .card-body { display: flex; }
-    .pl { padding: 12px 14px; font-size: 12.5px; line-height: 1.75; border-right: 1.5px solid #eee; width: 42%; box-sizing: border-box; }
-    .pv { padding: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #fafafa; width: 58%; box-sizing: border-box; }
+    .pl { padding: 12px 14px; font-size: 12.5px; line-height: 1.75; border-right: 1.5px solid #eee; width: 42%; box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; }
+    .pv { padding: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #fafafa; width: 58%; box-sizing: border-box; overflow: visible; }
     .trap { background: #fff3cd; border: 2px solid #f0a500; border-radius: 6px; padding: 8px 12px; font-size: 11.5px; font-family: monospace; color: #7a4f00; margin-top: 8px; }
     .download-bar { position: sticky; bottom: 20px; display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
     .dl-btn { background: var(--accent); color: white; border: none; border-radius: 6px; padding: 10px 24px; font-size: 13px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; table-layout: auto; }
+    th, td { padding: 6px 10px; border: 1px solid #ddd; text-align: left; word-wrap: break-word; overflow-wrap: break-word; }
+    th { background: var(--accent); color: white; font-size: 11px; }
+    td { font-size: 12px; }
+    svg { overflow: visible; }
     @media (max-width: 600px) { .card-body { flex-direction: column; } .pl, .pv { width: 100%; } }
   </style>
 </head>
@@ -230,13 +235,15 @@ SECTION CARD PATTERN (use for EVERY concept):
 </div>
 
 SVG DIAGRAM RULES:
-A. viewBox="0 0 300 [H]" always set. width="100%". max-width:300px.
-B. font-size: 6px min, 9px max.
-C. Every text element: explicit x= y= textAnchor=.
-D. Labels at DIFFERENT y coordinates (min 10px apart).
+A. viewBox="0 0 450 [H]" always. width="100%". max-width:450px. Use the FULL width — place labels from x=10 to x=440.
+B. font-size: 8px min, 11px max. For Japanese text use 10-12px (CJK needs larger).
+C. Every text element: explicit x= y= text-anchor=. NEVER place text where it overlaps another element.
+D. Labels at DIFFERENT y coordinates (min 14px apart). Min 20px gap between horizontally adjacent labels.
 E. Arrowheads: use <defs><marker> pattern.
-F. Diagram title: x=150 y=12 textAnchor="middle" font-size=8-9 font-weight=bold.
-G. No element bleeds past x=295 or y=[HEIGHT-5].
+F. Diagram title: x=225 y=16 text-anchor="middle" font-size=11 font-weight=bold.
+G. No element bleeds past x=445 or y=[HEIGHT-5]. TEST: if any text would be cut off, move it inward.
+H. For spatial/directional diagrams: use viewBox="0 0 500 400" minimum. Place labels WELL outside the center object with 30px+ margins.
+I. NEVER truncate text. If a Japanese word or conjugation is long, widen the viewBox or use multiple lines.
 
 FILTER + DOWNLOAD JS:
 <script>
@@ -262,10 +269,17 @@ document.getElementById('dl-btn')?.addEventListener('click', () => {
 
 COMPLETENESS REQUIREMENT (CRITICAL):
 - Extract EVERY vocabulary term, concept, keyword, definition, formula, and proper noun from the source material.
-- At the END of the guide, add a "COMPLETE TERM INDEX" section: a filterable alphabetical table with columns: Term | Definition | Section.
+- At the END of the guide, add a "COMPLETE TERM INDEX" section: a filterable alphabetical table with columns: Term | Reading/Romaji | Definition | Section.
 - This index must list EVERY term from the source — nothing omitted. If the source has 50 terms, the index has 50+ rows.
+- NEVER duplicate rows. Each term appears EXACTLY ONCE in the index. Deduplicate before outputting.
 - For language courses: include ALL vocab words with readings/translations, ALL grammar points, ALL conjugation patterns.
 - The index section should have data-section="term-index" and a corresponding filter button.
+
+TABLE & CONJUGATION RULES:
+- For conjugation tables: use <table> not SVG. Each cell must show the FULL text — NEVER truncate.
+- For comparison tables (i-adj vs na-adj, verb types): make columns wide enough for the longest entry.
+- For Japanese text in tables: use font-size 13-14px (CJK renders smaller than Latin at same size).
+- NEVER use overflow:hidden or text-overflow:ellipsis on table cells.
 
 QUALITY CHECKLIST:
 [ ] Every .card has an SVG in .pv with real structural content
