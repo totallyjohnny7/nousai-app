@@ -1252,14 +1252,14 @@ export default function SettingsPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ArrowUpCircle size={18} style={{ color: 'var(--green)' }} />
-                <span style={{ fontWeight: 700 }}>Update Available: v{updateInfo.version}</span>
+                <span style={{ fontWeight: 700 }}>Update Available: v{String(updateInfo.version ?? '')}</span>
               </div>
               <button
                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, padding: 4, fontFamily: 'inherit' }}
                 onClick={() => { dismissUpdate(); setUpdateInfo(null) }}
               >&times;</button>
             </div>
-            {updateInfo.releaseNotes && <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>{updateInfo.releaseNotes}</p>}
+            {updateInfo.releaseNotes && <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>{String(updateInfo.releaseNotes)}</p>}
             <div style={{ display: 'flex', gap: 8 }}>
               {platform === 'android' && updateInfo.androidUrl && (
                 <a href={updateInfo.androidUrl} className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>
@@ -3800,9 +3800,10 @@ export default function SettingsPage() {
                         }}
                       >
                         {keys.map(keyDef => {
-                          const actionId = k20.bindings[keyDef.id] ?? 'none';
+                          const rawActionId = k20.bindings[keyDef.id];
+                          const actionId = (typeof rawActionId === 'string' ? rawActionId : 'none') as K20ActionId;
                           const actionDef = K20_ACTIONS.find(a => a.id === actionId);
-                          const icon = K20_ACTION_ICONS[actionId] ?? '⬜';
+                          const icon = String(K20_ACTION_ICONS[actionId] ?? '⬜');
                           const hasConflict = conflictSet.has(keyDef.combo?.toLowerCase?.() ?? '');
                           const isDial = keyDef.isDial;
 

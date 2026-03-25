@@ -18,7 +18,14 @@ function loadBindings(): K20BindingsMap {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) {
-      const overrides = JSON.parse(raw) as Record<string, K20ActionId>;
+      const parsed = JSON.parse(raw);
+      // Validate: only merge string values (corrupted data could contain objects)
+      const overrides: Record<string, K20ActionId> = {};
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        for (const [k, v] of Object.entries(parsed)) {
+          if (typeof v === 'string') overrides[k] = v as K20ActionId;
+        }
+      }
       return { ...K20_DEFAULT_BINDINGS, ...overrides };
     }
   } catch { /* corrupt — use defaults */ }
