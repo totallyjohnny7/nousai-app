@@ -48,9 +48,13 @@ function PracticeGenTool() {
 
 Difficulty: ${difficulty} — ${difficultyDesc[difficulty]}
 
+Ensure each problem covers a different difficulty angle (easy/medium/hard) even within the selected difficulty band.
+Each answer MUST include a step-by-step solution walkthrough, not just the final answer.
+Add a "why_important" note in the answer explaining real-world or exam relevance of the concept tested.
+
 Return ONLY a valid JSON array with exactly 3 items. Each item must have:
 - "problem": the full problem statement (can include formulas or scenarios)
-- "answer": the complete solution with explanation
+- "answer": the complete solution with step-by-step explanation and why_important note
 
 Format: [{"problem":"...","answer":"..."},...]`;
 

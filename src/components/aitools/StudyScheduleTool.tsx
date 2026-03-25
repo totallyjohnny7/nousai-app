@@ -57,7 +57,11 @@ Available hours per week: ${hoursPerWeek}
 Topics and current proficiency:
 ${topicsWithProf || 'No topics listed'}
 
-Create a realistic weekly plan. Prioritize lower-proficiency topics. Return ONLY a valid JSON array with one object per week:
+Create a realistic weekly plan. Prioritize lower-proficiency topics. Schedule high-yield topics (most likely to appear on exams or most foundational) earlier.
+Flag any topics that are commonly under-studied or frequently missed by students in the tasks.
+Include specific study strategies per topic type (e.g., "use spaced repetition for vocabulary", "practice problems for calculation-heavy topics", "diagram-based review for anatomy").
+
+Return ONLY a valid JSON array with one object per week:
 [{"week":1,"focus":"Topic A, Topic B","hours":${hoursPerWeek},"tasks":["Task 1","Task 2","Task 3"]},...]
 
 Include all ${weeksUntilExam} weeks. Distribute hours realistically (total should sum to ~${hoursPerWeek * weeksUntilExam}).`;
