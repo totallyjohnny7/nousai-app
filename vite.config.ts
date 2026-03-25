@@ -43,12 +43,14 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB
         runtimeCaching: [
           {
-            // Cache JS/CSS chunks on first use (lazy-loaded pages, games, etc.)
+            // Cache JS/CSS chunks — NetworkFirst so new deploys take effect immediately.
+            // Old chunks with stale hashes get replaced on next fetch.
             urlPattern: /\/assets\/.*\.(?:js|css)$/i,
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'nousai-chunks',
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 } // 30 days
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 }, // 7 days
+              networkTimeoutSeconds: 3, // fall back to cache if network slow
             }
           },
           {
