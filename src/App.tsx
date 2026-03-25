@@ -37,6 +37,19 @@ class ErrorBoundary extends Component<EBProps, EBState> {
   }
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[NousAI] Render error caught:', error, info.componentStack);
+    // Log detailed info for error #310 (object rendered as React child)
+    if (error.message?.includes('#310') || error.message?.includes('Objects are not valid')) {
+      console.error('[NousAI] ERROR #310 DIAGNOSTIC — component stack:', info.componentStack);
+      // Store diagnostic info for debugging
+      try {
+        sessionStorage.setItem('nousai-error-310', JSON.stringify({
+          message: error.message,
+          stack: info.componentStack?.slice(0, 2000),
+          time: new Date().toISOString(),
+          url: window.location.hash,
+        }));
+      } catch { /* ignore */ }
+    }
     // Auto-reload on chunk load failure (backup for lazyWithRetry)
     if (isChunkLoadError(error)) {
       const flag = sessionStorage.getItem('nousai-chunk-reload');
@@ -61,7 +74,7 @@ class ErrorBoundary extends Component<EBProps, EBState> {
           <p style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 400 }}>
             {isChunk
               ? 'A new version was deployed. Click reload to get the latest version.'
-              : (this.state.error?.message || 'An unexpected error occurred.')}
+              : String(this.state.error?.message || 'An unexpected error occurred.')}
           </p>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button

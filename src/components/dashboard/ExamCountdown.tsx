@@ -93,14 +93,14 @@ export default function ExamCountdown() {
                 }}>
                   <div style={{
                     height: '100%',
-                    width: `${Math.round(deckHealth * 100)}%`,
-                    background: deckHealth >= 0.75 ? 'var(--green)' : deckHealth >= 0.5 ? 'var(--yellow)' : 'var(--red)',
+                    width: `${Math.min(100, Math.round(deckHealth))}%`,
+                    background: deckHealth >= 75 ? 'var(--green)' : deckHealth >= 50 ? 'var(--yellow)' : 'var(--red)',
                     borderRadius: 3,
                     transition: 'width 0.3s ease',
                   }} />
                 </div>
                 <span className="text-xs text-muted" style={{ minWidth: 36, textAlign: 'right' }}>
-                  {Math.round(deckHealth * 100)}% R
+                  {Math.min(100, Math.round(deckHealth))}% R
                 </span>
               </div>
             </div>
