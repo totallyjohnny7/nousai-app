@@ -325,26 +325,98 @@ export const PALETTES = [
   { name: 'Indigo', hex: '#3D2B8C', bg: '#f3f0ff' },
 ]
 
-/* ── Model Options ────────────────────────────────────────── */
-export const MODELS = [
-  // ── Recommended (fast + cheap) ──
-  { id: 'openai/gpt-5.4-nano', label: 'GPT-5.4 Nano (fastest)' },
-  { id: 'openai/gpt-5.4-mini', label: 'GPT-5.4 Mini (recommended)' },
-  { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash' },
-  // ── High Quality ──
-  { id: 'openai/gpt-5.4', label: 'GPT-5.4' },
-  { id: 'openai/gpt-5.4-pro', label: 'GPT-5.4 Pro (premium)' },
-  { id: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5' },
-  { id: 'anthropic/claude-opus-4.5', label: 'Claude Opus 4.5 (premium)' },
-  { id: 'google/gemini-3-pro-preview', label: 'Gemini 3 Pro' },
-  // ── Mid-Range ──
-  { id: 'deepseek/deepseek-v3.2', label: 'DeepSeek 3.2 (cheap + strong)' },
-  { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1 (reasoning)' },
-  { id: 'mistralai/mistral-small-4', label: 'Mistral Small 4' },
-  { id: 'x-ai/grok-4.1-fast', label: 'Grok 4.1 Fast' },
-  { id: 'qwen/qwen3.5-flash-02-23', label: 'Qwen 3.5 Flash' },
-  // ── Free / Auto ──
+/* ── Model Options (dynamic from OpenRouter API) ─────────── */
+
+export interface ModelOption {
+  id: string
+  label: string
+  free?: boolean
+}
+
+// Fallback models if API fetch fails
+const FALLBACK_MODELS: ModelOption[] = [
   { id: 'openrouter/auto', label: 'Auto Router (best match)' },
-  { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B (free)' },
-  { id: 'nvidia/nemotron-3-super-120b-a12b:free', label: 'Nemotron 3 Super 120B (free)' },
+  { id: 'openai/gpt-5.4-mini', label: 'GPT-5.4 Mini' },
+  { id: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5' },
+  { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash' },
+  { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1' },
+  { id: 'openrouter/free', label: 'Free Router (random free model)', free: true },
 ]
+
+// Providers to prioritize (in display order)
+const PRIORITY_PROVIDERS = ['openai', 'anthropic', 'google', 'deepseek', 'mistralai', 'x-ai', 'meta-llama', 'qwen', 'nvidia']
+
+// Cache: fetched models + timestamp
+let _cachedModels: ModelOption[] | null = null
+let _cacheTime = 0
+const CACHE_TTL = 30 * 60 * 1000 // 30 minutes
+
+/** Fetch latest models from OpenRouter API. Results cached for 30min. */
+export async function fetchOpenRouterModels(apiKey?: string): Promise<ModelOption[]> {
+  if (_cachedModels && Date.now() - _cacheTime < CACHE_TTL) return _cachedModels
+
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
+
+    const resp = await fetch('https://openrouter.ai/api/v1/models', { headers })
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+
+    const json = await resp.json()
+    const raw: Array<{ id: string; name: string; pricing?: { prompt?: string }; context_length?: number }> = json.data || []
+
+    // Build model list: Auto/Free routers first, then sorted by provider priority
+    const models: ModelOption[] = [
+      { id: 'openrouter/auto', label: 'Auto Router (best match)' },
+      { id: 'openrouter/free', label: 'Free Router (random free model)', free: true },
+    ]
+
+    // Group by provider, pick top models per provider
+    const byProvider = new Map<string, typeof raw>()
+    for (const m of raw) {
+      const provider = m.id.split('/')[0]
+      if (!provider || m.id.startsWith('openrouter/')) continue
+      if (!byProvider.has(provider)) byProvider.set(provider, [])
+      byProvider.get(provider)!.push(m)
+    }
+
+    // Add priority providers first (up to 4 models each), then others (up to 2 each)
+    const added = new Set<string>()
+    for (const provider of PRIORITY_PROVIDERS) {
+      const providerModels = byProvider.get(provider) || []
+      // Sort by context length descending (proxy for "newer/better")
+      providerModels.sort((a, b) => (b.context_length || 0) - (a.context_length || 0))
+      for (const m of providerModels.slice(0, 4)) {
+        const isFree = m.id.endsWith(':free') || m.pricing?.prompt === '0'
+        models.push({ id: m.id, label: `${m.name}${isFree ? ' (free)' : ''}`, free: isFree })
+        added.add(m.id)
+      }
+    }
+
+    // Add remaining providers (up to 2 each)
+    for (const [provider, providerModels] of byProvider) {
+      if (PRIORITY_PROVIDERS.includes(provider)) continue
+      providerModels.sort((a, b) => (b.context_length || 0) - (a.context_length || 0))
+      for (const m of providerModels.slice(0, 2)) {
+        if (added.has(m.id)) continue
+        const isFree = m.id.endsWith(':free') || m.pricing?.prompt === '0'
+        models.push({ id: m.id, label: `${m.name}${isFree ? ' (free)' : ''}`, free: isFree })
+      }
+    }
+
+    _cachedModels = models
+    _cacheTime = Date.now()
+    return models
+  } catch {
+    // API failed — return cached or fallback
+    return _cachedModels || FALLBACK_MODELS
+  }
+}
+
+/** Synchronous access to cached models (for initial render). */
+export function getCachedModels(): ModelOption[] {
+  return _cachedModels || FALLBACK_MODELS
+}
+
+// Legacy export for backwards compatibility
+export const MODELS = FALLBACK_MODELS
