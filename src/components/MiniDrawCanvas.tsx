@@ -62,6 +62,20 @@ export default function MiniDrawCanvas({ initialData, onChange }: Props) {
   };
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    // Palm rejection: when pen is detected, ignore touch/mouse events
+    if (e.pointerType === 'touch' && (canvasRef.current as any)?._lastPenTime &&
+        Date.now() - (canvasRef.current as any)._lastPenTime < 2000) {
+      return; // Reject palm touch within 2s of last pen stroke
+    }
+    if (e.pointerType === 'pen') {
+      (canvasRef.current as any)._lastPenTime = Date.now();
+      // Pen barrel button (button 5 or 2) = eraser toggle
+      if (e.button === 2 || e.button === 5) {
+        e.preventDefault();
+        setTool(t => t === 'eraser' ? 'pen' : 'eraser');
+        return;
+      }
+    }
     e.preventDefault();
     canvasRef.current?.setPointerCapture(e.pointerId);
     isDrawingRef.current = true;
@@ -101,9 +115,14 @@ export default function MiniDrawCanvas({ initialData, onChange }: Props) {
     const ctx = canvas.getContext('2d')!;
     const { x, y } = getPos(e);
 
-    const pressure = e.pressure > 0 && e.pressure < 1 ? e.pressure : 0.5;
+    // Wacom Intuos reports pressure 0.0-1.0; mouse/touch reports 0 or 0.5
+    const rawPressure = e.pressure;
+    const hasPenPressure = e.pointerType === 'pen' && rawPressure > 0 && rawPressure < 1;
+    const pressure = hasPenPressure ? rawPressure : 0.5;
     const stored = (canvas as any)._drawCtx ?? {};
-    const w = (stored.w ?? WIDTHS[tool][widthIdx]) * (0.5 + pressure);
+    const baseW = stored.w ?? WIDTHS[tool][widthIdx];
+    // Pen: smooth pressure curve (0.3 min to avoid invisible strokes); mouse: fixed width
+    const w = hasPenPressure ? baseW * (0.3 + pressure * 0.7) : baseW * (0.5 + pressure);
 
     ctx.lineWidth = w;
     ctx.lineTo(x, y);
@@ -214,6 +233,7 @@ export default function MiniDrawCanvas({ initialData, onChange }: Props) {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
+        onContextMenu={e => e.preventDefault()}
         style={{
           width: '100%',
           aspectRatio: '560 / 240',

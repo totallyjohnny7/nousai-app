@@ -753,7 +753,7 @@ function ExcalidrawEditor({
       </div>
 
       {/* Excalidraw canvas — takes remaining height */}
-      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', touchAction: 'none' }}>
         {drawing.data?.startsWith('data:') && (
           <div style={{
             position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',

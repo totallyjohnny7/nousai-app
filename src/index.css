@@ -1465,6 +1465,16 @@ div[data-video-embed] video {
 .pretest-hypercorrect-notice { background: rgba(245,166,35,.1); border: 1px solid var(--color-accent); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--color-accent); }
 .pretest-empty { text-align: center; padding: 32px; color: var(--text-muted); }
 
+/* ═══════ PEN TABLET (Wacom Intuos, Huion, XP-Pen) ═══════ */
+/* Prevent browser from interpreting pen gestures as navigation */
+.excalidraw-container,
+.excalidraw,
+.mini-draw-canvas { touch-action: none; -ms-touch-action: none; }
+/* Suppress hover effects on pen hover (prevents flicker on Wacom hover-over) */
+@media (pointer: fine) and (hover: hover) {
+  canvas { cursor: crosshair; }
+}
+
 /* ═══════ E-INK / BOOX EXTRA ═══════ */
 html.eink canvas { image-rendering: pixelated; }
 html.eink .rsvp-card__content { color: #000; }
