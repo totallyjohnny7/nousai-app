@@ -307,14 +307,24 @@ export const PALETTES = [
 
 /* ── Model Options ────────────────────────────────────────── */
 export const MODELS = [
-  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash (recommended)' },
-  { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (highest quality)' },
-  { id: 'anthropic/claude-sonnet-4', label: 'Claude Sonnet 4' },
-  { id: 'anthropic/claude-haiku-3.5', label: 'Claude 3.5 Haiku (fast)' },
-  { id: 'openai/gpt-4o', label: 'GPT-4o' },
-  { id: 'openai/gpt-4o-mini', label: 'GPT-4o Mini (budget)' },
-  { id: 'openai/o3-mini', label: 'o3-mini (reasoning)' },
-  { id: 'mistralai/mistral-small', label: 'Mistral Small (fast/cheap)' },
-  { id: 'mistralai/mistral-large', label: 'Mistral Large 2' },
-  { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B (free tier)' },
+  // ── Recommended ──
+  { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (recommended)' },
+  { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (newest)' },
+  { id: 'google/gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (newest)' },
+  // ── High Quality ──
+  { id: 'google/gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (highest quality)' },
+  { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6' },
+  { id: 'openai/gpt-5.4', label: 'GPT-5.4' },
+  // ── Mid-Range ──
+  { id: 'anthropic/claude-haiku-4.5', label: 'Claude Haiku 4.5 (fast)' },
+  { id: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
+  { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1 (reasoning)' },
+  { id: 'mistralai/mistral-small-2603', label: 'Mistral Small (fast/cheap)' },
+  { id: 'mistralai/mistral-large', label: 'Mistral Large' },
+  { id: 'x-ai/grok-4.1-fast', label: 'Grok 4.1 Fast' },
+  { id: 'qwen/qwen3-235b-a22b', label: 'Qwen 3 235B' },
+  // ── Free ──
+  { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B (free)' },
+  { id: 'stepfun/step-3.5-flash:free', label: 'Step 3.5 Flash (free)' },
+  { id: 'nvidia/nemotron-3-super-120b-a12b:free', label: 'Nemotron 3 Super 120B (free)' },
 ]
