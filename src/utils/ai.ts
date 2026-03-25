@@ -55,19 +55,54 @@ export function isAIConfigured(): boolean {
   return c.provider !== 'none' && !!c.apiKey
 }
 
+/**
+ * Recommended OpenRouter models per feature slot.
+ * When provider is 'openrouter' and no per-slot override is set,
+ * each feature uses the best model for its task type.
+ *
+ * Uses openrouter/auto as ultimate fallback — OpenRouter picks the
+ * best model based on the request's capabilities.
+ */
+const SLOT_RECOMMENDED_MODELS: Record<AIFeatureSlot, string> = {
+  chat: 'openrouter/auto',                    // conversational, balanced
+  generation: 'openrouter/auto',               // quiz/flashcard/course gen — needs structured JSON
+  analysis: 'openrouter/auto',                 // fact check, prerequisites — needs reasoning
+  ocr: 'openrouter/auto',                      // handwriting/image recognition — needs vision
+  japanese: 'openrouter/auto',                 // JP vocab analysis — needs CJK understanding
+  physics: 'openrouter/auto',                  // physics sim — needs math + code gen
+  omni: 'openrouter/auto',                     // Omni Protocol — long context, multi-turn
+}
+
+/** Get the AI config for the user, or fall back to OpenRouter with auto routing */
+export function getAIConfig(): AIConfig {
+  return getConfig()
+}
+
 export function getConfigForSlot(slot: AIFeatureSlot): AIConfig {
-  const provider = localStorage.getItem(`nousai-ai-slot-${slot}-provider`) || ''
-  if (!provider || provider === 'none') return getConfig()
-  const def = getConfig()
-  const model = localStorage.getItem(`nousai-ai-slot-${slot}-model`) || ''
-  return {
-    ...def,
-    provider: provider as AIProvider,
-    apiKey: localStorage.getItem(`nousai-ai-slot-${slot}-apikey`) || '',
-    model,
-    customModel: provider === 'custom' ? model : '',
-    baseUrl: provider === 'mistral' ? 'https://api.mistral.ai/v1' : def.baseUrl,
+  // Check for per-slot override first
+  const slotProvider = localStorage.getItem(`nousai-ai-slot-${slot}-provider`) || ''
+  if (slotProvider && slotProvider !== 'none') {
+    const def = getConfig()
+    const model = localStorage.getItem(`nousai-ai-slot-${slot}-model`) || ''
+    return {
+      ...def,
+      provider: slotProvider as AIProvider,
+      apiKey: localStorage.getItem(`nousai-ai-slot-${slot}-apikey`) || def.apiKey,
+      model,
+      customModel: slotProvider === 'custom' ? model : '',
+      baseUrl: slotProvider === 'mistral' ? 'https://api.mistral.ai/v1' : def.baseUrl,
+    }
   }
+
+  // No per-slot override — use default config with recommended model for this slot
+  const cfg = getConfig()
+
+  // If using OpenRouter and no specific model is set, use the recommended model for this slot
+  if (cfg.provider === 'openrouter' && (!cfg.model || cfg.model === 'openrouter/auto')) {
+    return { ...cfg, model: SLOT_RECOMMENDED_MODELS[slot] }
+  }
+
+  return cfg
 }
 
 export function isSlotConfigured(slot: AIFeatureSlot): boolean {
@@ -138,7 +173,7 @@ export async function callAI(
       result = await callOpenAICompatible(
         'https://openrouter.ai/api/v1',
         cfg.apiKey,
-        cfg.model || 'anthropic/claude-sonnet-4.6',
+        cfg.model || 'openrouter/auto',
         allMessages, temp, maxTokens, options,
         {
           Authorization: `Bearer ${cfg.apiKey}`,

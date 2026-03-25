@@ -1825,6 +1825,22 @@ export default function SettingsPage() {
 
             {aiConfig.provider !== 'none' && (
               <>
+                {/* OpenRouter recommendation banner */}
+                {aiConfig.provider === 'openrouter' && (
+                  <div style={{
+                    padding: '10px 14px', marginBottom: 14,
+                    background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)',
+                    borderRadius: 'var(--radius-sm)', fontSize: 12, lineHeight: 1.6,
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#a855f7', marginBottom: 4 }}>Recommended Setup</div>
+                    <div style={{ color: 'var(--text-secondary)' }}>
+                      OpenRouter gives NousAI access to <strong>400+ models</strong> (GPT-5, Claude, Gemini, DeepSeek, Llama) through one API key.
+                      Each AI feature auto-selects the best model via <code style={{ background: 'var(--bg-primary)', padding: '1px 4px', borderRadius: 3 }}>openrouter/auto</code> routing.
+                      Set your model to "Auto" and OpenRouter picks the optimal model per request.
+                    </div>
+                  </div>
+                )}
+
                 {/* Provider info badge */}
                 {PROVIDER_INFO[aiConfig.provider]?.url && (
                   <div style={{
@@ -1835,13 +1851,14 @@ export default function SettingsPage() {
                     <ExternalLink size={12} style={{ color: PROVIDER_INFO[aiConfig.provider].color }} />
                     <a href={PROVIDER_INFO[aiConfig.provider].url} target="_blank" rel="noopener noreferrer"
                       style={{ color: PROVIDER_INFO[aiConfig.provider].color, textDecoration: 'none' }}>
-                      Get your {PROVIDER_INFO[aiConfig.provider].label} API key
+                      Get your {PROVIDER_INFO[aiConfig.provider].label} API key →
                     </a>
                   </div>
                 )}
 
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>
                   Your queries are sent directly to {PROVIDER_INFO[aiConfig.provider]?.label || 'your AI provider'}. NousAI does not store or log your conversations.
+                  {aiConfig.provider === 'openrouter' && ' Each feature automatically uses the best model for its task type.'}
                 </div>
 
                 {/* API Key */}
