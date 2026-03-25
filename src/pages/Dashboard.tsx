@@ -847,6 +847,13 @@ function OverviewTab() {
 
       {/* ── Goals (#100) ───────────────────────────────── */}
       {<GoalsPanel data={data} updatePluginData={updatePluginData} gamification={gamification} courses={courses} />}
+
+      {/* Watermark */}
+      <div style={{ textAlign: 'right', marginTop: 24, paddingBottom: 8 }}>
+        <span style={{ fontSize: 10, color: 'var(--text-dim)', letterSpacing: 0.5, opacity: 0.5 }}>
+          studynous.com
+        </span>
+      </div>
     </div>
   )
 }
