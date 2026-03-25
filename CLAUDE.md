@@ -10,8 +10,12 @@
 - **Firebase project**: `nousai-dc038`
 
 ## Deploy
+> **RULE: Never chain commands with `&&`.** Always use separate commands, one per line.
+
 ```bash
-cd NousAI-App && npm run build && vercel --prod --yes
+cd NousAI-App
+npm run build
+vercel --prod --yes
 ```
 After **every** production deploy — MUST clear PWA cache:
 ```js
@@ -37,6 +41,10 @@ caches.keys().then(k => k.forEach(x => caches.delete(x)));
 | `src/pages/Dashboard.tsx` | Dashboard with 4 tabs (Overview, Courses, Analytics, Plan) |
 
 ## Engineering Standards
+
+### Shell Commands
+- **NEVER chain commands with `&&`** — always write them as separate commands, one per line
+- This applies to deploy steps, build steps, git commands, and any other shell instructions
 
 ### TypeScript
 - Strict mode enabled — no `any` casts unless absolutely necessary
