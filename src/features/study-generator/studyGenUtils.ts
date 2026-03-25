@@ -307,24 +307,24 @@ export const PALETTES = [
 
 /* ── Model Options ────────────────────────────────────────── */
 export const MODELS = [
-  // ── Recommended ──
-  { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (recommended)' },
-  { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (newest)' },
-  { id: 'google/gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (newest)' },
+  // ── Recommended (fast + cheap) ──
+  { id: 'openai/gpt-5.4-nano', label: 'GPT-5.4 Nano (fastest)' },
+  { id: 'openai/gpt-5.4-mini', label: 'GPT-5.4 Mini (recommended)' },
+  { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash' },
   // ── High Quality ──
-  { id: 'google/gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (highest quality)' },
-  { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6' },
   { id: 'openai/gpt-5.4', label: 'GPT-5.4' },
+  { id: 'openai/gpt-5.4-pro', label: 'GPT-5.4 Pro (premium)' },
+  { id: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5' },
+  { id: 'anthropic/claude-opus-4.5', label: 'Claude Opus 4.5 (premium)' },
+  { id: 'google/gemini-3-pro-preview', label: 'Gemini 3 Pro' },
   // ── Mid-Range ──
-  { id: 'anthropic/claude-haiku-4.5', label: 'Claude Haiku 4.5 (fast)' },
-  { id: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
+  { id: 'deepseek/deepseek-v3.2', label: 'DeepSeek 3.2 (cheap + strong)' },
   { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1 (reasoning)' },
-  { id: 'mistralai/mistral-small-2603', label: 'Mistral Small (fast/cheap)' },
-  { id: 'mistralai/mistral-large', label: 'Mistral Large' },
+  { id: 'mistralai/mistral-small-4', label: 'Mistral Small 4' },
   { id: 'x-ai/grok-4.1-fast', label: 'Grok 4.1 Fast' },
-  { id: 'qwen/qwen3-235b-a22b', label: 'Qwen 3 235B' },
-  // ── Free ──
+  { id: 'qwen/qwen3.5-flash-02-23', label: 'Qwen 3.5 Flash' },
+  // ── Free / Auto ──
+  { id: 'openrouter/auto', label: 'Auto Router (best match)' },
   { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B (free)' },
-  { id: 'stepfun/step-3.5-flash:free', label: 'Step 3.5 Flash (free)' },
   { id: 'nvidia/nemotron-3-super-120b-a12b:free', label: 'Nemotron 3 Super 120B (free)' },
 ]
