@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { SavedVideo, VideoCaption, VideoUploadProgress } from '../../types';
 import { useStore } from '../../store';
 import { uploadVideoToStorage, generateVideoThumbnail } from '../../utils/videoStorage';
+import { ToolErrorBoundary } from '../ToolErrorBoundary';
 
 const VideoPlayer = lazy(() => import('../VideoPlayer'));
 
@@ -36,7 +37,7 @@ function formatDuration(secs: number): string {
   return `${m}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export default function VideoTool() {
+function VideoToolInner() {
   const { addVideo, savedVideos, data } = useStore();
   const navigate = useNavigate();
   const uid = localStorage.getItem('nousai-auth-uid') ?? '';
@@ -486,5 +487,13 @@ export default function VideoTool() {
         </Suspense>
       )}
     </div>
+  );
+}
+
+export default function VideoTool() {
+  return (
+    <ToolErrorBoundary toolName="Video Studio">
+      <VideoToolInner />
+    </ToolErrorBoundary>
   );
 }

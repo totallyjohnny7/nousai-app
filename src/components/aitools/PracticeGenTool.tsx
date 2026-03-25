@@ -5,6 +5,7 @@ import { callAI, isAIConfigured } from '../../utils/ai';
 import type { Course, CourseTopic } from '../../types';
 import { selectStyle } from './shared';
 import { ToolErrorBoundary } from '../ToolErrorBoundary';
+import { parseJsonArray } from '../../utils/parseJson';
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
@@ -12,21 +13,6 @@ interface PracticeProblem {
   problem: string;
   answer: string;
   showAnswer: boolean;
-}
-
-function parseJsonArray(response: string): unknown[] | null {
-  try {
-    let s = response.trim();
-    const codeBlock = s.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (codeBlock) s = codeBlock[1].trim();
-    const arrMatch = s.match(/\[[\s\S]*\]/);
-    if (arrMatch) s = arrMatch[0];
-    const parsed = JSON.parse(s);
-    if (Array.isArray(parsed)) return parsed;
-  } catch {
-    // ignore
-  }
-  return null;
 }
 
 function PracticeGenTool() {

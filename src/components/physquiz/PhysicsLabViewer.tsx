@@ -8,6 +8,7 @@ import React, {
 import { X, Plus, Beaker } from 'lucide-react';
 import { useStore } from '../../store';
 import { callAI, isAIConfigured } from '../../utils/ai';
+import { formatDate } from '../course/courseHelpers';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -82,18 +83,6 @@ input[type=range]{width:200px;}</style>
 </head><body>${cleaned}</body></html>`;
   }
   return cleaned;
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
 }
 
 // ---------------------------------------------------------------------------

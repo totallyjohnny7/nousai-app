@@ -9,6 +9,7 @@ import { ChevronRight, SkipForward, X, Clock } from 'lucide-react'
 import type { EvolSession, EvolQuestion, EvolAnswer } from './types'
 import { TOPIC_LABELS, TOPIC_COLORS, HEADING_LABELS } from './types'
 import { callAI, isAIConfigured } from '../../utils/ai'
+import { formatTime } from '../../utils/formatTime'
 
 interface Props {
   session: EvolSession
@@ -18,13 +19,6 @@ interface Props {
 }
 
 const TIMED_DURATION_MS = 10 * 60 * 1000 // 10 minutes
-
-function formatTime(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000))
-  const m = Math.floor(totalSeconds / 60)
-  const s = totalSeconds % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
 
 export default function EvolutionSession({ session, questions, onFinish, onQuit }: Props) {
   const qMap = useMemo(() => {

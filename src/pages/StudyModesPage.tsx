@@ -63,7 +63,7 @@ function buildCourseTopicList(courses: Course[], courseId: string): { id: string
   const items: { id: string; label: string; name: string }[] = []
   ;(c.topics || []).forEach(t => {
     items.push({ id: t.id, label: t.name, name: t.name })
-    ;((t as any).subtopics || []).forEach((st: { id: string; name: string }) =>
+    ;(t.subtopics || []).forEach((st) =>
       items.push({ id: st.id, label: `${t.name} › ${st.name}`, name: st.name })
     )
   })
@@ -1136,7 +1136,7 @@ function CornellNotesMode() {
     const items: { id: string; label: string }[] = []
     ;(c.topics || []).forEach(t => {
       items.push({ id: t.id, label: t.name })
-      ;((t as any).subtopics || []).forEach((st: { id: string; name: string }) =>
+      ;(t.subtopics || []).forEach((st) =>
         items.push({ id: st.id, label: `${t.name} > ${st.name}` })
       )
     })
@@ -1188,7 +1188,7 @@ function CornellNotesMode() {
   function crossSaveToLibrary(note: CornellNote) {
     if (!data) return
     const libNoteId = `cornell-${note.id}`
-    const existingNotes = (data.pluginData as any).notes || []
+    const existingNotes = data.pluginData.notes || []
     // Combine Cornell sections into formatted HTML
     const combinedHtml = `<h2>Cues / Questions</h2>${note.cues || '<p></p>'}<h2>Notes</h2>${note.notes || '<p></p>'}<h2>Summary</h2>${note.summary || '<p></p>'}`
     const libNote = {
@@ -1203,9 +1203,9 @@ function CornellNotesMode() {
       createdAt: note.createdAt,
       updatedAt: note.updatedAt,
     }
-    const idx = existingNotes.findIndex((n: any) => n.id === libNoteId)
+    const idx = existingNotes.findIndex((n) => n.id === libNoteId)
     const updatedNotes = idx >= 0
-      ? existingNotes.map((n: any, i: number) => i === idx ? libNote : n)
+      ? existingNotes.map((n, i) => i === idx ? libNote : n)
       : [...existingNotes, libNote]
 
     updatePluginData({ notes: updatedNotes })
@@ -1217,7 +1217,7 @@ function CornellNotesMode() {
     lsSet('cornell-notes', newNotes)
     // Also remove from Library
     if (data) {
-      const libNotes = ((data.pluginData as any).notes || []).filter((n: any) => n.id !== `cornell-${id}`)
+      const libNotes = (data.pluginData.notes || []).filter((n) => n.id !== `cornell-${id}`)
       updatePluginData({ notes: libNotes })
     }
   }
@@ -1420,7 +1420,7 @@ function CornellNotesMode() {
     const items: { id: string; label: string }[] = []
     ;(c.topics || []).forEach(t => {
       items.push({ id: t.id, label: t.name })
-      ;((t as any).subtopics || []).forEach((st: { id: string; name: string }) =>
+      ;(t.subtopics || []).forEach((st) =>
         items.push({ id: st.id, label: `${t.name} > ${st.name}` })
       )
     })
@@ -1848,7 +1848,7 @@ Make the content educational, specific, and detailed. Use proper HTML formatting
                         if (c) {
                           for (const t of (c.topics || [])) {
                             if (t.id === tid) { label = t.name; break }
-                            for (const st of ((t as any).subtopics || [])) {
+                            for (const st of (t.subtopics || [])) {
                               if (st.id === tid) { label = st.name; break }
                             }
                           }

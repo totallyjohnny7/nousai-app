@@ -5,27 +5,13 @@ import { callAI, isAIConfigured } from '../../utils/ai';
 import type { Course, CourseTopic } from '../../types';
 import { selectStyle, inputStyle } from './shared';
 import { ToolErrorBoundary } from '../ToolErrorBoundary';
+import { parseJsonArray } from '../../utils/parseJson';
 
 interface QuizQuestion {
   question: string;
   options: string[];
   answer: string;
   explanation: string;
-}
-
-function parseJsonArray(response: string): unknown[] | null {
-  try {
-    let s = response.trim();
-    const codeBlock = s.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (codeBlock) s = codeBlock[1].trim();
-    const arrMatch = s.match(/\[[\s\S]*\]/);
-    if (arrMatch) s = arrMatch[0];
-    const parsed = JSON.parse(s);
-    if (Array.isArray(parsed)) return parsed;
-  } catch {
-    // ignore
-  }
-  return null;
 }
 
 function QuizGenTool() {

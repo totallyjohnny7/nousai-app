@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import type { EvolSession, EvolQuestion, EvolAnswer } from './types'
 import { TOPIC_LABELS, TOPIC_COLORS, HEADING_LABELS } from './types'
+import { formatDate } from '../course/courseHelpers'
 
 interface Props {
   session: EvolSession
@@ -19,12 +20,6 @@ const MODE_LABELS: Record<string, string> = {
   'topic-drill': 'Topic Drill',
   'heading-drill': 'Heading Drill',
   'due-review': 'Due Review',
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-  } catch { return iso }
 }
 
 function scoreColor(score: number): string {

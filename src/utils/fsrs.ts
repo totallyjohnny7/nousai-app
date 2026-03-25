@@ -86,13 +86,17 @@ export function nextStabilitySuccess(D: number, S: number, R: number, grade: Gra
   const easyBonus = grade === 4 ? W[16] : 1;
   const inner = Math.exp(W[8]) * (11 - D) * Math.pow(S, -W[9]) *
     (Math.exp(W[10] * (1 - R)) - 1) * hardPenalty * easyBonus;
-  return Math.max(0.1, S * (1 + inner));
+  const result = Math.max(0.1, S * (1 + inner));
+  if (!Number.isFinite(result)) return S || 0.1;
+  return result;
 }
 
 /** Next stability after a failed review (grade = 1) */
 export function nextStabilityFail(D: number, S: number, R: number): number {
   const sNew = W[11] * Math.pow(D, -W[12]) * (Math.pow(S + 1, W[13]) - 1) * Math.exp(W[14] * (1 - R));
-  return Math.max(0.1, Math.min(S, sNew));
+  const result = Math.max(0.1, Math.min(S, sNew));
+  if (!Number.isFinite(result)) return S || 0.1;
+  return result;
 }
 
 // ─── Card Review ────────────────────────────────────────

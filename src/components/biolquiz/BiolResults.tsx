@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import type { BiolSession, BiolQuestion, BiolAnswer } from './types'
 import { TOPIC_LABELS, TOPIC_COLORS } from './types'
+import { formatDate } from '../course/courseHelpers'
 
 interface Props {
   session: BiolSession
@@ -18,12 +19,6 @@ const MODE_LABELS: Record<string, string> = {
   'weak-topics': 'Weak Topics',
   'topic-drill': 'Topic Drill',
   'due-review': 'Due Review',
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-  } catch { return iso }
 }
 
 function scoreColor(score: number): string {

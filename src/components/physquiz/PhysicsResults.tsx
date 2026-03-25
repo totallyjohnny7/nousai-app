@@ -11,6 +11,7 @@ import {
   type PhysicsTopic,
 } from './types'
 import type { Course } from '../../types'
+import { formatDate } from '../course/courseHelpers'
 
 interface Props {
   session: PhysicsSession
@@ -34,14 +35,6 @@ function formatDuration(ms: number): string {
   const m = Math.floor(s / 60)
   const rem = s % 60
   return `${m}m ${rem > 0 ? `${rem}s` : ''}`
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-  } catch {
-    return iso
-  }
 }
 
 function scoreColor(score: number): string {

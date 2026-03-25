@@ -2,6 +2,7 @@ import { useState, lazy, Suspense } from 'react';
 import type { SavedVideo } from '../types';
 import { useStore } from '../store';
 import { deleteVideoFromStorage } from '../utils/videoStorage';
+import { formatDate } from '../components/course/courseHelpers';
 
 const VideoPlayer = lazy(() => import('../components/VideoPlayer'));
 const VideoTool = lazy(() => import('../components/aitools/VideoTool'));
@@ -19,10 +20,6 @@ function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
-
-function formatDate(iso: string): string {
-  try { return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return iso; }
 }
 
 export default function VideosPage() {

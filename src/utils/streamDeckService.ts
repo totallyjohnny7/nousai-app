@@ -21,6 +21,7 @@
 import { setStreamDeckConnected } from './deviceDetection';
 import { saveQKConfig, loadQKConfig } from './auth';
 import { renderKeyIcon, renderEmptyKey } from './streamDeckIcons';
+import { log, warn } from './logger';
 
 export type StreamDeckMode = 'flashcard' | 'quiz' | 'drawing' | 'navigation' | 'notes';
 
@@ -329,7 +330,7 @@ export class StreamDeckService {
       if (!devices || devices.length === 0) return false;
 
       const device = devices[0];
-      console.log('[StreamDeck] Auto-reconnected:', device.MODEL ?? 'Stream Deck');
+      log('[StreamDeck] Auto-reconnected:', device.MODEL ?? 'Stream Deck');
       this._wireDevice(device);
       this._connected = true;
       setStreamDeckConnected(true);
@@ -362,7 +363,7 @@ export class StreamDeckService {
       }
     }
 
-    console.log('[StreamDeck] Requesting device...');
+    log('[StreamDeck] Requesting device...');
 
     let devices: any[];
     try {
@@ -377,7 +378,7 @@ export class StreamDeckService {
     }
 
     const device = devices[0];
-    console.log('[StreamDeck] Device granted:', device.MODEL ?? 'Stream Deck');
+    log('[StreamDeck] Device granted:', device.MODEL ?? 'Stream Deck');
 
     this._wireDevice(device);
     this._connected = true;
@@ -412,7 +413,7 @@ export class StreamDeckService {
     device.on('down', (keyIndex: number) => {
       if (!document.hasFocus()) return;
       const btn = this.config.modes[this.config.currentMode].buttons[keyIndex];
-      console.log(`[StreamDeck] Key down: ${keyIndex} → ${btn?.actionId ?? 'none'}`);
+      log(`[StreamDeck] Key down: ${keyIndex} → ${btn?.actionId ?? 'none'}`);
       if (btn) this._dispatchAction(btn.actionId);
     });
 
@@ -423,7 +424,7 @@ export class StreamDeckService {
     // Handle disconnect
     device.on('error', (err: any) => {
       if (err?.message?.includes('disconnect') || err?.message?.includes('removed')) {
-        console.log('[StreamDeck] Disconnected');
+        log('[StreamDeck] Disconnected');
         this.device = null;
         this._connected = false;
         setStreamDeckConnected(false);
@@ -543,10 +544,10 @@ export class StreamDeckService {
           }
         }
       } catch (e) {
-        console.warn(`[StreamDeck] key render(${i}) failed:`, e);
+        warn(`[StreamDeck] key render(${i}) failed:`, e);
       }
     }
-    console.log(`[StreamDeck] Icons rendered for mode: ${this.config.currentMode}`);
+    log(`[StreamDeck] Icons rendered for mode: ${this.config.currentMode}`);
   }
 
   private loadConfig(): StreamDeckConfig {

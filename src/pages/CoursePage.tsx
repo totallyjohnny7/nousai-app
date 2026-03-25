@@ -876,7 +876,7 @@ const StatsTab = React.memo(function StatsTab({
             {topicStats.map(t => {
               const color = t.proficiency >= 80 ? 'var(--green)' : t.proficiency >= 50 ? 'var(--yellow)' : t.proficiency > 0 ? 'var(--red)' : 'var(--text-dim)';
               const isExpanded = expandedStatsTopic === t.id;
-              const hasSubs = t.subtopics.length > 0;
+              const hasSubs = (t.subtopics?.length ?? 0) > 0;
               return (
                 <div key={t.name}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3, cursor: hasSubs ? 'pointer' : 'default' }}
@@ -884,7 +884,7 @@ const StatsTab = React.memo(function StatsTab({
                     <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
                       {hasSubs && (isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />)}
                       {t.name}
-                      {hasSubs && <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>({t.subtopics.length})</span>}
+                      {hasSubs && <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>({t.subtopics?.length ?? 0})</span>}
                     </span>
                     <span style={{ fontWeight: 700, color, flexShrink: 0 }}>{t.proficiency}%</span>
                   </div>
@@ -2377,7 +2377,7 @@ function ModulesTab({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{mod.name}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      {mod.topics.length} topic{mod.topics.length !== 1 ? 's' : ''}
+                      {mod.topics?.length ?? 0} topic{(mod.topics?.length ?? 0) !== 1 ? 's' : ''}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

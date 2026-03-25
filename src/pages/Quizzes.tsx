@@ -23,6 +23,34 @@ import { saveQuizLog, makeQuizLogEntry } from '../utils/quizLog'
 
 type QuizTab = 'create' | 'bank' | 'history' | 'merge'
 
+/** Shape of raw question objects stored in QuizAttempt.questions (unknown[]) */
+interface RawQuizQuestion {
+  question?: string
+  q?: string
+  correctAnswer?: string
+  answer?: string
+  options?: string[]
+  type?: string
+  explanation?: string
+}
+
+/** Shape of merged question objects built during quiz merge */
+interface MergedQuizQuestion {
+  question: string
+  correctAnswer: string
+  options?: string[]
+  type: string
+  explanation?: string
+  subject: string
+}
+
+/** Extend Window for IME composition tracking flag */
+declare global {
+  interface Window {
+    __imeComposing?: boolean
+  }
+}
+
 interface PlayableQuiz {
   questions: { question: string; correctAnswer: string; options?: string[]; type: string; explanation?: string }[]
   name: string
@@ -574,8 +602,8 @@ export default function Quizzes() {
       // Build PlayableQuiz from attempt's questions or answers
       let questions: PlayableQuiz['questions'] = []
       // Try from attempt.questions first (saved/imported quizzes)
-      if (attempt.questions && Array.isArray(attempt.questions) && (attempt.questions as any[]).length > 0) {
-        questions = (attempt.questions as any[]).map(q => ({
+      if (attempt.questions && Array.isArray(attempt.questions) && (attempt.questions as RawQuizQuestion[]).length > 0) {
+        questions = (attempt.questions as RawQuizQuestion[]).map(q => ({
           question: q.question || q.q || '',
           correctAnswer: q.correctAnswer || q.answer || '',
           options: Array.isArray(q.options) ? q.options : undefined,
@@ -1513,7 +1541,7 @@ function BankTab({ onPlay, folders, folderMap, folderActions, activeSession, onS
       })
       // Also extract from attempt.questions (for saved/untaken quizzes with answers: [])
       if (attempt.questions && Array.isArray(attempt.questions)) {
-        (attempt.questions as any[]).forEach((q, i) => {
+        (attempt.questions as RawQuizQuestion[]).forEach((q, i) => {
           const qText = q?.question || q?.q || ''
           if (!qText) return
           const key = qText.substring(0, 80)
@@ -2396,8 +2424,8 @@ function HistoryTab({ onSelectAttempt, onPlay, folders, folderMap, folderActions
                     e.stopPropagation()
                     // Build PlayableQuiz from attempt
                     let questions: PlayableQuiz['questions'] = []
-                    if (q.questions && Array.isArray(q.questions) && (q.questions as any[]).length > 0) {
-                      questions = (q.questions as any[]).map(qq => ({
+                    if (q.questions && Array.isArray(q.questions) && (q.questions as RawQuizQuestion[]).length > 0) {
+                      questions = (q.questions as RawQuizQuestion[]).map(qq => ({
                         question: qq.question || qq.q || '', correctAnswer: qq.correctAnswer || qq.answer || '',
                         options: Array.isArray(qq.options) ? qq.options : undefined, type: qq.type || 'multiple-choice', explanation: qq.explanation,
                       })).filter(qq => qq.question && qq.correctAnswer)
@@ -2505,7 +2533,7 @@ function MergeTab() {
   const selectedQuestionCount = useMemo(() => {
     return quizHistory
       .filter(q => selectedIds.has(q.id))
-      .reduce((acc, q) => acc + Math.max((q.answers?.length || 0), Array.isArray(q.questions) ? (q.questions as any[]).length : 0), 0)
+      .reduce((acc, q) => acc + Math.max((q.answers?.length || 0), Array.isArray(q.questions) ? (q.questions as RawQuizQuestion[]).length : 0), 0)
   }, [quizHistory, selectedIds])
 
   function handleMerge() {
@@ -2517,7 +2545,7 @@ function MergeTab() {
     }
 
     // Collect questions grouped by subject
-    const bySubject = new Map<string, any[]>()
+    const bySubject = new Map<string, MergedQuizQuestion[]>()
     const seen = new Set<string>()
 
     quizHistory.filter(q => selectedIds.has(q.id)).forEach(q => {
@@ -2541,7 +2569,7 @@ function MergeTab() {
       })
 
       // Collect from questions array (saved/imported quizzes)
-      ;(q.questions as any[] || []).forEach(qq => {
+      ;((q.questions as RawQuizQuestion[]) || []).forEach(qq => {
         const key = (qq?.question || '').substring(0, 80)
         if (!key || seen.has(key)) return
         seen.add(key)
@@ -2749,7 +2777,7 @@ function QuizPlayer({ quiz, onComplete, onCancel, onAnswer: onAnswerCb }: {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Don't intercept when typing in an input or during IME composition
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-    if (e.isComposing || (e as any).keyCode === 229) return;
+    if (e.isComposing || e.keyCode === 229) return;
     if (showFeedback) {
       if (matchesShortcut(e, 'qz_submit') || matchesShortcut(e, 'qz_continue')) { e.preventDefault(); nextQuestion() }
     } else {
@@ -2956,9 +2984,9 @@ function QuizPlayer({ quiz, onComplete, onCancel, onAnswer: onAnswerCb }: {
                 })()}
                 autoFocus
                 lang="ja"
-                onCompositionStart={() => { (window as any).__imeComposing = true }}
-                onCompositionEnd={() => { (window as any).__imeComposing = false }}
-                onKeyDown={e => { if (e.nativeEvent.isComposing || (e as any).keyCode === 229 || (window as any).__imeComposing) return; if (e.key === 'Enter' && selected.trim()) checkAnswer() }}
+                onCompositionStart={() => { window.__imeComposing = true }}
+                onCompositionEnd={() => { window.__imeComposing = false }}
+                onKeyDown={e => { if (e.nativeEvent.isComposing || e.keyCode === 229 || window.__imeComposing) return; if (e.key === 'Enter' && selected.trim()) checkAnswer() }}
                 style={{
                   width: '100%', padding: '14px 16px', border: '1px solid var(--border)',
                   borderRadius: 'var(--radius)', background: 'var(--bg-input)', color: 'var(--text-primary)',
@@ -3289,7 +3317,7 @@ function QuizDetail({ attempt, onBack, onRetake }: { attempt: QuizAttempt; onBac
               <div key={j} className="quiz-option" style={{ opacity: 0.7 }}>{opt}</div>
             ))}
             <div style={{ marginTop: 6, fontSize: 12, color: 'var(--green)' }}>
-              <strong>Answer:</strong> {q.answer || (q as any).correctAnswer}
+              <strong>Answer:</strong> {q.answer || (q as unknown as RawQuizQuestion).correctAnswer}
             </div>
             {q.explanation && (
               <div style={{ marginTop: 6, padding: 8, background: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text-secondary)' }}>

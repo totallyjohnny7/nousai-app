@@ -264,12 +264,13 @@ import type { WeeklyQuest } from '../types';
 
 /** Get the ISO week key for a date (YYYY-WNN) */
 export function getWeekKey(date: Date = new Date()): string {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  // Use local time (not UTC) to match localDateStr() used for streak days
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayNum = d.getDay() || 7;
+  d.setDate(d.getDate() + 4 - dayNum);
+  const yearStart = new Date(d.getFullYear(), 0, 1);
   const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+  return `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
 }
 
 interface QuestTemplate { id: string; label: string; target: number; xpReward: number }

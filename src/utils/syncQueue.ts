@@ -8,6 +8,8 @@
  * delta is persisted to IDB first. On reconnect, the flush retries automatically.
  */
 
+import { log } from './logger';
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type EntityType =
@@ -62,6 +64,7 @@ async function persistDeltaToIDB(delta: SyncDelta): Promise<void> {
     });
   } catch (e) {
     console.error('[SYNC-QUEUE] Failed to persist delta to IDB:', e);
+    throw e;
   }
 }
 
@@ -93,6 +96,7 @@ async function clearDeltasFromIDB(ids: string[]): Promise<void> {
     });
   } catch (e) {
     console.error('[SYNC-QUEUE] Failed to clear deltas from IDB:', e);
+    throw e;
   }
 }
 
@@ -127,7 +131,7 @@ export class SyncQueue {
   async hydrate(): Promise<void> {
     const persisted = await loadDeltasFromIDB();
     if (persisted.length > 0) {
-      console.log(`[SYNC-QUEUE] Hydrated ${persisted.length} persisted deltas from IDB`);
+      log(`[SYNC-QUEUE] Hydrated ${persisted.length} persisted deltas from IDB`);
       // Merge without duplicates (by id)
       const existingIds = new Set(this.queue.map(d => d.id));
       for (const d of persisted) {
@@ -217,7 +221,7 @@ export class SyncQueue {
       // Remove flushed from in-memory queue
       const flushedIds = new Set(batch.map(d => d.id));
       this.queue = this.queue.filter(d => !flushedIds.has(d.id));
-      console.log(`[SYNC-QUEUE] Flushed ${batch.length} deltas`);
+      log(`[SYNC-QUEUE] Flushed ${batch.length} deltas`);
     } catch (e) {
       console.error('[SYNC-QUEUE] Flush failed, will retry:', e);
       // Keep deltas in queue for retry — they remain in IDB

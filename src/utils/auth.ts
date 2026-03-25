@@ -13,6 +13,7 @@
 
 import type { NousAIData } from '../types';
 import pako from 'pako';
+import { log, warn } from './logger';
 import { setFirebaseRefs, startReplication, stopReplication } from '../db/replication';
 
 // ─── Firebase Config ────────────────────────────────────
@@ -81,7 +82,7 @@ let fbFns: {
 
 async function _doLoadFirebase(): Promise<boolean> {
   if (!FIREBASE_CONFIG.apiKey) {
-    console.log('NousAI: No Firebase config found, running in local mode');
+    log('NousAI: No Firebase config found, running in local mode');
     return false;
   }
 
@@ -137,7 +138,7 @@ async function _doLoadFirebase(): Promise<boolean> {
 
     return true;
   } catch (e) {
-    console.warn('NousAI: Firebase failed to load, using local mode', e);
+    warn('NousAI: Firebase failed to load, using local mode', e);
     // Reset promise so callers can retry (e.g. network was down temporarily)
     firebaseLoadPromise = null;
     return false;
@@ -254,7 +255,7 @@ export async function onAuthChange(callback: (user: AuthUser | null) => void): P
       });
       // Start RxDB ↔ Firestore per-document replication
       startReplication(fbUser.uid).catch(e =>
-        console.warn('[AUTH] RxDB replication start failed (non-fatal):', e)
+        warn('[AUTH] RxDB replication start failed (non-fatal):', e)
       );
     } else {
       callback(null);
@@ -452,9 +453,9 @@ function trimForSync(data: any): any {
 }
 
 export async function syncToCloud(uid: string, data: NousAIData): Promise<void> {
-  console.log('[AUTH] syncToCloud: loading firebase...');
+  log('[AUTH] syncToCloud: loading firebase...');
   const loaded = await loadFirebase();
-  console.log('[AUTH] syncToCloud: firebase loaded =', loaded);
+  log('[AUTH] syncToCloud: firebase loaded =', loaded);
   if (!loaded) throw new Error('Firebase not available. Check your internet connection or Firebase config.');
 
   const fb = fbFns!;
@@ -490,18 +491,21 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
   }
 
   // Strip sensitive credentials before syncing to cloud
+  // IMPORTANT: filter runs LAST so explicit empty strings aren't overwritten by spread
   const safeData = {
     ...data,
     settings: {
-      ...data.settings,
+      ...Object.fromEntries(
+        Object.entries(data.settings).filter(([k]) => {
+          const lower = k.toLowerCase();
+          return !lower.includes('token') &&
+            !lower.includes('apikey') &&
+            !lower.includes('api_key') &&
+            !lower.includes('secret');
+        })
+      ),
       canvasToken: '',   // Never sync Canvas API token to cloud
       aiProvider: data.settings.aiProvider,
-      // Strip any AI API keys from settings
-      ...(Object.fromEntries(
-        Object.entries(data.settings).filter(([k]) =>
-          !k.toLowerCase().includes('token') && !k.toLowerCase().includes('apikey') && !k.toLowerCase().includes('api_key')
-        )
-      )),
       canvasUrl: data.settings.canvasUrl, // URL is safe to sync
     },
     tutorSessions,
@@ -511,14 +515,14 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
   // Trim data to fit within Firestore 1MB document limit
   const trimmed = trimForSync(safeData);
   const json = JSON.stringify(trimmed);
-  console.log('[AUTH] syncToCloud: raw JSON =', (json.length / 1024).toFixed(1), 'KB, compressing...');
+  log('[AUTH] syncToCloud: raw JSON =', (json.length / 1024).toFixed(1), 'KB, compressing...');
   const compressed = await compressString(json);
-  console.log('[AUTH] syncToCloud: compressed =', (compressed.length / 1024).toFixed(1), 'KB');
+  log('[AUTH] syncToCloud: compressed =', (compressed.length / 1024).toFixed(1), 'KB');
 
   // Store compressed data as chunks in Firestore subcollection (avoids Cloud Storage CORS issues)
   const CHUNK_SIZE = 800_000; // ~800KB per chunk (well under 1MB Firestore limit)
   const totalChunks = Math.ceil(compressed.length / CHUNK_SIZE);
-  console.log('[AUTH] syncToCloud: splitting into', totalChunks, 'chunks');
+  log('[AUTH] syncToCloud: splitting into', totalChunks, 'chunks');
 
   try {
     // ATOMIC SYNC: Write new chunks with a versioned prefix FIRST, then swap
@@ -534,7 +538,7 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
       const chunkRef = fb.doc(firebaseDb, 'users', uid, 'sync-chunks', `${chunkPrefix}${String(i).padStart(4, '0')}`);
       await fb.setDoc(chunkRef, { data: chunk, index: i });
     }
-    console.log('[AUTH] syncToCloud: wrote', totalChunks, 'new chunks (v' + syncVersion + ')');
+    log('[AUTH] syncToCloud: wrote', totalChunks, 'new chunks (v' + syncVersion + ')');
 
     // Step 2: Atomically swap the metadata pointer to the new version
     // This is the "commit point" — after this, readers see the new data
@@ -552,7 +556,7 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
       compressed: fb.deleteField(),
       data: fb.deleteField(),
     }, { merge: true });
-    console.log('[AUTH] syncToCloud: metadata swapped to v' + syncVersion);
+    log('[AUTH] syncToCloud: metadata swapped to v' + syncVersion);
 
     // Step 3: Clean up old chunks (best-effort — if this fails, stale chunks just waste space)
     try {
@@ -565,11 +569,11 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
           staleChunks.slice(i, i + 450).forEach((d: any) => batch.delete(d.ref));
           await batch.commit();
         }
-        console.log('[AUTH] syncToCloud: cleaned up', staleChunks.length, 'old chunks');
+        log('[AUTH] syncToCloud: cleaned up', staleChunks.length, 'old chunks');
       }
     } catch (cleanupErr) {
       // Cleanup failure is non-critical — old chunks are just wasted space
-      console.warn('[AUTH] syncToCloud: old chunk cleanup failed (non-critical):', cleanupErr);
+      warn('[AUTH] syncToCloud: old chunk cleanup failed (non-critical):', cleanupErr);
     }
   } catch (e: any) {
     console.error('[AUTH] syncToCloud: write failed', e?.code, e?.message);
@@ -584,18 +588,18 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
 }
 
 export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
-  console.log('[AUTH] syncFromCloud: loading firebase...');
+  log('[AUTH] syncFromCloud: loading firebase...');
   const loaded = await loadFirebase();
-  console.log('[AUTH] syncFromCloud: firebase loaded =', loaded);
+  log('[AUTH] syncFromCloud: firebase loaded =', loaded);
   if (!loaded) throw new Error('Firebase not available. Check your internet connection or Firebase config.');
 
   const fb = fbFns!;
   const docRef = fb.doc(firebaseDb, 'users', uid);
 
   try {
-    console.log('[AUTH] syncFromCloud: reading from Firestore...');
+    log('[AUTH] syncFromCloud: reading from Firestore...');
     const snap = await fb.getDoc(docRef);
-    console.log('[AUTH] syncFromCloud: doc exists =', snap.exists());
+    log('[AUTH] syncFromCloud: doc exists =', snap.exists());
 
     if (snap.exists()) {
       const raw = snap.data();
@@ -605,7 +609,7 @@ export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
           // V2/V2.1: Read compressed data from Firestore subcollection chunks
           // V2.1 (atomic sync) uses chunkPrefix to identify the correct chunk set
           const prefix = raw.chunkPrefix || 'chunk_'; // fallback for pre-atomic V2 format
-          console.log('[AUTH] syncFromCloud: reading', raw.totalChunks, 'chunks (prefix:', prefix + ')');
+          log('[AUTH] syncFromCloud: reading', raw.totalChunks, 'chunks (prefix:', prefix + ')');
           const chunksCol = fb.collection(firebaseDb, 'users', uid, 'sync-chunks');
           const chunksSnap = await fb.getDocs(chunksCol);
           // Only read chunks matching the current version prefix
@@ -617,18 +621,24 @@ export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
             console.error('[AUTH] syncFromCloud: no chunks found with prefix', prefix, '— possible corruption');
             throw new Error('Sync data corrupted: chunks missing. Try syncing from another device.');
           }
+          if (raw.totalChunks && sorted.length !== raw.totalChunks) {
+            throw new Error(`Cloud data error: expected ${raw.totalChunks} chunks, got ${sorted.length}`);
+          }
+          sorted.forEach((c: { index: unknown }, i: number) => {
+            if (typeof c.index !== 'number') throw new Error(`Cloud data error: chunk ${i} has invalid index`);
+          });
           const compressed = sorted.map((c: any) => c.data).join('');
-          console.log('[AUTH] syncFromCloud: reassembled', (compressed.length / 1024).toFixed(1), 'KB compressed');
+          log('[AUTH] syncFromCloud: reassembled', (compressed.length / 1024).toFixed(1), 'KB compressed');
           jsonStr = decompressString(compressed);
         } else if (raw.storageSync) {
           // LEGACY V1.1: Cloud Storage (may fail without CORS config)
-          console.log('[AUTH] syncFromCloud: downloading from Cloud Storage...');
+          log('[AUTH] syncFromCloud: downloading from Cloud Storage...');
           const storagePath = fb.storageRef(firebaseStorage, `users/${uid}/sync-data.gz`);
           const url = await fb.getDownloadURL(storagePath);
           const response = await fetch(url);
           if (!response.ok) throw new Error(`Download failed: HTTP ${response.status}`);
           const arrayBuf = await response.arrayBuffer();
-          console.log('[AUTH] syncFromCloud: downloaded', (arrayBuf.byteLength / 1024).toFixed(1), 'KB raw');
+          log('[AUTH] syncFromCloud: downloaded', (arrayBuf.byteLength / 1024).toFixed(1), 'KB raw');
           const blob = new Blob([arrayBuf]);
           const ds = new DecompressionStream('gzip');
           const decompStream = blob.stream().pipeThrough(ds);
@@ -644,14 +654,14 @@ export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
           jsonStr = textChunks.join('');
         } else if (raw.compressed) {
           // LEGACY: Decompress from Firestore doc
-          console.log('[AUTH] syncFromCloud: decompressing from Firestore...');
+          log('[AUTH] syncFromCloud: decompressing from Firestore...');
           jsonStr = decompressString(raw.data);
         } else {
           // VERY OLD: Raw JSON in Firestore doc
           jsonStr = raw.data;
         }
-        console.log('[AUTH] syncFromCloud: parsed', (jsonStr.length / 1024).toFixed(1), 'KB');
-        const parsed = JSON.parse(jsonStr) as NousAIData & { tutorSessions?: Record<string, unknown> };
+        log('[AUTH] syncFromCloud: parsed', (jsonStr.length / 1024).toFixed(1), 'KB');
+        const parsed = JSON.parse(jsonStr) as NousAIData & { tutorSessions?: Record<string, unknown>; localData?: Record<string, string> };
 
         // Restore tutor sessions to localStorage
         if (parsed.tutorSessions) {
@@ -662,11 +672,11 @@ export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
         }
 
         // Restore additional localStorage data (vocab, notes, preferences, etc.)
-        if ((parsed as any).localData) {
-          for (const [key, value] of Object.entries((parsed as any).localData)) {
+        if (parsed.localData) {
+          for (const [key, value] of Object.entries(parsed.localData)) {
             try { localStorage.setItem(key, String(value)); } catch { /* skip */ }
           }
-          delete (parsed as any).localData;
+          delete parsed.localData;
         }
 
         return parsed;
@@ -870,7 +880,7 @@ export async function deleteAccount(): Promise<{ error?: string }> {
         await fb.deleteDoc(userDoc);
       } catch (firestoreErr) {
         // Non-fatal: log but proceed with auth deletion
-        console.warn('[deleteAccount] Firestore cleanup failed (proceeding with auth deletion):', firestoreErr);
+        warn('[deleteAccount] Firestore cleanup failed (proceeding with auth deletion):', firestoreErr);
       }
     }
 
@@ -964,7 +974,7 @@ export async function saveConflictBackup(uid: string, data: NousAIData, label: s
   try {
     const loaded = await loadFirebase();
     if (!loaded || !fbFns) {
-      console.warn('[BACKUP] Firebase not available — skipping conflict backup');
+      warn('[BACKUP] Firebase not available — skipping conflict backup');
       return;
     }
 
@@ -984,7 +994,7 @@ export async function saveConflictBackup(uid: string, data: NousAIData, label: s
       compressedSize: compressed.length,
     });
 
-    console.log(`[BACKUP] Saved conflict backup "${label}" (${(json.length / 1024).toFixed(1)} KB)`);
+    log(`[BACKUP] Saved conflict backup "${label}" (${(json.length / 1024).toFixed(1)} KB)`);
   } catch (e) {
     // Backup failures are non-fatal — log but don't throw
     console.error('[BACKUP] Failed to save conflict backup:', e);
@@ -1016,7 +1026,7 @@ export async function publishSharedContent(content: ShareableContent): Promise<s
       ...content,
       createdAt: new Date().toISOString(),
     });
-    console.log('[SHARE] Published content:', shareId);
+    log('[SHARE] Published content:', shareId);
     return shareId;
   } catch (e) {
     console.error('[SHARE] Failed to publish:', e);

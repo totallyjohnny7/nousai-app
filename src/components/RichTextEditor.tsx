@@ -430,7 +430,7 @@ function TableContextMenu({ editor, position, onClose }: {
     return () => document.removeEventListener('mousedown', handler);
   }, [onClose]);
 
-  const items = [
+  const items: Array<{ label: string; icon: typeof Plus | null; action: () => void; danger?: boolean }> = [
     { label: '+ Row Above', icon: Plus, action: () => editor.chain().focus().addRowBefore().run() },
     { label: '+ Row Below', icon: Plus, action: () => editor.chain().focus().addRowAfter().run() },
     { label: '+ Column Left', icon: Plus, action: () => editor.chain().focus().addColumnBefore().run() },
@@ -461,7 +461,7 @@ function TableContextMenu({ editor, position, onClose }: {
             display: 'flex', alignItems: 'center', gap: 8, width: '100%',
             padding: '6px 12px', border: 'none', background: 'none',
             cursor: 'pointer', fontSize: 12,
-            color: (item as any).danger ? '#ef4444' : 'var(--text-primary)',
+            color: item.danger ? '#ef4444' : 'var(--text-primary)',
           }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -620,6 +620,20 @@ function injectCSS() {
 
 /* ── FontSize Extension (global attribute, compatible with Color) ── */
 import { Extension, Node as TipTapNode, mergeAttributes } from '@tiptap/core';
+import type { CommandProps } from '@tiptap/core';
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    fontSizeExt: {
+      setFontSize: (size: string) => ReturnType;
+      unsetFontSize: () => ReturnType;
+    };
+    videoEmbed: {
+      setVideo: (opts: { src: string; embedType: 'video' | 'iframe' }) => ReturnType;
+    };
+  }
+}
+
 const FontSizeExt = Extension.create({
   name: 'fontSizeExt',
   addGlobalAttributes() {
@@ -639,13 +653,13 @@ const FontSizeExt = Extension.create({
   },
   addCommands() {
     return {
-      setFontSize: (size: string) => ({ chain }: any) => {
+      setFontSize: (size: string) => ({ chain }: CommandProps) => {
         return chain().setMark('textStyle', { fontSize: size }).run();
       },
-      unsetFontSize: () => ({ chain }: any) => {
+      unsetFontSize: () => ({ chain }: CommandProps) => {
         return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
       },
-    } as any;
+    };
   },
 });
 
@@ -737,9 +751,9 @@ const VideoExtension = TipTapNode.create({
 
   addCommands() {
     return {
-      setVideo: (opts: { src: string; embedType: 'video' | 'iframe' }) => ({ commands }: any) =>
+      setVideo: (opts: { src: string; embedType: 'video' | 'iframe' }) => ({ commands }: CommandProps) =>
         commands.insertContent({ type: 'videoEmbed', attrs: opts }),
-    } as any;
+    };
   },
 });
 
@@ -1236,7 +1250,7 @@ export default function RichTextEditor({
   }, [editor]);
 
   const insertVideo = useCallback((src: string, embedType: 'video' | 'iframe') => {
-    (editor?.chain().focus() as any).setVideo({ src, embedType }).run();
+    editor?.chain().focus().setVideo({ src, embedType }).run();
   }, [editor]);
 
   const addImage = useCallback(() => {
@@ -1307,8 +1321,8 @@ export default function RichTextEditor({
           value={currentFontSize}
           options={FONT_SIZES}
           onChange={v => {
-            if (v) (editor.chain().focus() as any).setFontSize(v).run();
-            else (editor.chain().focus() as any).unsetFontSize().run();
+            if (v) editor.chain().focus().setFontSize(v).run();
+            else editor.chain().focus().unsetFontSize().run();
           }}
           title="Font Size"
           width={70}
@@ -1685,7 +1699,7 @@ export default function RichTextEditor({
       )}
 
       {/* ── Editor Content ──────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: 'auto', ['--editor-min-height' as any]: `${minHeight}px` }}>
+      <div style={{ flex: 1, overflowY: 'auto', ['--editor-min-height' as string & {}]: `${minHeight}px` }}>
         <EditorContent editor={editor} />
       </div>
 

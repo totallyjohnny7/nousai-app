@@ -572,7 +572,7 @@ export default function StudyAnnotationSidecar({
     setActiveSession(s);
     setCanvasData(null);
     if (s.canvasKey) {
-      loadFile(s.canvasKey).then(d => { if (d) setCanvasData(d); });
+      loadFile(s.canvasKey).then(d => { if (d) setCanvasData(d); }).catch(console.error);
     }
   }, [questionId, questionText, subject, getOrCreate]);
 
@@ -664,7 +664,7 @@ export default function StudyAnnotationSidecar({
     setTextDraft(session.textContent ?? '');
     setCanvasData(null);
     if (session.canvasKey) {
-      loadFile(session.canvasKey).then(d => { if (d) setCanvasData(d); });
+      loadFile(session.canvasKey).then(d => { if (d) setCanvasData(d); }).catch(console.error);
     }
     setTab('draw');
   }, []);

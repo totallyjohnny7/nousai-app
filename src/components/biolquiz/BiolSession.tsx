@@ -8,6 +8,7 @@ import { ChevronRight, SkipForward, X, Clock } from 'lucide-react'
 import type { BiolSession, BiolQuestion, BiolAnswer, BiolSessionMode } from './types'
 import { TOPIC_LABELS, TOPIC_COLORS } from './types'
 import { callAI, isAIConfigured } from '../../utils/ai'
+import { formatTime } from '../../utils/formatTime'
 
 interface Props {
   session: BiolSession
@@ -17,13 +18,6 @@ interface Props {
 }
 
 const TIMED_DURATION_MS = 10 * 60 * 1000 // 10 minutes
-
-function formatTime(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000))
-  const m = Math.floor(totalSeconds / 60)
-  const s = totalSeconds % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
 
 export default function BiolSession({ session, questions, onFinish, onQuit }: Props) {
   const qMap = useMemo(() => {

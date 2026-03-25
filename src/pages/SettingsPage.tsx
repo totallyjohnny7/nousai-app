@@ -7,6 +7,7 @@ import {
   AlertTriangle, Settings, Shield, Clock, Minus, Plus, ExternalLink, FolderPlus,
   Bell, Mic, Sun, Clipboard, HardDrive, FileText, Wifi, Headphones, Keyboard
 } from 'lucide-react'
+import type { NousAIData, Course } from '../types'
 import { useStore, saveBackupHandle, loadBackupHandle, clearBackupHandle } from '../store'
 import { checkForUpdates, getAppVersion, getStoredUpdate, dismissUpdate, getPlatform } from '../utils/updater'
 import { signUp, signIn, logOut, onAuthChange, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, saveOmiConfig, type AuthUser } from '../utils/auth'
@@ -716,7 +717,7 @@ export default function SettingsPage() {
 
   async function handlePickBackupFolder() {
     try {
-      const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+      const handle = await (window as unknown as { showDirectoryPicker: (opts: { mode: string }) => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker({ mode: 'readwrite' });
       await saveBackupHandle(handle);
       setBackupFolder(handle.name);
       localStorage.setItem('nousai-auto-backup', 'true');
@@ -776,7 +777,7 @@ export default function SettingsPage() {
     const local = getAIConfig()
     // If no API key in localStorage, try cloud copy (loaded after store hydration)
     if (!local.apiKey && !local.provider || local.provider === 'none') {
-      const cloud = (data as any)?.pluginData?.aiSettings as { provider: string; apiKey: string; model: string; baseUrl?: string; customModel?: string } | undefined
+      const cloud = (data?.pluginData as Record<string, unknown>)?.aiSettings as { provider: string; apiKey: string; model: string; baseUrl?: string; customModel?: string } | undefined
       if (cloud?.apiKey && cloud.provider && cloud.provider !== 'none') {
         // Restore to localStorage so the app-level AI utils can use it immediately
         localStorage.setItem('nousai-ai-provider', cloud.provider)
@@ -1064,7 +1065,7 @@ export default function SettingsPage() {
         return
       }
     }
-    setData(createBlankWorkspace() as any)
+    setData(createBlankWorkspace() as NousAIData)
     showToast('Blank workspace created!')
   }
 
@@ -1206,12 +1207,12 @@ export default function SettingsPage() {
   const stats = data ? {
     quizzes: data.pluginData?.quizHistory?.length || 0,
     courses: data.pluginData?.coachData?.courses?.length || 0,
-    flashcards: data.pluginData?.coachData?.courses?.reduce((sum: number, c: any) => sum + (c.flashcards?.length || 0), 0) || 0,
+    flashcards: data.pluginData?.coachData?.courses?.reduce((sum: number, c: Course) => sum + (c.flashcards?.length || 0), 0) || 0,
     events: data.settings?.canvasEvents?.length || 0,
     srCards: data.pluginData?.srData?.cards?.length || 0,
-    notes: (data.pluginData as any)?.notes?.length || 0,
-    drawings: (data.pluginData as any)?.drawings?.length || 0,
-    matchSets: (data.pluginData as any)?.matchSets?.length || 0,
+    notes: data.pluginData?.notes?.length || 0,
+    drawings: data.pluginData?.drawings?.length || 0,
+    matchSets: data.pluginData?.matchSets?.length || 0,
     size: new Blob([JSON.stringify(data)]).size,
   } : null
 
@@ -3521,7 +3522,7 @@ export default function SettingsPage() {
               </p>
               <button className="btn btn-sm" style={{ background: '#f59e0b', color: '#000', border: 'none', fontWeight: 700 }} onClick={async () => {
                 const { injectTestData } = await import('../utils/testData');
-                injectTestData(setData as any);
+                injectTestData(setData as (d: NousAIData) => void);
                 showToast('Sample data loaded! Explore all features now.');
               }}>
                 <Zap size={13} /> Load Test Data

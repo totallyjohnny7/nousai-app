@@ -27,6 +27,7 @@ import { callAI, isAIConfigured } from '../utils/ai';
 import RichTextEditor, { markdownToHtml, htmlToMarkdown } from '../components/RichTextEditor';
 import { sanitizeHtml } from '../utils/sanitize';
 import { exportNoteAsMarkdown, exportAllNotesAsMarkdown, exportQuizzesAsCSV, exportFlashcardsAsAnki, exportNoteAsLatex } from '../utils/exportFormats';
+import { formatDate } from '../components/course/courseHelpers';
 
 /* ── Types ──────────────────────────────────────────── */
 interface Note {
@@ -52,11 +53,6 @@ type LibraryTab = 'courses' | 'notes' | 'drawings' | 'study' | 'annotations';
 /* ── Helpers ────────────────────────────────────────── */
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function formatDateShort(iso: string): string {
@@ -239,8 +235,8 @@ export default function LibraryPage() {
     }
     list.sort((a, b) => {
       // Pinned notes always first (beta)
-      if ((a as any).pinned && !(b as any).pinned) return -1;
-      if (!(a as any).pinned && (b as any).pinned) return 1;
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
       let cmp = 0;
       if (sortKey === 'name') cmp = a.title.localeCompare(b.title);
       else if (sortKey === 'date') cmp = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
@@ -478,7 +474,7 @@ export default function LibraryPage() {
     queueMicrotask(() => setView('list'));
   }
   if (activeTab === 'notes' && view === 'viewer' && selectedNote) {
-    return <NoteViewer note={selectedNote} onBack={() => { setView('list'); }} onEdit={() => setView('editor')} onDelete={() => deleteNote(selectedNote.id)} onDuplicate={() => duplicateNote(selectedNote)} onExport={() => exportNote(selectedNote)} onExportLatex={() => exportNoteAsLatex(selectedNote as any)} onUpdate={(updated) => persistNotes(notes.map(n => n.id === updated.id ? updated : n))} />;
+    return <NoteViewer note={selectedNote} onBack={() => { setView('list'); }} onEdit={() => setView('editor')} onDelete={() => deleteNote(selectedNote.id)} onDuplicate={() => duplicateNote(selectedNote)} onExport={() => exportNote(selectedNote)} onExportLatex={() => exportNoteAsLatex(selectedNote)} onUpdate={(updated) => persistNotes(notes.map(n => n.id === updated.id ? updated : n))} />;
   }
 
   if (activeTab === 'notes' && view === 'editor') {
@@ -568,7 +564,7 @@ export default function LibraryPage() {
             borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 800,
             marginLeft: 2,
           }}>
-            {(data?.pluginData?.drawings as any[])?.length || 0}
+            {data?.pluginData?.drawings?.length || 0}
           </span>
         </button>
         <button
@@ -1312,15 +1308,15 @@ export default function LibraryPage() {
                       )}
                     </div>
                     <button
-                        title={(note as any).pinned ? 'Unpin' : 'Pin to top'}
+                        title={note.pinned ? 'Unpin' : 'Pin to top'}
                         onClick={e => {
                           e.stopPropagation();
-                          const updated = notes.map(n => n.id === note.id ? { ...n, pinned: !(n as any).pinned } : n)
+                          const updated = notes.map(n => n.id === note.id ? { ...n, pinned: !n.pinned } : n)
                           updatePluginData({ notes: updated })
                         }}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer',
-                          color: (note as any).pinned ? 'var(--color-accent, #F5A623)' : 'var(--text-muted)',
+                          color: note.pinned ? 'var(--color-accent, #F5A623)' : 'var(--text-muted)',
                           padding: 4, flexShrink: 0, fontSize: 13,
                         }}
                       >📌</button>
@@ -1513,7 +1509,7 @@ function AnnotationsTab() {
       if (s.canvasKey && !canvasCache[s.canvasKey]) {
         loadFile(s.canvasKey).then(data => {
           if (data) setCanvasCache(prev => ({ ...prev, [s.canvasKey!]: data }));
-        });
+        }).catch(console.error);
       }
     }
   }, [sessions]); // eslint-disable-line react-hooks/exhaustive-deps
