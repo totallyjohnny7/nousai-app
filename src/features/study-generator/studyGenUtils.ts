@@ -167,8 +167,20 @@ CRITICAL OUTPUT RULES — FOLLOW EXACTLY:
 1. Output ONLY raw HTML. Start with <!DOCTYPE html>. End with </html>.
 2. ZERO markdown. ZERO code fences. ZERO explanations. Just HTML.
 3. All CSS in <style> in <head>. All JS in <script> before </body>.
-4. No external scripts, fonts, or resources. Everything inline.
-5. File works 100% offline after download.
+4. EXCEPTION to "no external": include KaTeX CSS+JS from CDN for math rendering:
+   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+   Then at bottom of body: <script>renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});</script>
+5. For math/formulas: use $...$ (inline) and $$...$$ (display) LaTeX notation. KaTeX will render them.
+6. File works offline after download (except KaTeX CDN, which caches).
+
+LANGUAGE & FORMAT SUPPORT:
+- Add <meta charset="UTF-8"> in <head> for full Unicode support.
+- For Japanese content: use <span lang="ja"> for Japanese text. Include furigana with <ruby>漢字<rt>かんじ</rt></ruby>.
+- For code/programming content: use <pre><code> with syntax highlighting via inline CSS.
+- For chemical formulas: use subscript/superscript HTML (H<sub>2</sub>O).
+- For musical notation or special symbols: use Unicode directly.
 
 APPLIED SETTINGS:
 - TONE: ${toneMap[s.profanity]}
@@ -248,6 +260,13 @@ document.getElementById('dl-btn')?.addEventListener('click', () => {
 });
 </script>
 
+COMPLETENESS REQUIREMENT (CRITICAL):
+- Extract EVERY vocabulary term, concept, keyword, definition, formula, and proper noun from the source material.
+- At the END of the guide, add a "COMPLETE TERM INDEX" section: a filterable alphabetical table with columns: Term | Definition | Section.
+- This index must list EVERY term from the source — nothing omitted. If the source has 50 terms, the index has 50+ rows.
+- For language courses: include ALL vocab words with readings/translations, ALL grammar points, ALL conjugation patterns.
+- The index section should have data-section="term-index" and a corresponding filter button.
+
 QUALITY CHECKLIST:
 [ ] Every .card has an SVG in .pv with real structural content
 [ ] No SVG text overlaps
@@ -255,6 +274,7 @@ QUALITY CHECKLIST:
 [ ] Every concept has a mnemonic in the specified tone format
 [ ] Trap boxes on every potential misconception
 [ ] Trap summary box at bottom lists all traps numbered
+[ ] COMPLETE TERM INDEX at bottom with EVERY term from source
 [ ] Download button with id="dl-btn" present
 [ ] Valid HTML — all tags closed`
 }

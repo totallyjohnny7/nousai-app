@@ -142,11 +142,39 @@ export default function NousaiStudyGenerator() {
 
   const download = () => {
     const blob = new Blob([genHTML], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    // Use link click for desktop, window.open fallback for mobile/iOS
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
+    a.href = url
     a.download = `nousai_study_guide_${Date.now()}.html`
+    a.style.display = 'none'
+    document.body.appendChild(a)
     a.click()
-    URL.revokeObjectURL(a.href)
+    // Fallback: if click didn't trigger download (iOS Safari), open in new tab
+    setTimeout(() => {
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    }, 1000)
+  }
+
+  const saveToLibrary = () => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('nousai-study-guides') || '[]')
+      const title = genHTML.match(/<h1[^>]*>(.*?)<\/h1>/i)?.[1]?.replace(/<[^>]*>/g, '') || 'Study Guide'
+      existing.unshift({
+        id: crypto.randomUUID(),
+        title,
+        html: genHTML,
+        createdAt: new Date().toISOString(),
+        model,
+      })
+      // Keep max 20 guides
+      if (existing.length > 20) existing.length = 20
+      localStorage.setItem('nousai-study-guides', JSON.stringify(existing))
+      alert(`Saved "${title}" to library!`)
+    } catch (e) {
+      alert('Failed to save — study guide may be too large for localStorage.')
+    }
   }
 
   const regenerateSection = async (secId: string) => {
@@ -205,7 +233,10 @@ export default function NousaiStudyGenerator() {
             </button>
             {phase === 'done' && (
               <>
-                <button className="btn btn-primary btn-sm" onClick={download}><Download size={14} /> Download HTML</button>
+                <button className="btn btn-primary btn-sm" onClick={download}><Download size={14} /> Download</button>
+                <button className="btn btn-sm" style={{ background: 'var(--accent-color, #F5A623)', color: '#000', border: 'none' }} onClick={saveToLibrary}>
+                  <FileText size={14} /> Save to Library
+                </button>
                 <button className="btn btn-ghost btn-sm" onClick={() => { setGenHTML(''); setPhase('idle'); setSections([]) }}>
                   <X size={14} /> Reset
                 </button>
