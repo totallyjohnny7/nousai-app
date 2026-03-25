@@ -307,13 +307,14 @@ export const PALETTES = [
 
 /* ── Model Options ────────────────────────────────────────── */
 export const MODELS = [
-  { id: 'google/gemini-2.5-flash-preview', label: 'Gemini 2.5 Flash (recommended)' },
-  { id: 'google/gemini-2.5-pro-preview', label: 'Gemini 2.5 Pro (highest quality)' },
-  { id: 'mistralai/mistral-small-latest', label: 'Mistral Small (fast/cheap)' },
-  { id: 'mistralai/mistral-large-latest', label: 'Mistral Large' },
-  { id: 'openai/gpt-4o-mini', label: 'GPT-4o Mini' },
-  { id: 'openai/gpt-4o', label: 'GPT-4o' },
+  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash (recommended)' },
+  { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (highest quality)' },
   { id: 'anthropic/claude-sonnet-4', label: 'Claude Sonnet 4' },
   { id: 'anthropic/claude-haiku-3.5', label: 'Claude 3.5 Haiku (fast)' },
-  { id: 'google/gemini-2.0-flash-001', label: 'Gemini 2.0 Flash (legacy)' },
+  { id: 'openai/gpt-4o', label: 'GPT-4o' },
+  { id: 'openai/gpt-4o-mini', label: 'GPT-4o Mini (budget)' },
+  { id: 'openai/o3-mini', label: 'o3-mini (reasoning)' },
+  { id: 'mistralai/mistral-small', label: 'Mistral Small (fast/cheap)' },
+  { id: 'mistralai/mistral-large', label: 'Mistral Large 2' },
+  { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B (free tier)' },
 ]
