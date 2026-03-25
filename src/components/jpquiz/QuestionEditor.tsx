@@ -599,8 +599,9 @@ export default function QuestionEditor({ questions, onChange, onBack }: Props) {
             style={{
               background: 'var(--bg-card)', border: '1px solid var(--border-color)',
               borderRadius: 12, padding: 24, width: '100%', maxWidth: 520,
-              maxHeight: '85vh', overflowY: 'auto',
+              maxHeight: '80vh', overflowY: 'auto',
               boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              marginTop: 'auto', marginBottom: 'auto',
             }}
           >
             {/* Header */}

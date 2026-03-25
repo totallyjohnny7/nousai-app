@@ -29,7 +29,7 @@ function getStoredApiKey(): string {
 /* ── Component ──────────────────────────────────────────── */
 export default function NousaiStudyGenerator() {
   const [apiKey, setApiKey] = useState(getStoredApiKey)
-  const [model, setModel] = useState('google/gemini-2.5-flash-lite')
+  const [model, setModel] = useState('openai/gpt-5.4-mini')
   const [files, setFiles] = useState<FileEntry[]>([])
   const [paste, setPaste] = useState('')
   const [settings, setSettings] = useState<GenSettings>({
