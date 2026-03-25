@@ -22,6 +22,7 @@ import { detectDeviceProfile } from './utils/deviceDetection'
 import { useAuthUser } from './hooks/useAuthUser'
 import { streamDeckService, StreamDeckService } from './utils/streamDeckService'
 import { useK20Hotkeys } from './hooks/useK20Hotkeys'
+import GlobalIme from './components/GlobalIme'
 import './App.css'
 
 /* ── Error Boundary to prevent blank page crashes ──── */
@@ -757,6 +758,9 @@ export default function App() {
 
       {/* Floating AI assistant panel — persists across all routes */}
       <NousPanel open={nousChatOpen} onOpenChange={setNousChatOpen} />
+
+      {/* Global Japanese IME — Alt+J cycles: Off → Hiragana → Katakana */}
+      <GlobalIme />
 
       {/* Floating mic indicator — shows on any page while Transcribe is recording */}
       <FloatingTranscribeIndicator />
