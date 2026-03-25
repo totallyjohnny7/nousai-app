@@ -10,6 +10,7 @@ import Onboarding from './pages/Onboarding'
 import NousLogo from './components/Logo'
 import NousPanel from './components/NousPanel'
 import OmniSearch from './components/OmniSearch'
+import { useEscapePriority } from './hooks/useEscapePriority'
 import SyncStatusBanner from './components/SyncStatusBanner'
 import SyncStatusIndicator from './components/SyncStatusIndicator'
 import {
@@ -291,6 +292,9 @@ export default function App() {
   }, [uid])
   const [omniSearchOpen, setOmniSearchOpen] = useState(false)
   const [shortcutOverlayOpen, setShortcutOverlayOpen] = useState(false)
+  const [nousChatOpen, setNousChatOpen] = useState(() => {
+    try { const s = JSON.parse(localStorage.getItem('nous-chat-window') || '{}'); return s.state && s.state !== 'hidden' } catch { return false }
+  })
   const [focusMode, setFocusMode] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [storageWarning, setStorageWarning] = useState(false)
@@ -301,6 +305,12 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem('nousai-sidebar-collapsed', String(sidebarCollapsed)) } catch {}
   }, [sidebarCollapsed])
+  useEscapePriority({
+    modalOpen: omniSearchOpen || shortcutOverlayOpen,
+    nousChatOpen,
+    closeNousChat: () => setNousChatOpen(false),
+  })
+
   const updateRef = useRef(updatePluginData)
   const dataRef = useRef(data)
   updateRef.current = updatePluginData
@@ -717,7 +727,7 @@ export default function App() {
       </main>
 
       {/* Floating AI assistant panel — persists across all routes */}
-      <NousPanel />
+      <NousPanel open={nousChatOpen} onOpenChange={setNousChatOpen} />
 
       {/* Floating mic indicator — shows on any page while Transcribe is recording */}
       <FloatingTranscribeIndicator />

@@ -1096,35 +1096,6 @@ div[data-video-embed] video {
   background: #000;
 }
 
-/* ── NousPanel — Floating mode ───────────────────────── */
-.nous-panel--floating {
-  position: fixed !important;
-  right: unset !important;
-  top: 0 !important;
-  width: 360px !important;
-  height: auto !important;
-  max-height: 80vh;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  z-index: 9999;
-  overflow: hidden;
-}
-
-/* When floating but closed, the inline transform overrides translateX(100%) — hide it explicitly */
-.nous-panel--floating:not(.nous-panel--open) {
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.nous-panel-drag-handle {
-  cursor: grab;
-  user-select: none;
-}
-
-.nous-panel-drag-handle:active {
-  cursor: grabbing;
-}
-
 /* ── NousPanel — Settings drawer ─────────────────────── */
 .nous-panel-settings {
   padding: 10px 14px;
