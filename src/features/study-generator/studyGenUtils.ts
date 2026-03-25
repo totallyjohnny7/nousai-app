@@ -307,10 +307,13 @@ export const PALETTES = [
 
 /* ── Model Options ────────────────────────────────────────── */
 export const MODELS = [
-  { id: 'google/gemini-2.0-flash-001', label: 'Gemini 2.0 Flash (recommended)' },
-  { id: 'google/gemini-2.5-flash-preview', label: 'Gemini 2.5 Flash Preview' },
-  { id: 'google/gemini-flash-1.5-8b', label: 'Gemini 1.5 Flash 8B (fast/cheap)' },
-  { id: 'google/gemini-pro-1.5', label: 'Gemini Pro 1.5 (high quality)' },
+  { id: 'google/gemini-2.5-flash-preview', label: 'Gemini 2.5 Flash (recommended)' },
+  { id: 'google/gemini-2.5-pro-preview', label: 'Gemini 2.5 Pro (highest quality)' },
+  { id: 'mistralai/mistral-small-latest', label: 'Mistral Small (fast/cheap)' },
+  { id: 'mistralai/mistral-large-latest', label: 'Mistral Large' },
   { id: 'openai/gpt-4o-mini', label: 'GPT-4o Mini' },
-  { id: 'anthropic/claude-3-haiku', label: 'Claude 3 Haiku' },
+  { id: 'openai/gpt-4o', label: 'GPT-4o' },
+  { id: 'anthropic/claude-sonnet-4', label: 'Claude Sonnet 4' },
+  { id: 'anthropic/claude-haiku-3.5', label: 'Claude 3.5 Haiku (fast)' },
+  { id: 'google/gemini-2.0-flash-001', label: 'Gemini 2.0 Flash (legacy)' },
 ]

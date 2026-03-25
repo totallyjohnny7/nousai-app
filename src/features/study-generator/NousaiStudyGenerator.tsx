@@ -29,7 +29,7 @@ function getStoredApiKey(): string {
 /* ── Component ──────────────────────────────────────────── */
 export default function NousaiStudyGenerator() {
   const [apiKey, setApiKey] = useState(getStoredApiKey)
-  const [model, setModel] = useState('google/gemini-2.0-flash-001')
+  const [model, setModel] = useState('google/gemini-2.5-flash-preview')
   const [files, setFiles] = useState<FileEntry[]>([])
   const [paste, setPaste] = useState('')
   const [settings, setSettings] = useState<GenSettings>({
