@@ -894,7 +894,7 @@ export interface OmniProtocolData {
   lastSessionId?: string;
 }
 
-// ─── Omni V6.1 Adaptive + Crisis Types ────────────────────────────────────────
+// ─── Omni V6.1+ Adaptive & Crisis Types ──────────────────────────────────────
 
 export interface OmniAdaptiveAllocation {
   phase1_prime: number;
@@ -905,19 +905,19 @@ export interface OmniAdaptiveAllocation {
   phase5_break: number;
   phase6_test: number;
   phase7_anchor: number;
-  adaptationNote: string;
+  adaptationNote?: string;
 }
 
 export interface OmniMCQuestion {
   q: string;
   options: string[];
   correct: number;
-  difficulty: 'easy' | 'medium' | 'hard';
-  bloomsLevel: 'Remember' | 'Apply' | 'Analyze' | 'Evaluate';
+  difficulty?: 'easy' | 'medium' | 'hard';
+  bloomsLevel?: 'Remember' | 'Apply' | 'Analyze' | 'Evaluate';
   targetTopic: string;
 }
 
-export type OmniCrisisErrorType = 'confusion' | 'conceptual' | 'procedural' | 'careless';
+export type OmniCrisisErrorType = 'conceptual' | 'procedural' | 'confusion' | 'careless';
 
 export interface OmniCrisisMCAnswer {
   selectedOption: number;
@@ -926,7 +926,19 @@ export interface OmniCrisisMCAnswer {
   targetTopic: string;
 }
 
-export type OmniCrisisAdaptiveAllocation = OmniAdaptiveAllocation;
+export interface OmniCrisisAdaptiveAllocation extends OmniAdaptiveAllocation {
+  mnemonicTopics?: string[];
+}
+
+/** Inline card type for suspended session serialization (avoids circular import with OmniProtocol) */
+interface OmniSuspendedCard {
+  courseId: string;
+  courseName: string;
+  front: string;
+  back: string;
+  topic?: string;
+  grade?: 1 | 2 | 3 | 4;
+}
 
 /** Serialized snapshot of a suspended Omni session (saved to IDB for resume) */
 export interface OmniSuspendedSession {
@@ -941,13 +953,20 @@ export interface OmniSuspendedSession {
   durationConfig: { durationMin: number; cycleCount: number; extended: boolean };
   sessionPlan: OmniSessionPlan | null;
   phaseResults: OmniPhaseResult[];
-  motivationState: unknown;
+  motivationState: {
+    consecutiveLowPhases: number;
+    inCollapseMode: boolean;
+    collapseEnteredAt?: string;
+    consecutiveCorrectSinceCollapse: number;
+    xpRevealMultiplier: number;
+    motivationResets: number;
+  };
   totalXp: number;
   sessionStartedAt: number;
   timeRemaining: number;
-  phaseCards: unknown[];
+  phaseCards: OmniSuspendedCard[];
   currentCardIdx: number;
-  gradedCards: unknown[];
+  gradedCards: OmniSuspendedCard[];
   phaseCorrect: number;
   phaseTotal: number;
   whyChainAssessment: Record<string, 'ok' | 'unclear'>;
@@ -957,6 +976,24 @@ export interface OmniSuspendedSession {
   manualQuizQuestions?: ManualMCQuestion[];
   manualExamQuestions?: ManualExamQuestion[];
   manualContentMode?: 'supplement' | 'replace';
+  rawStudyGuide: string;
+  guideSummary: string;
+  guideKeywords: string[];
+  guideMainTopics: string[];
+  mcQuestions: OmniMCQuestion[];
+  mcAnswers: Record<number, number>;
+  adaptiveAllocation: OmniAdaptiveAllocation | null;
+  usedStudyGuide: boolean;
+  crisisMode: boolean;
+  crisisAnswers: OmniCrisisMCAnswer[];
+  tieredTopics: { tier1: string[]; tier2: string[]; tier3: string[] } | null;
+  currentCrisisDay: 1 | 2;
+  currentCrisisCycle: number;
+  anchorSentences: string[];
+  examDateTime: string | null;
+  availableSources: string[];
+  userConfidence: Record<number, 'sure' | 'guess'>;
+  mnemonicTopics: string[];
   [key: string]: unknown;
 }
 

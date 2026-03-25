@@ -1127,12 +1127,13 @@ function OmniProtocolInner({ onComplete, onClose }: OmniProps) {
     const snap = suspendedSession;
     const course = courses.find(c => c.id === snap.selectedCourseId);
     const elapsed = Math.round((new Date(snap.savedAt).getTime() - snap.sessionStartedAt) / 60000);
-    const screenLabel = snap.screen.screen === 'running'
-      ? `Phase ${((snap.screen.phaseIdx as number) ?? 0) + 1}, Cycle ${((snap.screen.cycleIdx as number) ?? 0) + 1}`
-      : snap.screen.screen === 'wizard' ? `Setup step ${snap.screen.step ?? 1}`
-      : snap.screen.screen === 'crisis-wizard' ? `Crisis Mode — ${snap.screen.step ?? 'C1'}`
-      : snap.screen.screen === 'interstitial' ? 'Break between cycles'
-      : snap.screen.screen;
+    const sScreen = snap.screen as { screen: string; phaseIdx?: number; cycleIdx?: number; step?: number | string };
+    const screenLabel = sScreen.screen === 'running'
+      ? `Phase ${(sScreen.phaseIdx ?? 0) + 1}, Cycle ${(sScreen.cycleIdx ?? 0) + 1}`
+      : sScreen.screen === 'wizard' ? `Setup step ${sScreen.step ?? 1}`
+      : sScreen.screen === 'crisis-wizard' ? `Crisis Mode — ${sScreen.step ?? 'C1'}`
+      : sScreen.screen === 'interstitial' ? 'Break between cycles'
+      : sScreen.screen;
     const savedAgo = Math.round((Date.now() - new Date(snap.savedAt).getTime()) / 60000);
     const savedAgoLabel = savedAgo < 60 ? `${savedAgo}m ago` : `${Math.floor(savedAgo / 60)}h ${savedAgo % 60}m ago`;
 
