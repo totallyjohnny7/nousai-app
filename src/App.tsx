@@ -706,10 +706,6 @@ export default function App() {
               </div>
             )
           })()}
-          <SyncStatusIndicator status={syncStatus} lastSyncAt={lastSyncAt} />
-          <NavLink to="/settings" className="sidebar-item" style={{ fontSize: 12, color: 'var(--text-muted)' }} title={sidebarCollapsed ? 'Sync Data' : undefined}>
-            <Upload size={14} /><span className="sidebar-label"> Sync Data</span>
-          </NavLink>
         </div>
       </nav>
 
