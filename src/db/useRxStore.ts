@@ -172,13 +172,15 @@ export async function loadFromRxDB(): Promise<NousAIData | null> {
 let lastSavedHash: Record<string, string> = {};
 
 function quickHash(obj: unknown): string {
-  // Fast hash for change detection — not cryptographic, just for diffing
+  // Dual 32-bit hash + length for change detection (effectively 64-bit, collision-safe to ~4B states)
   const str = JSON.stringify(obj);
-  let hash = 0;
+  let h1 = 0, h2 = 0x9e3779b9; // h2 seeded with golden ratio
   for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+    const c = str.charCodeAt(i);
+    h1 = ((h1 << 5) - h1 + c) | 0;
+    h2 = ((h2 << 7) ^ h2 ^ c) | 0;
   }
-  return String(hash);
+  return `${h1}_${h2}_${str.length}`;
 }
 
 export async function saveToRxDB(data: NousAIData): Promise<void> {
@@ -245,15 +247,26 @@ export async function saveToRxDB(data: NousAIData): Promise<void> {
 
   for (const { key, collection, items } of arrayCollections) {
     const hash = quickHash(items);
-    if (hash !== lastSavedHash[key] && items.length > 0) {
-      await (db as any)[collection].bulkUpsert(
-        items.map((item: any, i: number) => ({
-          ...item,
-          id: item.id || `${key}_${String(i).padStart(6, '0')}`,
-          updatedAt: item.updatedAt || now,
-          createdAt: item.createdAt || now,
-        }))
-      );
+    if (hash !== lastSavedHash[key]) {
+      // Upsert current items
+      if (items.length > 0) {
+        await (db as any)[collection].bulkUpsert(
+          items.map((item: any, i: number) => ({
+            ...item,
+            id: item.id || `${key}_${String(i).padStart(6, '0')}`,
+            updatedAt: item.updatedAt || now,
+            createdAt: item.createdAt || now,
+          }))
+        );
+      }
+      // Delete items removed from the array (same pattern as courses)
+      const currentIds = new Set(items.map((item: any, i: number) => item.id || `${key}_${String(i).padStart(6, '0')}`));
+      const existing = await (db as any)[collection].find().exec();
+      for (const doc of existing) {
+        if (!currentIds.has(doc.id)) {
+          await doc.remove();
+        }
+      }
       lastSavedHash[key] = hash;
     }
   }

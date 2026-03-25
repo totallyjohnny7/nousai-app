@@ -431,16 +431,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
 
       // Check crash-recovery data from a follower tab that closed
+      // Only use crash recovery if it has MORE content than what we loaded (prevents stale overwrites)
       const crashRecovery = localStorage.getItem('nousai-crash-recovery');
-      const crashAt = localStorage.getItem('nousai-crash-recovery-at');
-      const idbModified = localStorage.getItem('nousai-data-modified-at');
-      if (crashRecovery && crashAt && (!idbModified || crashAt > idbModified)) {
+      if (crashRecovery) {
         try {
           const recovered = JSON.parse(crashRecovery) as NousAIData;
           if (recovered?.pluginData?.coachData) {
-            d = recovered;
-            source = 'crash-recovery';
-            log('[STORE] Restored from crash-recovery (follower tab that closed)');
+            // Compare content richness: use crash recovery only if it has more data
+            const currentCourses = d?.pluginData?.coachData?.courses?.length ?? 0;
+            const currentCards = d?.pluginData?.srData?.cards?.length ?? 0;
+            const recoveredCourses = recovered.pluginData?.coachData?.courses?.length ?? 0;
+            const recoveredCards = recovered.pluginData?.srData?.cards?.length ?? 0;
+            const currentScore = currentCourses * 100 + currentCards;
+            const recoveredScore = recoveredCourses * 100 + recoveredCards;
+            if (recoveredScore > currentScore) {
+              d = recovered;
+              source = 'crash-recovery';
+              log('[STORE] Restored from crash-recovery — had more data than IDB/RxDB');
+            } else {
+              log('[STORE] Skipped crash-recovery — IDB/RxDB data is richer or equal');
+            }
           }
         } catch { /* corrupt crash recovery data — ignore */ }
       }
