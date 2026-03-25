@@ -3,7 +3,7 @@ import { Layers, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStore } from '../../store';
 import { callAI, isAIConfigured } from '../../utils/ai';
 import type { Note } from '../../types';
-import { selectStyle } from './shared';
+import { selectStyle, TRANSPARENCY_LEVELS, getTransparencyPrompt, type TransparencyLevel } from './shared';
 import { ToolErrorBoundary } from '../ToolErrorBoundary';
 import { parseJsonArray } from '../../utils/parseJson';
 
@@ -333,6 +333,7 @@ function FlashcardGenTool() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [transparency, setTransparency] = useState<TransparencyLevel>('standard');
 
   const notes = data?.pluginData?.notes || [];
   const activeFmt = CARD_FORMATS.find(f => f.id === selectedFormat) ?? CARD_FORMATS[0];
@@ -348,7 +349,8 @@ function FlashcardGenTool() {
     setCards([]);
 
     try {
-      const prompt = activeFmt.buildPrompt(note.title, note.content.slice(0, 4000));
+      const basePrompt = activeFmt.buildPrompt(note.title, note.content.slice(0, 4000));
+      const prompt = basePrompt + getTransparencyPrompt(transparency);
       const response = await callAI([{ role: 'user', content: prompt }], {}, 'generation');
       const parsed = parseJsonArray(response);
       if (!parsed || parsed.length === 0) {
@@ -433,6 +435,15 @@ function FlashcardGenTool() {
             </div>
 
             <FormatPicker selected={selectedFormat} onSelect={setSelectedFormat} />
+
+            <div style={{ marginBottom: 8 }}>
+              <label className="text-xs text-muted" style={{ display: 'block', marginBottom: 4 }}>Transparency Level</label>
+              <select value={transparency} onChange={e => setTransparency(e.target.value as TransparencyLevel)} style={selectStyle}>
+                {TRANSPARENCY_LEVELS.map(t => (
+                  <option key={t.id} value={t.id}>{t.label} — {t.desc}</option>
+                ))}
+              </select>
+            </div>
 
             <button
               className="btn btn-primary w-full"
