@@ -24,15 +24,6 @@ registerSW({
   },
 })
 
-// MSW: Mock AI responses in dev when NOUSAI_MOCK_AI=true in localStorage
-async function enableMocking() {
-  if (import.meta.env.PROD || localStorage.getItem('NOUSAI_MOCK_AI') !== 'true') return
-  const { worker } = await import('./mocks/browser')
-  return worker.start({ onUnhandledRequest: 'bypass' })
-}
-
-enableMocking().then(() => {
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>
@@ -42,5 +33,3 @@ createRoot(document.getElementById('root')!).render(
     </HashRouter>
   </StrictMode>
 )
-
-})
