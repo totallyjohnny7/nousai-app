@@ -2,7 +2,7 @@ name: E2E Tests (Cloud)
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, 'feature/**']
   pull_request:
     branches: [main, master]
   # Manual trigger from GitHub UI
