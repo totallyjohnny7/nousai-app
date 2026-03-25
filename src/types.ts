@@ -1,17 +1,5 @@
 /* ── Plugin data.json types ────────────────────────────── */
 
-// ─── Cross-Device Content Relay ─────────────────────────
-export type RelayContentType = 'text' | 'image' | 'url' | 'note' | 'drawing';
-export interface RelayPayload {
-  type: RelayContentType;
-  content: string;         // raw text / base64 / URL / Note JSON (empty string when contentRef is set)
-  contentRef?: string;     // Firebase Storage download URL for payloads > 100KB
-  sizeBytes?: number;      // original content byte size (for progress display)
-  sourceDevice: string;   // fingerprint — prevents echo to sender
-  sentAt: string;          // ISO timestamp
-  expiresAt: string;       // sentAt + 30 seconds
-}
-
 // ─── Chunked File Processing ─────────────────────────────
 export interface ChunkManifest {
   fileId: string;
@@ -397,6 +385,65 @@ export interface AIChatSession {
   updatedAt: string;
 }
 
+// ── Tool Session History ──────────────────────────────────────────────────────
+
+export interface ToolError {
+  timestamp: number;
+  errorType: 'API_TIMEOUT' | 'NULL_RESPONSE' | 'RENDER_CRASH' | 'STREAM_CUT' | 'OFFLINE_AT_REQUEST';
+  errorMessage: string;
+  messageIndexAtCrash: number;
+  recoveryAttempted: boolean;
+  recoverySucceeded: boolean;
+  fixDescription: string | null;
+}
+
+export interface ToolSession {
+  id: string;
+  toolName: string;
+  toolIcon: string;
+  courseId: string | null;
+  courseName: string | null;
+  topic: string;
+  messages: { role: 'user' | 'ai'; text: string }[];
+  createdAt: number;
+  updatedAt: number;
+  preview: string;              // first 100 chars of first AI response
+  syncStatus: 'synced' | 'pending' | 'failed';
+  localVersion: number;
+  cloudVersion: number;
+  hadError: boolean;
+  errorLog: ToolError[];
+  wasAutoFixed: boolean;
+  fixApplied: string | null;
+  sessionState: 'healthy' | 'broken' | 'fixed' | 'partially-fixed';
+}
+
+// ── Manual Content Injection Types ────────────────────────────────────────────
+
+export interface ManualCard {
+  front: string;
+  back: string;
+  source: 'manual';
+  rawInput?: string;
+}
+
+export interface ManualMCQuestion {
+  question: string;
+  options: string[];
+  correct: number;         // 0-indexed, -1 if user did not specify answer
+  source: 'manual';
+  rawInput?: string;
+}
+
+export interface ManualExamQuestion {
+  question: string;
+  type: 'mc' | 'frq' | 'unknown';
+  options?: string[];
+  answer?: string;
+  source: 'manual';
+  rawInput?: string;
+}
+
 export interface ProcedureStep {
   order: number;
   text: string;
@@ -491,6 +538,7 @@ export interface PluginData {
   studySchedules?: StudySchedule[];
   annotations?: QuizAnnotation[];
   aiChatSessions?: AIChatSession[];
+  toolSessions?: ToolSession[];
   savedProcedures?: SavedProcedure[];
   goals?: StudyGoal[];
   weeklyQuests?: WeeklyQuest[];
@@ -844,6 +892,72 @@ export interface OmniProtocolData {
   feynmanGaps: OmniFeynmanGap[];
   currentArcPhase: Record<string, OmniArcPhase>;  // keyed by courseId
   lastSessionId?: string;
+}
+
+// ─── Omni V6.1 Adaptive + Crisis Types ────────────────────────────────────────
+
+export interface OmniAdaptiveAllocation {
+  phase1_prime: number;
+  phase2_chunk: number;
+  phase2_5_decode: number;
+  phase3_encode: number;
+  phase4_connect: number;
+  phase5_break: number;
+  phase6_test: number;
+  phase7_anchor: number;
+  adaptationNote: string;
+}
+
+export interface OmniMCQuestion {
+  q: string;
+  options: string[];
+  correct: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  bloomsLevel: 'Remember' | 'Apply' | 'Analyze' | 'Evaluate';
+  targetTopic: string;
+}
+
+export type OmniCrisisErrorType = 'confusion' | 'conceptual' | 'procedural' | 'careless';
+
+export interface OmniCrisisMCAnswer {
+  selectedOption: number;
+  wasCorrect: boolean;
+  errorType?: OmniCrisisErrorType;
+  targetTopic: string;
+}
+
+export type OmniCrisisAdaptiveAllocation = OmniAdaptiveAllocation;
+
+/** Serialized snapshot of a suspended Omni session (saved to IDB for resume) */
+export interface OmniSuspendedSession {
+  savedAt: string;
+  screen: { screen: string; [key: string]: unknown };
+  selectedCourseId: string;
+  selectedTopics: string[];
+  difficulty: OmniDifficulty;
+  arcPhase: OmniArcPhase;
+  intakeAnswers: string[];
+  professorEmphasis: string;
+  durationConfig: { durationMin: number; cycleCount: number; extended: boolean };
+  sessionPlan: OmniSessionPlan | null;
+  phaseResults: OmniPhaseResult[];
+  motivationState: unknown;
+  totalXp: number;
+  sessionStartedAt: number;
+  timeRemaining: number;
+  phaseCards: unknown[];
+  currentCardIdx: number;
+  gradedCards: unknown[];
+  phaseCorrect: number;
+  phaseTotal: number;
+  whyChainAssessment: Record<string, 'ok' | 'unclear'>;
+  pendingGaps: OmniFeynmanGap[];
+  // Manual content injection
+  manualCards?: ManualCard[];
+  manualQuizQuestions?: ManualMCQuestion[];
+  manualExamQuestions?: ManualExamQuestion[];
+  manualContentMode?: 'supplement' | 'replace';
+  [key: string]: unknown;
 }
 
 // ─── Links & Files ────────────────────────────────────────────────────────────

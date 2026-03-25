@@ -31,67 +31,65 @@ function CourseGeneratorTool() {
     const academicSources = valyuCtx.isVerified ? valyuCtx.sources : [];
     setAcademicVerified(valyuCtx.isVerified);
 
-    setTimeout(() => {
-      const diffConfig = {
-        beginner: { moduleCount: 4, topicCount: 3, subtopicCount: 2 },
-        intermediate: { moduleCount: 6, topicCount: 4, subtopicCount: 3 },
-        advanced: { moduleCount: 8, topicCount: 5, subtopicCount: 4 },
-      }[difficulty];
+    const diffConfig = {
+      beginner: { moduleCount: 4, topicCount: 3, subtopicCount: 2 },
+      intermediate: { moduleCount: 6, topicCount: 4, subtopicCount: 3 },
+      advanced: { moduleCount: 8, topicCount: 5, subtopicCount: 4 },
+    }[difficulty];
 
-      const moduleTemplates = [
-        'Introduction & Foundations',
-        'Core Concepts',
-        'Fundamental Principles',
-        'Methods & Techniques',
-        'Analysis & Application',
-        'Advanced Topics',
-        'Practical Projects',
-        'Case Studies & Real-World Applications',
-        'Integration & Synthesis',
-        'Assessment & Review',
-      ];
+    const moduleTemplates = [
+      'Introduction & Foundations',
+      'Core Concepts',
+      'Fundamental Principles',
+      'Methods & Techniques',
+      'Analysis & Application',
+      'Advanced Topics',
+      'Practical Projects',
+      'Case Studies & Real-World Applications',
+      'Integration & Synthesis',
+      'Assessment & Review',
+    ];
 
-      const topicTemplates = [
-        'Overview & Definitions', 'Historical Context', 'Key Terminology',
-        'Basic Principles', 'Core Frameworks', 'Theoretical Models',
-        'Practical Methods', 'Problem-Solving Strategies', 'Common Patterns',
-        'Data Analysis', 'Experimental Design', 'Research Methods',
-        'Advanced Techniques', 'Optimization', 'Edge Cases',
-        'Hands-on Exercise', 'Group Project', 'Capstone Assignment',
-        'Review & Summary', 'Practice Questions', 'Further Reading',
-      ];
+    const topicTemplates = [
+      'Overview & Definitions', 'Historical Context', 'Key Terminology',
+      'Basic Principles', 'Core Frameworks', 'Theoretical Models',
+      'Practical Methods', 'Problem-Solving Strategies', 'Common Patterns',
+      'Data Analysis', 'Experimental Design', 'Research Methods',
+      'Advanced Techniques', 'Optimization', 'Edge Cases',
+      'Hands-on Exercise', 'Group Project', 'Capstone Assignment',
+      'Review & Summary', 'Practice Questions', 'Further Reading',
+    ];
 
-      const generated: CourseModule[] = [];
-      for (let m = 0; m < diffConfig.moduleCount; m++) {
-        const topics: CourseModule['topics'] = [];
-        for (let t = 0; t < diffConfig.topicCount; t++) {
-          const subtopics: string[] = [];
-          for (let s = 0; s < diffConfig.subtopicCount; s++) {
-            // Use academic paper titles/snippets to enrich subtopic descriptions where available
-            const sourceIdx = (m * diffConfig.topicCount * diffConfig.subtopicCount + t * diffConfig.subtopicCount + s);
-            const source = academicSources[sourceIdx % (academicSources.length || 1)];
-            const enriched = source && valyuCtx.isVerified
-              ? `${subject}: ${source.title.slice(0, 60)}${source.title.length > 60 ? '…' : ''}`
-              : `${subject} - Detail ${t + 1}.${s + 1}`;
-            subtopics.push(enriched);
-          }
-          topics.push({
-            id: uid(),
-            name: topicTemplates[(m * diffConfig.topicCount + t) % topicTemplates.length],
-            subtopics,
-          });
+    const generated: CourseModule[] = [];
+    for (let m = 0; m < diffConfig.moduleCount; m++) {
+      const topics: CourseModule['topics'] = [];
+      for (let t = 0; t < diffConfig.topicCount; t++) {
+        const subtopics: string[] = [];
+        for (let s = 0; s < diffConfig.subtopicCount; s++) {
+          // Use academic paper titles/snippets to enrich subtopic descriptions where available
+          const sourceIdx = (m * diffConfig.topicCount * diffConfig.subtopicCount + t * diffConfig.subtopicCount + s);
+          const source = academicSources[sourceIdx % (academicSources.length || 1)];
+          const enriched = source && valyuCtx.isVerified
+            ? `${subject}: ${source.title.slice(0, 60)}${source.title.length > 60 ? '…' : ''}`
+            : `${subject} - Detail ${t + 1}.${s + 1}`;
+          subtopics.push(enriched);
         }
-        generated.push({
+        topics.push({
           id: uid(),
-          title: `Module ${m + 1}: ${moduleTemplates[m % moduleTemplates.length]}`,
-          topics,
+          name: topicTemplates[(m * diffConfig.topicCount + t) % topicTemplates.length],
+          subtopics,
         });
       }
+      generated.push({
+        id: uid(),
+        title: `Module ${m + 1}: ${moduleTemplates[m % moduleTemplates.length]}`,
+        topics,
+      });
+    }
 
-      setModules(generated);
-      setSaved(false);
-      setGenerating(false);
-    }, 800);
+    setModules(generated);
+    setSaved(false);
+    setGenerating(false);
   }
 
   function saveCourse() {

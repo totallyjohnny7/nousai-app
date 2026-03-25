@@ -3895,7 +3895,7 @@ export default function SettingsPage() {
                       fc_flip: { emoji: '🔄', label: 'FLIP' }, fc_next: { emoji: '➡️', label: 'NEXT' },
                       fc_prev: { emoji: '⬅️', label: 'PREV' }, fc_rsvp: { emoji: '⏩', label: 'RSVP' },
                       fc_cram: { emoji: '⚡', label: 'CRAM' }, fc_type_recall: { emoji: '✍️', label: 'TYPE' },
-                      fc_zen: { emoji: '🧘', label: 'ZEN' }, relay_send: { emoji: '📤', label: 'RELAY' },
+                      fc_zen: { emoji: '🧘', label: 'ZEN' },
                       screen_lasso: { emoji: '✂️', label: 'LASSO' }, notes_speak: { emoji: '🔊', label: 'TTS' },
                       fc_conf1: { emoji: '❌', label: 'AGAIN' }, fc_conf2: { emoji: '😰', label: 'HARD' },
                       fc_conf3: { emoji: '✅', label: 'GOOD' }, fc_conf4: { emoji: '🚀', label: 'EASY' },
@@ -3921,7 +3921,7 @@ export default function SettingsPage() {
                         color: '#F5A623',
                         keys: [
                           'fc_flip', 'fc_next', 'fc_prev', 'fc_rsvp', 'fc_cram',
-                          'fc_type_recall', 'fc_zen', 'relay_send', 'screen_lasso', 'notes_speak',
+                          'fc_type_recall', 'fc_zen', 'screen_lasso', 'notes_speak',
                           'fc_conf1', 'fc_conf2', 'fc_conf3', 'fc_conf4', 'nav_next',
                         ],
                       },
@@ -4106,7 +4106,7 @@ Modes (auto-switch by page):
 • Quiz Mode — on /quiz: Btn 1-4 = select options, Btn 5=SUBMIT, Btn 6=NEXT
 • Drawing Mode — on /draw: Btn 1=UNDO, Btn 2=REDO
 • Navigation Mode — all other pages: Btn 1-15 = jump to any NousAI page
-• Notes Mode — on /library or /learn: Btn 3=RELAY, Btn 4=LASSO
+• Notes Mode — on /library or /learn: Btn 4=LASSO
 
 Remapping: Settings → Input Devices → choose mode → click any button → select new action
 
@@ -4214,28 +4214,6 @@ What happens over time:
 Daily Cap: 50 cards per course per day (configurable in Settings). This prevents overwhelm when you add a large deck all at once.
 
 ⚡ Pro Tip: Grade honestly. Rating "Easy" when it was "Hard" corrupts the schedule. The algorithm only works if your self-ratings are accurate.`,
-  },
-  {
-    id: 'relay',
-    title: 'Content Relay — Step-by-Step Cross-Device',
-    tldr: 'Send text, notes, or URLs from any device to any other device instantly via Firebase.',
-    content: `Method 1 — Screen Lasso (Windows → Boox):
-1. Stream Deck Notes Btn 4, OR: Learn → Screen Lasso tool
-2. Select your screen (browser permission asked once)
-3. Draw a polygon around the text you want
-4. AI extracts the text (OCR)
-5. Click "Send to Relay"
-6. On Boox: amber dot appears → tap → "Save to Notes"
-
-Method 2 — Manual Relay (any device):
-1. Tap the relay button (bottom-right corner, circle icon)
-2. Type or paste content → select type: Text/URL/Note → Send
-3. Other device: amber dot appears within 5 seconds → accept
-
-Requirements: Both devices must be logged in with the same account.
-Works across: Windows, macOS, Boox, iPad, iOS, Android — any browser.
-
-⚡ Pro Tip: Relay works offline-to-online — if your Boox is offline when you send, the message waits in Firestore and delivers when Boox reconnects.`,
   },
   {
     id: 'pretest',

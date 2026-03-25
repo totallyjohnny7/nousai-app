@@ -43,13 +43,13 @@ function ScreenLassoToolInner() {
         <h3>Screen Lasso</h3>
       </div>
       <p className="screen-lasso-tool__desc">
-        Capture any region of your screen, extract text via OCR, and save as a note or relay to another device.
+        Capture any region of your screen, extract text via OCR, and save as a note.
       </p>
       <ol className="screen-lasso-tool__steps">
         <li>Click Capture — browser will ask for screen permission</li>
         <li>Draw a polygon around the region you want</li>
         <li>AI extracts the text (OCR)</li>
-        <li>Save as Note or Send to Relay device</li>
+        <li>Save as Note or Copy to clipboard</li>
       </ol>
       <button className="btn btn-primary" onClick={() => setOpen(true)}>
         Capture Screen Region
