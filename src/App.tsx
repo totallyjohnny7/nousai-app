@@ -359,9 +359,7 @@ export default function App() {
   // #46 Online/Offline Sync — trigger backup when connection is restored
   useEffect(() => {
     const handleOnline = () => {
-      if (localStorage.getItem('nousai-auto-sync') === 'true') {
-        backupNow()
-      }
+      backupNow()
     }
     window.addEventListener('online', handleOnline)
     return () => window.removeEventListener('online', handleOnline)

@@ -9,9 +9,9 @@ import {
 } from 'lucide-react'
 import { streamDeckService, StreamDeckService, ALL_STREAM_DECK_ACTIONS, type StreamDeckMode } from '../utils/streamDeckService'
 import { gamepadService, GamepadService, GAMEPAD_BUTTON_LABELS, type GamepadConfig, type GamepadModeConfig } from '../utils/gamepadService'
-import { useStore, normalizeData, forceWriteToIDB, clearPWACache, saveBackupHandle, loadBackupHandle, clearBackupHandle } from '../store'
+import { useStore, saveBackupHandle, loadBackupHandle, clearBackupHandle } from '../store'
 import { checkForUpdates, getAppVersion, getStoredUpdate, dismissUpdate, getPlatform } from '../utils/updater'
-import { signUp, signIn, logOut, onAuthChange, syncToCloud, syncFromCloud, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, saveOmiConfig, type AuthUser } from '../utils/auth'
+import { signUp, signIn, logOut, onAuthChange, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, saveOmiConfig, type AuthUser } from '../utils/auth'
 // testData is lazy-loaded only when user clicks "Load Test Data" button
 import { SHORTCUT_DEFS, getShortcutKey, setShortcutKey, resetAllShortcuts, formatKey } from '../utils/shortcuts'
 import { K20_KEYS, K20_ACTIONS, K20_ACTION_ICONS, K20_DEFAULT_BINDINGS, type K20ActionId } from '../utils/k20Types'
@@ -45,7 +45,7 @@ const PROVIDER_INFO: Record<string, { label: string; color: string; url: string;
 }
 
 // ─── Feature Slot Types ─────────────────────────────────────
-type AIFeatureSlot = 'chat' | 'generation' | 'analysis' | 'ocr' | 'japanese' | 'physics'
+type AIFeatureSlot = 'chat' | 'generation' | 'analysis' | 'ocr' | 'japanese' | 'physics' | 'omni'
 
 const SLOT_INFO: Record<AIFeatureSlot, { label: string; description: string }> = {
   chat:       { label: 'Chat & Tutor',  description: 'AI Tutor, chat, Feynman mode, quiz chat' },
@@ -54,6 +54,7 @@ const SLOT_INFO: Record<AIFeatureSlot, { label: string; description: string }> =
   ocr:        { label: 'PDF & Image OCR', description: 'Document / image text extraction (requires Mistral key for OCR)' },
   japanese:   { label: 'Japanese',      description: 'Japanese study tools, JP quiz & flashcards' },
   physics:    { label: 'Physics',       description: 'Physics lab simulation code generation' },
+  omni:       { label: 'Omni Protocol', description: 'Omni Protocol study session AI calls' },
 }
 
 interface SlotConfig { provider: string; apiKey: string; model: string }
@@ -531,9 +532,7 @@ export default function SettingsPage() {
   const [createConfirm, setCreateConfirm] = useState('')
 
   // Sync state
-  const [syncing, setSyncing] = useState(false)
-  const [lastSync, setLastSync] = useState<string | null>(localStorage.getItem('nousai-last-sync'))
-  const [autoSync, setAutoSync] = useState(localStorage.getItem('nousai-auto-sync') !== 'false')
+  const [lastSync] = useState<string | null>(localStorage.getItem('nousai-last-sync'))
 
   // Omi device
   const [omiApiKey, setOmiApiKey] = useState(localStorage.getItem('nousai-omi-api-key') || '')
@@ -843,128 +842,6 @@ export default function SettingsPage() {
     } catch {
       showToast('Failed to sign out.')
     }
-  }
-
-  async function handleSyncToCloud() {
-    console.log('[SYNC] handleSyncToCloud called', { authUser: !!authUser, data: !!data })
-    if (!authUser || !data) {
-      console.warn('[SYNC] Early return — authUser:', !!authUser, 'data:', !!data)
-      if (!data) showToast('No data to sync. Import your data first.')
-      return
-    }
-    // Safety guard: refuse to sync if there are no courses — likely means local data isn't loaded yet.
-    // This prevents accidentally overwriting cloud data with an empty state (e.g. on a fresh mobile install).
-    const localCourses = data.pluginData?.coachData?.courses || []
-    if (localCourses.length === 0) {
-      const proceed = confirm(
-        'Warning: You have no courses in your local data.\n\n' +
-        'Syncing now will overwrite your cloud backup with empty data.\n\n' +
-        'If you want to restore your data on this device, use "Load from Cloud" instead.\n\n' +
-        'Continue uploading empty data anyway?'
-      )
-      if (!proceed) {
-        showToast('Sync cancelled — your cloud data is safe.')
-        return
-      }
-    }
-    setSyncing(true)
-    try {
-      console.log('[SYNC] Calling syncToCloud with uid:', authUser.uid)
-      await syncToCloud(authUser.uid, data)
-      console.log('[SYNC] syncToCloud succeeded')
-      const now = new Date().toISOString()
-      localStorage.setItem('nousai-last-sync', now)
-      setLastSync(now)
-      const noteCount = (data.pluginData as any)?.notes?.length || 0
-      showToast(`Synced to cloud! ${noteCount} notes uploaded.`)
-    } catch (e: any) {
-      console.error('[SYNC] syncToCloud failed:', e)
-      showToast('Sync failed: ' + (e?.message || 'Unknown error'))
-    } finally {
-      setSyncing(false)
-    }
-  }
-
-  async function handleSyncFromCloud() {
-    console.log('[SYNC] handleSyncFromCloud called', { authUser: !!authUser })
-    if (!authUser) {
-      console.warn('[SYNC] Early return — no authUser')
-      return
-    }
-    setSyncing(true)
-    try {
-      // Step 1: Clear PWA cache first so stale service worker doesn't interfere
-      const cacheCleared = await clearPWACache()
-      if (cacheCleared) console.log('[SYNC] PWA cache cleared before sync')
-
-      console.log('[SYNC] Calling syncFromCloud with uid:', authUser.uid)
-      const cloudData = await syncFromCloud(authUser.uid)
-      console.log('[SYNC] syncFromCloud returned:', cloudData ? 'data found' : 'null')
-      if (cloudData) {
-        // Conflict detection: warn before overwriting local data
-        const localModifiedAt = localStorage.getItem('nousai-data-modified-at')
-        const lastSyncAt = localStorage.getItem('nousai-last-sync')
-        const localCourses = data?.pluginData?.coachData?.courses || []
-        const isFirstSync = !lastSyncAt
-        const hasUnsyncedChanges = !!(localModifiedAt && lastSyncAt && localModifiedAt > lastSyncAt)
-        if ((isFirstSync && localCourses.length > 0) || hasUnsyncedChanges) {
-          const proceed = confirm(
-            isFirstSync
-              ? `Loading from cloud will replace your local data (${localCourses.length} course${localCourses.length !== 1 ? 's' : ''}).\n\nContinue?`
-              : 'Your local data has been modified since the last sync. ' +
-                'Loading cloud data will overwrite these local changes.\n\nContinue?'
-          )
-          if (!proceed) {
-            showToast('Cloud sync cancelled.')
-            return
-          }
-        }
-
-        // Safety check: warn if cloud data has no courses but local data does
-        const normalized = normalizeData(cloudData)
-        const cloudCourses = normalized.pluginData?.coachData?.courses || []
-        if (localCourses.length > 0 && cloudCourses.length === 0) {
-          const proceed = confirm(
-            `Warning: Cloud data has 0 courses, but you have ${localCourses.length} courses locally.\n\n` +
-            'This may indicate corrupted cloud data. Continue anyway?'
-          )
-          if (!proceed) {
-            showToast('Cloud sync cancelled — local data preserved.')
-            return
-          }
-        }
-
-        // Step 2: Normalize and set data in React state
-        setData(normalized)
-
-        // Step 3: Force-write to IndexedDB immediately (don't wait for 500ms debounce)
-        await forceWriteToIDB(normalized)
-        console.log('[SYNC] Force-wrote cloud data to IDB')
-
-        const now = new Date().toISOString()
-        localStorage.setItem('nousai-last-sync', now)
-        localStorage.setItem('nousai-data-modified-at', now)
-        setLastSync(now)
-
-        const noteCount = Array.isArray(normalized.settings?.notes) ? normalized.settings.notes.length : 0
-        const subjectCount = Array.isArray(normalized.settings?.subjects) ? normalized.settings.subjects.length : 0
-        showToast(`Synced from cloud! ${noteCount} notes, ${subjectCount} subjects loaded.`)
-      } else {
-        showToast('No cloud data found for this account.')
-      }
-    } catch (e: any) {
-      console.error('[SYNC] syncFromCloud failed:', e)
-      showToast('Sync failed: ' + (e?.message || 'Unknown error'))
-    } finally {
-      setSyncing(false)
-    }
-  }
-
-  function handleAutoSyncToggle() {
-    const next = !autoSync
-    setAutoSync(next)
-    localStorage.setItem('nousai-auto-sync', String(next))
-    showToast(next ? 'Auto-sync enabled' : 'Auto-sync disabled')
   }
 
   // ─── Canvas Sync Handler ──────────────────────────────
@@ -1388,26 +1265,6 @@ export default function SettingsPage() {
                   >Save Profile</button>
                 </div>
 
-                {/* Sync Buttons */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-                  <button
-                    className="btn btn-primary"
-                    style={{ flex: 1, opacity: syncing ? 0.6 : 1 }}
-                    disabled={syncing || !data}
-                    onClick={handleSyncToCloud}
-                  >
-                    <Upload size={15} /> {syncing ? 'Syncing...' : 'Sync to Cloud'}
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    style={{ flex: 1, opacity: syncing ? 0.6 : 1 }}
-                    disabled={syncing}
-                    onClick={handleSyncFromCloud}
-                  >
-                    <Download size={15} /> {syncing ? 'Syncing...' : 'Sync from Cloud'}
-                  </button>
-                </div>
-
                 {/* Last sync */}
                 {lastSync && (
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1416,21 +1273,10 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* Auto-sync toggle */}
-                <div style={rowStyle}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>Auto-sync</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Automatically sync when data changes</div>
-                  </div>
-                  <button style={toggleStyle(autoSync)} onClick={handleAutoSyncToggle}>
-                    <div style={toggleKnobStyle(autoSync)} />
-                  </button>
-                </div>
-
-                {/* Your account syncs info */}
+                {/* Sync info */}
                 <div style={{ ...warningBoxStyle, background: 'rgba(59,130,246,0.06)', borderColor: 'rgba(59,130,246,0.15)' }}>
                   <Cloud size={16} style={{ flexShrink: 0, marginTop: 1, color: 'var(--accent, #3b82f6)' }} />
-                  <span>Your account syncs your data to the cloud. Access your study progress, quizzes, and flashcards from any device by signing in.</span>
+                  <span>Your data syncs automatically to the cloud. Access your study progress, quizzes, and flashcards from any device by signing in.</span>
                 </div>
 
                 {/* ── Login History ── */}
@@ -3579,7 +3425,7 @@ export default function SettingsPage() {
               { title: '🎮 Games', desc: 'Educational games are available within course spaces. Access mini-games and interactive learning activities from your course pages.' },
               { title: '⚙️ Settings', desc: 'Configure AI provider (OpenAI, Anthropic, OpenRouter, Google AI, Groq, Ollama), connect extensions (Chrome, Canvas), adjust study preferences, keyboard shortcuts, theme, e-ink mode, import/export data, and manage your account.' },
               { title: '🔗 Links & Files', desc: 'Inside each course space, store links and upload files of any type (images, PDFs, docs, spreadsheets, code, archives, etc.). Preview images and PDFs in a fullscreen modal. Download non-previewable files. Filter by All, Links, or Files. Files stored locally as base64.' },
-              { title: '🔄 Data Sync', desc: 'Sign in with email to sync across all devices. YOUR ACCOUNT: Sign up → Settings → Sync to Cloud → sign in on another device → Sync from Cloud. FRIENDS: They sign up with their own email, study, then Sync to Cloud. Each account is isolated. Enable Auto-sync for automatic background syncing every 2 min. Data is gzip compressed (~78% smaller). Syncs: flashcards, quizzes, notes, drawings, vocab, preferences, study progress. Does NOT sync: API keys, Firebase config, device-specific settings.' },
+              { title: '🔄 Data Sync', desc: 'Sign in with email to sync across all devices. Data syncs automatically in the background (every 30s on change, instantly on tab switch). Data is gzip compressed (~78% smaller). Syncs: flashcards, quizzes, notes, drawings, vocab, preferences, study progress. Does NOT sync: API keys, Firebase config, device-specific settings.' },
               { title: '📱 Mobile & Desktop', desc: 'NousAI is a PWA — install it on any device. Mobile shows a bottom nav bar (Home, Learn, Cards, Library, Notes, AI, Settings), desktop shows a full sidebar with all pages. All layouts are responsive.' },
             ].map((item, i) => (
               <div key={i} style={{ padding: '10px 0', borderBottom: i < 19 ? '1px solid var(--border)' : 'none' }}>

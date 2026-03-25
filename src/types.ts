@@ -814,6 +814,87 @@ export type OmniArcPhase = 'Foundation' | 'BuildUp' | 'Application' | 'Synthesis
 export type OmniDifficulty = 'Beginner' | 'Review' | 'DeepDive';
 export type OmniBloomsLevel = 'Remember' | 'Understand' | 'Apply' | 'Analyze' | 'Evaluate' | 'Create';
 
+export interface OmniAdaptiveAllocation {
+  phase1_prime: number;
+  phase2_chunk: number;
+  phase2_5_decode: number;
+  phase3_encode: number;
+  phase4_connect: number;
+  phase5_break: number;
+  phase6_test: number;
+  phase7_anchor: number;
+  adaptationNote: string;
+}
+
+export interface OmniMCQuestion {
+  question: string;
+  q: string;
+  options: string[];
+  correct: number;
+  targetTopic: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  bloomsLevel?: string;
+}
+
+export type OmniCrisisErrorType = 'conceptual' | 'procedural' | 'confusion' | 'careless';
+
+export interface OmniCrisisMCAnswer {
+  selectedOption: number;
+  wasCorrect: boolean;
+  errorType?: OmniCrisisErrorType;
+  targetTopic: string;
+}
+
+export type OmniCrisisAdaptiveAllocation = OmniAdaptiveAllocation;
+
+/**
+ * Snapshot of OmniProtocol session state for suspend/resume.
+ * Some fields use `any` because their types are component-local (OmniScreen, CardWithMeta, MotivationState).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface OmniSuspendedSession {
+  savedAt: string;
+  screen: any;
+  selectedCourseId: string;
+  selectedTopics: string[];
+  difficulty: OmniDifficulty;
+  arcPhase: OmniArcPhase;
+  intakeAnswers: string[];
+  professorEmphasis: string;
+  durationConfig: any;
+  sessionPlan: OmniSessionPlan | null;
+  phaseResults: OmniPhaseResult[];
+  motivationState: any;
+  totalXp: number;
+  sessionStartedAt: number;
+  timeRemaining: number;
+  phaseCards: any[];
+  currentCardIdx: number;
+  gradedCards: any[];
+  phaseCorrect: number;
+  phaseTotal: number;
+  whyChainAssessment: any;
+  pendingGaps: any[];
+  rawStudyGuide: string;
+  guideSummary: string;
+  guideKeywords: string[];
+  guideMainTopics: string[];
+  mcQuestions: OmniMCQuestion[];
+  mcAnswers: Record<number, number>;
+  adaptiveAllocation: OmniAdaptiveAllocation | null;
+  usedStudyGuide: boolean;
+  crisisMode: boolean;
+  crisisAnswers: OmniCrisisMCAnswer[];
+  tieredTopics: { tier1: string[]; tier2: string[]; tier3: string[] };
+  currentCrisisDay: 1 | 2;
+  currentCrisisCycle: number;
+  anchorSentences: string[];
+  examDateTime: string;
+  availableSources: string[];
+  userConfidence: Record<number, 'sure' | 'guess'>;
+  mnemonicTopics: string[];
+}
+
 export interface OmniFeynmanGap {
   id: string;
   concept: string;

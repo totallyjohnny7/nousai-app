@@ -196,8 +196,7 @@ class AutoSyncScheduler {
   async flush() {
     if (!this.dirty) return;
     const uid = localStorage.getItem('nousai-auth-uid');
-    const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
-    if (!uid || !autoSync || !this.dataRef.current) return;
+    if (!uid || !this.dataRef.current) return;
     // Safety: don't sync if courses is not an array (truly unloaded/corrupt state)
     // Empty array IS valid — user may have deleted all courses intentionally
     const courses = this.dataRef.current.pluginData?.coachData?.courses;
@@ -357,7 +356,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const { report, repairedData } = dataHealthCheck(normalized);
         const final = report.autoRepaired.length > 0 ? repairedData : normalized;
         if (!report.healthy) {
-          console.warn('[HEALTH CHECK]', report.score + '/100 —', report.issues.length, 'issues:', report.issues.map(i => `[${i.severity}] ${i.code}: ${i.message}`).join('; '));
+          console.warn('[HEALTH CHECK]', report.score + '/100 —', report.issues.length, 'issues:', report.issues.map((i: { severity: string; code: string; message: string }) => `[${i.severity}] ${i.code}: ${i.message}`).join('; '));
         } else {
           console.log('[HEALTH CHECK] Score:', report.score + '/100 — healthy');
         }
