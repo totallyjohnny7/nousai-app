@@ -3,7 +3,7 @@ import { HelpCircle, Save } from 'lucide-react';
 import { useStore } from '../../store';
 import { callAI, isAIConfigured } from '../../utils/ai';
 import type { Course, CourseTopic } from '../../types';
-import { selectStyle, inputStyle, TRANSPARENCY_LEVELS, getTransparencyPrompt, type TransparencyLevel } from './shared';
+import { selectStyle, inputStyle, TRANSPARENCY_LEVELS, getTransparencyPrompt, getTransparencyTokenLimit, type TransparencyLevel } from './shared';
 import { ToolErrorBoundary } from '../ToolErrorBoundary';
 import { parseJsonArray } from '../../utils/parseJson';
 
@@ -41,7 +41,8 @@ function QuizGenTool() {
 
     try {
       const subtopics = topic.subtopics?.map(s => s.name).join(', ') || '';
-      const transparencyInstructions = getTransparencyPrompt(transparency);
+      const sourceContext = `${topic.name} ${subtopics} ${selectedCourse?.name ?? ''}`;
+      const transparencyInstructions = getTransparencyPrompt(transparency, sourceContext);
       const prompt = `Generate ${questionCount} multiple choice quiz questions about the topic and course specified below.
 ${subtopics ? `Subtopics to cover: <subtopics>${subtopics}</subtopics>` : ''}
 <topic>${topic.name}</topic>
@@ -56,7 +57,7 @@ Return ONLY a valid JSON array. Each question must have:
 
 Format: [{"question":"...","options":["A","B","C","D"],"answer":"A","explanation":"..."},...]`;
 
-      const response = await callAI([{ role: 'user', content: prompt }], {}, 'generation');
+      const response = await callAI([{ role: 'user', content: prompt }], { maxTokens: getTransparencyTokenLimit(transparency) }, 'generation');
       const parsed = parseJsonArray(response);
       if (!parsed || parsed.length === 0) {
         setError('Could not parse questions from AI response. Please try again.');

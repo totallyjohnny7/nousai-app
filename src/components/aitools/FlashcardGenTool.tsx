@@ -3,7 +3,7 @@ import { Layers, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStore } from '../../store';
 import { callAI, isAIConfigured } from '../../utils/ai';
 import type { Note } from '../../types';
-import { selectStyle, TRANSPARENCY_LEVELS, getTransparencyPrompt, type TransparencyLevel } from './shared';
+import { selectStyle, TRANSPARENCY_LEVELS, getTransparencyPrompt, getTransparencyTokenLimit, type TransparencyLevel } from './shared';
 import { ToolErrorBoundary } from '../ToolErrorBoundary';
 import { parseJsonArray } from '../../utils/parseJson';
 
@@ -350,8 +350,8 @@ function FlashcardGenTool() {
 
     try {
       const basePrompt = activeFmt.buildPrompt(note.title, note.content.slice(0, 4000));
-      const prompt = basePrompt + getTransparencyPrompt(transparency);
-      const response = await callAI([{ role: 'user', content: prompt }], {}, 'generation');
+      const prompt = basePrompt + getTransparencyPrompt(transparency, note.content);
+      const response = await callAI([{ role: 'user', content: prompt }], { maxTokens: getTransparencyTokenLimit(transparency) }, 'generation');
       const parsed = parseJsonArray(response);
       if (!parsed || parsed.length === 0) {
         setError('Could not parse flashcards from AI response. Please try again.');
