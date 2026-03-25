@@ -2522,6 +2522,165 @@ The Data tab shows how much storage your data uses locally. If approaching limit
 Watch out: The "Clear All Data" button is permanent and local — it cannot be undone from within the app. Before using it, export your data first. Cloud sync data is not automatically deleted by this action (it stays in Firestore until you delete your account).`,
     proTip: `Set up automatic local backups to a cloud-synced folder (Dropbox, Google Drive, iCloud Drive). You'll have both NousAI's Firebase cloud sync AND local file backups — two independent backup systems protecting your study data.`,
   },
+  {
+    id: 'japanese-ime',
+    title: 'Japanese IME — Type Hiragana & Katakana Anywhere',
+    tldr: 'Press Alt+J to toggle a built-in Japanese IME that converts romaji to hiragana or katakana in any text field.',
+    tags: ['japanese', 'ime', 'hiragana', 'katakana', 'romaji', 'input', 'language', 'hotkey'],
+    content: `NousAI has a built-in Japanese IME (Input Method Editor) that works on every page, in every text input.
+
+How to activate:
+Press Alt+J (or Ctrl+Shift+J) to cycle through three modes:
+• OFF — normal typing (default)
+• ひらがな — romaji automatically converts to hiragana (green badge)
+• カタカナ — romaji automatically converts to katakana (blue badge)
+
+A floating badge appears in the bottom-right corner showing your current mode. Click it to cycle modes too.
+
+How it works:
+Type romaji and it converts live. For example:
+• Type "taberu" → たべる (hiragana mode)
+• Type "ramen" → ラメン (katakana mode)
+• Press Space to commit the current buffer
+• Press Enter or Tab to commit and submit normally
+• Backspace deletes from the romaji buffer
+
+Special conversions:
+• "n" at end of word → ん (auto-detected on Space/Enter)
+• Double consonants work: "kitte" → きって
+• Long vowels: "ou" → おう
+
+Note on Kanji: This IME handles romaji → hiragana/katakana only. For kanji conversion, use your operating system's built-in Japanese keyboard:
+• Windows: Alt+\` (backtick) to toggle Microsoft IME
+• Mac: Ctrl+Space to switch to Japanese keyboard
+• Chrome OS: Settings → Languages → Japanese
+
+Your IME mode persists across page navigation and browser sessions (saved in localStorage).`,
+    proTip: `In the Japanese Practicum quiz, the IME works seamlessly with the answer input. Type romaji answers and they auto-convert to hiragana, so you can practice writing Japanese without switching your system keyboard.`,
+  },
+  {
+    id: 'k20-hotkeys',
+    title: 'HUION K20 KeyDial Mini — Global Hotkeys',
+    tldr: 'Every K20 key now works globally on all pages — remappable from Settings.',
+    tags: ['k20', 'huion', 'hotkeys', 'shortcuts', 'keydial', 'hardware', 'tablet'],
+    content: `The HUION K20 KeyDial Mini sends keyboard shortcuts to your computer. NousAI intercepts these and maps them to study actions.
+
+All 18 keys + dial work from ANY page:
+• Dial CW/CCW — Zoom in/out (page scale)
+• K1 — Cycle AI Mode (switches active AI tool)
+• K2 — Flip flashcard
+• K3 — Open Omni Search
+• K4-K7 — FSRS ratings: Again, Hard, Good, Easy (only during flashcard review)
+• K8 — Visual Lab (mind map)
+• K9 — Explain (re-explain tool)
+• K10 — Quiz (navigate to quiz page)
+• K11 — Send to AI (submit current AI chat)
+• K12 — Pomodoro Timer
+• K13 — Transcribe (toggle speech-to-text)
+• K14 — Navigate Back
+• K15 — Close Modal
+• K16 — Close Panel
+• K17-K18 — Unassigned (customize in Settings)
+
+Remapping:
+Go to Settings → scroll to "HUION K20 KeyDial Mini" section. Click any key in the visual layout to change its action. Changes take effect immediately on all pages.
+
+The K20 sends Ctrl+Shift+1 through Ctrl+Shift+H as keyboard combos. NousAI matches these to the physical keys and looks up your custom binding.`,
+    proTip: `Assign K17 and K18 to your most-used actions. If you're doing Japanese study, try mapping one to "Transcribe" for voice input and another to "Quiz" for quick practice switching.`,
+  },
+  {
+    id: 'wacom-pen-tablet',
+    title: 'Wacom Intuos & Pen Tablet Support',
+    tldr: 'Wacom Intuos, Staedtler Noris Digital, and other EMR pen tablets work seamlessly — pressure sensitivity, palm rejection, barrel button eraser.',
+    tags: ['wacom', 'intuos', 'pen', 'tablet', 'stylus', 'drawing', 'staedtler', 'pressure'],
+    content: `NousAI automatically detects pen tablet input and adapts the drawing experience.
+
+Supported devices:
+• Wacom Intuos (all models)
+• Staedtler Noris Digital Jumbo
+• Huion pen tablets
+• XP-Pen tablets
+• Any device using Pointer Events API with pointerType="pen"
+
+Features:
+• Pressure sensitivity — light strokes are thin, firm strokes are thick (0.3-1.0 range)
+• Palm rejection — touch events are ignored for 2 seconds after pen contact
+• Barrel button — right-click on Wacom pen toggles eraser (pens without buttons are unaffected)
+• No context menu — pen barrel button won't accidentally open the browser context menu
+
+Works in:
+• Drawing Studio (Excalidraw) — full pen support with pressure
+• MiniDrawCanvas (quiz annotations) — pen-aware with palm rejection
+• All canvas-based tools
+
+No setup needed — just plug in your tablet and start drawing. NousAI detects pen input automatically via the browser's Pointer Events API.`,
+    proTip: `In the Drawing Studio, use firm pressure for structure lines and light pressure for shading/annotations. The pressure curve is calibrated for natural feel — light initial activation so hovering doesn't create marks.`,
+  },
+  {
+    id: 'study-generator',
+    title: 'Study Visual Generator — AI Study Guides',
+    tldr: 'Upload source material and AI generates a complete, downloadable HTML study guide with diagrams, term index, and filter buttons.',
+    tags: ['study', 'generator', 'guide', 'html', 'download', 'ai', 'visual', 'openrouter'],
+    content: `The Study Visual Generator creates comprehensive HTML study guides from your source material.
+
+How to use:
+1. Go to the Study Generator page (sidebar → STUDY GEN)
+2. Enter your OpenRouter API key (or it auto-fills from NousAI AI settings)
+3. Upload files (PDF, DOCX, TXT, images) or paste text
+4. Choose your settings: Depth, Diagrams, Tone, Accent Color
+5. Click "Generate Study Guide"
+
+Model selection:
+The dropdown fetches the latest models LIVE from OpenRouter's API — always up to date. Includes:
+• Auto Router — lets OpenRouter pick the best model
+• Free Router — uses free models (no cost)
+• GPT-5.4, Claude Sonnet 4.5, Gemini 3 Pro, DeepSeek, and more
+
+Completeness guarantee:
+Every generated guide includes a COMPLETE TERM INDEX at the bottom — an alphabetical table listing EVERY vocabulary term, definition, and concept from your source material. Nothing is skipped.
+
+Editing your guide:
+• Edit Mode (green button) — click any text in the preview to edit it directly (WYSIWYG)
+• </> HTML button — opens the raw HTML source for power-user edits
+• Regenerate Section — click any section button to regenerate just that part
+• Download — saves as a standalone .html file that works offline
+• Save to Library — stores up to 20 guides locally
+
+Math support:
+LaTeX math notation works: $x^2$ for inline, $$\\int_0^1 f(x)dx$$ for display blocks. Rendered via KaTeX.
+
+Japanese language support:
+Guides include furigana (<ruby> tags), proper CJK font sizing, and original Japanese text alongside translations.`,
+    proTip: `Set Depth to "Deep" and Diagrams to "Every section" for exam prep. The AI generates SVG diagrams for every concept — these visual anchors dramatically improve recall compared to text-only study guides (dual coding theory, Paivio 1986).`,
+  },
+  {
+    id: 'transparency-levels',
+    title: 'AI Transparency Levels — Control Quiz & Flashcard Depth',
+    tldr: 'Choose how much metadata the AI includes when generating quizzes and flashcards — from minimal to research-grade.',
+    tags: ['transparency', 'ai', 'quiz', 'flashcard', 'difficulty', 'confidence', 'depth'],
+    content: `When generating quizzes or flashcards, you can now choose a Transparency Level that controls how much metadata the AI includes.
+
+Four levels:
+• Minimal — just the content, no extras (fastest, smallest output)
+• Standard — adds difficulty tags (easy/medium/hard) to each item
+• Full — adds why_tested (exam relevance), flags common misconceptions, includes original language text
+• Research — adds confidence ratings, source notes, trap flags, and a coverage report listing any terms the AI couldn't cover
+
+How to set it:
+In the Quiz Generator or Flashcard Generator, look for the "Transparency" dropdown below the other settings.
+
+Key Term Extraction:
+At ALL transparency levels (even Minimal), NousAI automatically scans your source material and extracts key terms — bold text, quoted terms, ALL CAPS terms, and Japanese kanji/katakana. These are injected into the AI prompt as REQUIRED terms that must be covered. This prevents the AI from skipping important vocabulary.
+
+Token limits scale automatically:
+• Minimal: 2,048 tokens
+• Standard: 3,000 tokens
+• Full: 4,096 tokens
+• Research: 6,000 tokens
+
+Higher transparency = more output tokens = more detailed metadata per item.`,
+    proTip: `Use "Research" level before a final exam — the confidence ratings and source notes help you identify which facts you should double-check against your textbook. Use "Standard" for daily practice to keep things fast.`,
+  },
 ]
 
 // ─── Build full TUTORIAL_CATEGORIES ──────────────────────────────────────────
