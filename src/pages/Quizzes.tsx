@@ -3306,18 +3306,18 @@ function QuizDetail({ attempt, onBack, onRetake }: { attempt: QuizAttempt; onBac
         ))
       ) : attempt.questions && attempt.questions.length > 0 ? (
         /* Show question bank preview when quiz hasn't been taken yet */
-        (attempt.questions as QuizQuestion[]).map((q, i) => (
+        (attempt.questions as RawQuizQuestion[]).map((q, i) => (
           <div key={i} className="quiz-question">
             <div className="flex items-center gap-2 mb-2">
               <AlertCircle size={16} style={{ color: 'var(--text-muted)' }} />
               <span className="text-xs text-muted">Q{i + 1} &bull; {q.type?.replace(/_/g, ' ') || 'question'}</span>
             </div>
-            <div className="quiz-question-text">{q.question}</div>
+            <div className="quiz-question-text">{q.question || q.q || ''}</div>
             {q.options?.map((opt, j) => (
               <div key={j} className="quiz-option" style={{ opacity: 0.7 }}>{opt}</div>
             ))}
             <div style={{ marginTop: 6, fontSize: 12, color: 'var(--green)' }}>
-              <strong>Answer:</strong> {q.answer || (q as unknown as RawQuizQuestion).correctAnswer}
+              <strong>Answer:</strong> {String(q.answer || q.correctAnswer || '')}
             </div>
             {q.explanation && (
               <div style={{ marginTop: 6, padding: 8, background: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text-secondary)' }}>
