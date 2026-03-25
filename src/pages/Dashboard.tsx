@@ -183,7 +183,7 @@ function OverviewTab() {
   const xpForNext = 100
   const xpPct = Math.min(100, Math.round((levelProg / xpForNext) * 100))
 
-  const allBadgeDefs = getAllBadgeDefs()
+  const allBadgeDefs = useMemo(() => getAllBadgeDefs(), [])
   const earnedIds = new Set((gamification.badges ?? []).map(b => b.id))
 
   // Due cards count — shared utility keeps badge and stat in sync
@@ -1198,17 +1198,58 @@ function AnalyticsTab() {
   const { gamification, quizHistory, proficiency, srData, data } = useStore()
   const { tip: atip, show: ashow, move: amove, hide: ahide } = useTip()
 
-  // Study streak calendar (last 12 weeks)
+  // Single-pass quiz history aggregation — builds dateMap, weeklyXp, scoreDist in one loop
+  const { dateMap, weeklyXpArr, scoreDistArr } = useMemo(() => {
+    const dm = new Map<string, number>()
+    const now = new Date()
+    // Pre-compute week boundaries for XP calculation
+    const weekBounds: { start: number; end: number }[] = []
+    for (let w = 7; w >= 0; w--) {
+      const ws = new Date(now)
+      ws.setDate(ws.getDate() - w * 7)
+      const we = new Date(ws)
+      we.setDate(we.getDate() + 7)
+      weekBounds.push({ start: ws.getTime(), end: we.getTime() })
+    }
+    const wxp = new Array(8).fill(0)
+    const sd = [0, 0, 0, 0] // buckets: 0-49, 50-69, 70-89, 90-100
+
+    for (const q of quizHistory) {
+      const d = new Date(q.date)
+      const key = d.toISOString().split('T')[0]
+      dm.set(key, (dm.get(key) || 0) + 1)
+
+      // Weekly XP
+      const qt = d.getTime()
+      for (let i = 0; i < weekBounds.length; i++) {
+        if (qt >= weekBounds[i].start && qt < weekBounds[i].end) {
+          wxp[i] += (Number(q.correct) || 0) * 5 + (Number(q.score) === 100 ? 20 : 0)
+          break
+        }
+      }
+
+      // Score distribution
+      if (q.score < 50) sd[0]++
+      else if (q.score < 70) sd[1]++
+      else if (q.score < 90) sd[2]++
+      else sd[3]++
+    }
+
+    return {
+      dateMap: dm,
+      weeklyXpArr: wxp.map((xp, i) => ({ label: `W${i + 1}`, xp })),
+      scoreDistArr: [
+        { label: '0-49', count: sd[0], color: 'var(--red)' },
+        { label: '50-69', count: sd[1], color: 'var(--orange)' },
+        { label: '70-89', count: sd[2], color: 'var(--yellow)' },
+        { label: '90-100', count: sd[3], color: 'var(--green)' },
+      ],
+    }
+  }, [quizHistory])
+
+  // Study streak calendar (last 12 weeks) — reuses shared dateMap
   const streakData = useMemo(() => {
     const days: { date: string; count: number }[] = []
-    const dateMap = new Map<string, number>()
-
-    // Count quiz attempts per day
-    quizHistory.forEach(q => {
-      const d = new Date(q.date).toISOString().split('T')[0]
-      dateMap.set(d, (dateMap.get(d) || 0) + 1)
-    })
-
     const today = new Date()
     for (let i = 83; i >= 0; i--) {
       const d = new Date(today)
@@ -1217,17 +1258,11 @@ function AnalyticsTab() {
       days.push({ date: key, count: dateMap.get(key) || 0 })
     }
     return days
-  }, [quizHistory])
+  }, [dateMap])
 
-  // 52-week heatmap data
+  // 52-week heatmap data — reuses shared dateMap
   const heatmapData = useMemo(() => {
-    const dateMap = new Map<string, number>()
-    quizHistory.forEach(q => {
-      const d = new Date(q.date).toISOString().split('T')[0]
-      dateMap.set(d, (dateMap.get(d) || 0) + 1)
-    })
     const today = new Date()
-    // Align to start on Sunday of the week 51 weeks ago
     const startDate = new Date(today)
     startDate.setDate(startDate.getDate() - 363)
     const dayOfWeek = startDate.getDay()
@@ -1242,50 +1277,12 @@ function AnalyticsTab() {
       }
     }
     return cells
-  }, [quizHistory])
+  }, [dateMap])
 
-  // XP by week (last 8 weeks)
-  const weeklyXp = useMemo(() => {
-    const weeks: { label: string; xp: number }[] = []
-    const now = new Date()
-    for (let w = 7; w >= 0; w--) {
-      const weekStart = new Date(now)
-      weekStart.setDate(weekStart.getDate() - w * 7)
-      const weekEnd = new Date(weekStart)
-      weekEnd.setDate(weekEnd.getDate() + 7)
-      const label = `W${8 - w}`
-
-      // Estimate XP from quizzes in that week
-      let xp = 0
-      quizHistory.forEach(q => {
-        const qd = new Date(q.date)
-        if (qd >= weekStart && qd < weekEnd) {
-          xp += (Number(q.correct) || 0) * 5 + (Number(q.score) === 100 ? 20 : 0)
-        }
-      })
-      weeks.push({ label, xp })
-    }
-    return weeks
-  }, [quizHistory])
-
+  const weeklyXp = weeklyXpArr
   const maxWeekXp = Math.max(...weeklyXp.map(w => w.xp), 1)
 
-  // Quiz score distribution
-  const scoreDist = useMemo(() => {
-    const buckets = [
-      { label: '0-49', count: 0, color: 'var(--red)' },
-      { label: '50-69', count: 0, color: 'var(--orange)' },
-      { label: '70-89', count: 0, color: 'var(--yellow)' },
-      { label: '90-100', count: 0, color: 'var(--green)' },
-    ]
-    quizHistory.forEach(q => {
-      if (q.score < 50) buckets[0].count++
-      else if (q.score < 70) buckets[1].count++
-      else if (q.score < 90) buckets[2].count++
-      else buckets[3].count++
-    })
-    return buckets
-  }, [quizHistory])
+  const scoreDist = scoreDistArr
 
   const maxScoreCount = Math.max(...scoreDist.map(b => b.count), 1)
 
@@ -1300,7 +1297,7 @@ function AnalyticsTab() {
     }).filter(s => s.score > 0).sort((a, b) => b.score - a.score)
   }, [proficiency])
 
-  // Time studied per day (last 7 days from quiz count approximation)
+  // Time studied per day (last 7 days) — reuses shared dateMap instead of O(n*7) filter
   const dailyActivity = useMemo(() => {
     const days: { label: string; quizzes: number }[] = []
     const now = new Date()
@@ -1309,11 +1306,10 @@ function AnalyticsTab() {
       d.setDate(d.getDate() - i)
       const key = d.toISOString().split('T')[0]
       const label = d.toLocaleDateString('en-US', { weekday: 'short' })
-      const count = quizHistory.filter(q => new Date(q.date).toISOString().split('T')[0] === key).length
-      days.push({ label, quizzes: count })
+      days.push({ label, quizzes: dateMap.get(key) || 0 })
     }
     return days
-  }, [quizHistory])
+  }, [dateMap])
 
   const maxDailyQ = Math.max(...dailyActivity.map(d => d.quizzes), 1)
 

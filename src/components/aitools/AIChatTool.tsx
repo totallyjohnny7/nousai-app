@@ -115,19 +115,34 @@ function AIChatTool() {
         ...trimmedHistory.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
       ];
 
+      // Buffer chunks and flush to state periodically to avoid per-chunk re-renders
+      let chunkBuffer = '';
+      let flushTimer: ReturnType<typeof setTimeout> | null = null;
+      const flushChunks = () => {
+        if (!chunkBuffer) return;
+        const buffered = chunkBuffer;
+        chunkBuffer = '';
+        updateSessions(prev => prev.map(s => {
+          if (s.id !== sid) return s;
+          const msgs = [...s.messages];
+          const last = msgs[msgs.length - 1];
+          if (last && last.role === 'assistant') {
+            msgs[msgs.length - 1] = { ...last, content: last.content + buffered };
+          }
+          return { ...s, messages: msgs };
+        }));
+      };
       await callAI(aiMessages, {
         onChunk(chunk: string) {
-          updateSessions(prev => prev.map(s => {
-            if (s.id !== sid) return s;
-            const msgs = [...s.messages];
-            const last = msgs[msgs.length - 1];
-            if (last && last.role === 'assistant') {
-              msgs[msgs.length - 1] = { ...last, content: last.content + chunk };
-            }
-            return { ...s, messages: msgs };
-          }));
+          chunkBuffer += chunk;
+          if (!flushTimer) {
+            flushTimer = setTimeout(() => { flushTimer = null; flushChunks(); }, 80);
+          }
         },
       }, 'chat');
+      // Final flush for any remaining buffered content
+      if (flushTimer) clearTimeout(flushTimer);
+      flushChunks();
     } catch (e: any) {
       updateSessions(prev => prev.map(s => {
         if (s.id !== sid) return s;

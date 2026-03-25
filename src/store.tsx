@@ -539,9 +539,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRemoteUpdateAvailable(false);
   }, []);
 
+  // Debounce markDirty to avoid excessive sync scheduling during rapid updates (e.g. AI streaming)
+  const markDirtyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!data) return;
-    autoSyncRef.current.markDirty();
+    if (markDirtyTimerRef.current) clearTimeout(markDirtyTimerRef.current);
+    markDirtyTimerRef.current = setTimeout(() => {
+      autoSyncRef.current.markDirty();
+    }, 500);
   }, [data]);
 
   // Auto-load remote changes silently — no banner needed when auto-sync is on
