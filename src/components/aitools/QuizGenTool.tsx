@@ -45,13 +45,22 @@ ${subtopics ? `Subtopics to cover: <subtopics>${subtopics}</subtopics>` : ''}
 <topic>${topic.name}</topic>
 <course>${selectedCourse?.name ?? ''}</course>
 
+TRANSPARENCY REQUIREMENTS:
+- Cover the MOST IMPORTANT and commonly tested concepts for this topic
+- Include at least 1 question targeting a common misconception or "trap" that students frequently get wrong
+- Each question's explanation should cite WHY this concept matters (exam relevance, real-world application, or common confusion point)
+- Vary difficulty: include easy (recall), medium (application), and hard (analysis/trap) questions
+- For language topics: include vocabulary, grammar, and reading comprehension questions with the original language text
+
 Return ONLY a valid JSON array. Each question must have:
 - "question": the question text
 - "options": array of exactly 4 answer choices (strings)
 - "answer": the correct answer (must match one of the options exactly)
 - "explanation": brief explanation of why the answer is correct
+- "difficulty": "easy", "medium", or "hard"
+- "why_tested": one sentence — why this concept is important or commonly tested
 
-Format: [{"question":"...","options":["A","B","C","D"],"answer":"A","explanation":"..."},...]`;
+Format: [{"question":"...","options":["A","B","C","D"],"answer":"A","explanation":"...","difficulty":"medium","why_tested":"..."},...]`;
 
       const response = await callAI([{ role: 'user', content: prompt }], {}, 'generation');
       const parsed = parseJsonArray(response);

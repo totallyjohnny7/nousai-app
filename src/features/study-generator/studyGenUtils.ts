@@ -247,23 +247,53 @@ I. NEVER truncate text. If a Japanese word or conjugation is long, widen the vie
 
 FILTER + DOWNLOAD JS:
 <script>
-document.querySelectorAll('.filter-btn').forEach(b => {
-  b.addEventListener('click', function() {
-    const id = this.dataset.filter;
-    document.querySelectorAll('.card').forEach(c => {
-      c.style.display = (id === 'all' || c.dataset.section === id) ? '' : 'none';
-    });
-    document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
-    this.classList.add('active');
+// Self-healing filter: auto-discover sections from cards, rebuild buttons if needed
+(function() {
+  var cards = document.querySelectorAll('.card[data-section]');
+  var filterRow = document.querySelector('.filter-row');
+  // Collect unique sections from actual cards
+  var sections = [];
+  var seen = {};
+  cards.forEach(function(c) {
+    var s = c.getAttribute('data-section');
+    if (s && !seen[s]) { seen[s] = true; sections.push(s); }
   });
-});
-document.getElementById('dl-btn')?.addEventListener('click', () => {
-  const blob = new Blob([document.documentElement.outerHTML], {type:'text/html'});
-  const a = document.createElement('a');
+  // If no filter buttons exist but we have sections, auto-generate them
+  if (filterRow && document.querySelectorAll('.filter-btn').length === 0 && sections.length > 0) {
+    var allBtn = document.createElement('button');
+    allBtn.className = 'filter-btn active';
+    allBtn.setAttribute('data-filter', 'all');
+    allBtn.textContent = 'Show All';
+    filterRow.appendChild(allBtn);
+    sections.forEach(function(s) {
+      var btn = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.setAttribute('data-filter', s);
+      btn.textContent = s.replace(/-/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+      filterRow.appendChild(btn);
+    });
+  }
+  // Wire up ALL filter buttons (existing or auto-generated)
+  document.querySelectorAll('.filter-btn').forEach(function(b) {
+    b.addEventListener('click', function() {
+      var id = this.getAttribute('data-filter');
+      document.querySelectorAll('.card[data-section]').forEach(function(c) {
+        c.style.display = (id === 'all' || c.getAttribute('data-section') === id) ? '' : 'none';
+      });
+      document.querySelectorAll('.filter-btn').forEach(function(x) { x.classList.remove('active'); });
+      this.classList.add('active');
+    });
+  });
+})();
+// Download button
+document.getElementById('dl-btn')?.addEventListener('click', function() {
+  var blob = new Blob([document.documentElement.outerHTML], {type:'text/html'});
+  var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'study_guide.html';
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 500);
 });
 </script>
 

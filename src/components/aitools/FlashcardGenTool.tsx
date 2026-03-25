@@ -27,7 +27,15 @@ const CARD_FORMATS: CardFormat[] = [
     exampleFront: 'What is the primary function of the mitochondria?',
     exampleBack: 'To produce ATP (energy) through cellular respiration — often called the powerhouse of the cell.',
     buildPrompt: (title, content) =>
-      `Generate 10 question-and-answer flashcard pairs based on the note below. Return ONLY a valid JSON array with "front" (the question) and "back" (the answer) fields.
+      `Generate 10 question-and-answer flashcard pairs based on the note below. Cover ALL key terms and concepts from the content — do not skip any important vocabulary, definition, formula, or fact.
+
+TRANSPARENCY REQUIREMENTS:
+- Prioritize high-yield concepts (most likely to appear on exams or most foundational)
+- Include cards for commonly confused terms or misconceptions
+- For language content: include the original language text (hiragana, kanji, etc.) on the front
+- Each card's back should give a complete, self-contained answer
+
+Return ONLY a valid JSON array with "front" (the question) and "back" (the answer) fields.
 
 <note_title>${title}</note_title>
 <note_content>${content}</note_content>
