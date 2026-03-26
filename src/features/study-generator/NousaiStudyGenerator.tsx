@@ -59,6 +59,9 @@ export default function NousaiStudyGenerator() {
   const [genElapsed, setGenElapsed] = useState(0)
   const [genPhase, setGenPhase] = useState(0)
 
+  // Track auto-saved guide ID to prevent duplicates
+  const [currentGuideId, setCurrentGuideId] = useState<string | null>(null)
+
   // Store for auto-save + previous sessions
   const { data, updatePluginData } = useStore()
   const savedGuides: StudyGuide[] = (data?.pluginData?.studyGuides as StudyGuide[] | undefined) || []
@@ -96,13 +99,52 @@ export default function NousaiStudyGenerator() {
     return () => iframe.removeEventListener('load', onLoad)
   }, [genHTML, phase])
 
+  // Auto-resize iframe to content height
+  useEffect(() => {
+    if (!genHTML || phase !== 'done') return
+    const iframe = iframeRef.current
+    if (!iframe) return
+    let observer: MutationObserver | null = null
+
+    const resize = () => {
+      try {
+        const doc = iframe.contentDocument
+        if (!doc?.body) return
+        iframe.style.height = doc.documentElement.scrollHeight + 'px'
+      } catch { /* cross-origin safety */ }
+    }
+
+    const onLoad = () => {
+      resize()
+      try {
+        const doc = iframe.contentDocument
+        if (doc) {
+          observer = new MutationObserver(resize)
+          observer.observe(doc.body, { childList: true, subtree: true, attributes: true })
+        }
+      } catch { /* ignore */ }
+      // Delayed resizes for KaTeX rendering
+      setTimeout(resize, 1000)
+      setTimeout(resize, 3000)
+    }
+
+    iframe.addEventListener('load', onLoad)
+    if (iframe.contentDocument?.readyState === 'complete') onLoad()
+    return () => {
+      iframe.removeEventListener('load', onLoad)
+      observer?.disconnect()
+    }
+  }, [genHTML, phase])
+
   const allText = [
     ...files.filter(f => f.status === 'done').map(f => f.text),
     paste,
   ].filter(Boolean).join('\n\n=====\n\n')
 
   const toks = allText.trim() ? estimateTokens(allText, settings.depth) : null
-  const cost = toks ? estimateCost(toks) : null
+  const selectedModel = models.find(m => m.id === model)
+  const cost = toks ? estimateCost(toks, selectedModel) : null
+  const hasPricing = selectedModel?.promptPrice != null && selectedModel.promptPrice > 0
 
   const setSetting = <K extends keyof GenSettings>(k: K, v: GenSettings[K]) => {
     setSettings(prev => {
@@ -198,8 +240,10 @@ export default function NousaiStudyGenerator() {
 
       // Auto-save to library
       const title = html.match(/<h1[^>]*>(.*?)<\/h1>/i)?.[1]?.replace(/<[^>]*>/g, '') || 'Study Guide'
+      const guideId = crypto.randomUUID()
+      setCurrentGuideId(guideId)
       const guide: StudyGuide = {
-        id: crypto.randomUUID(),
+        id: guideId,
         title,
         html,
         model,
@@ -235,17 +279,22 @@ export default function NousaiStudyGenerator() {
   const saveToLibrary = () => {
     try {
       const title = genHTML.match(/<h1[^>]*>(.*?)<\/h1>/i)?.[1]?.replace(/<[^>]*>/g, '') || 'Study Guide'
-      const guide: StudyGuide = {
-        id: crypto.randomUUID(),
-        title,
-        html: genHTML,
-        model,
-        sourcePreview: allText.slice(0, 200),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+      if (currentGuideId) {
+        // Update existing auto-saved entry (avoid duplicates)
+        const updated = savedGuides.map(g =>
+          g.id === currentGuideId
+            ? { ...g, html: genHTML, title, updatedAt: new Date().toISOString() }
+            : g
+        )
+        updatePluginData({ studyGuides: updated })
+        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message: `Updated "${title}" in Library`, type: 'success', duration: 2000 } }))
+      } else {
+        const id = crypto.randomUUID()
+        setCurrentGuideId(id)
+        const guide: StudyGuide = { id, title, html: genHTML, model, sourcePreview: allText.slice(0, 200), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+        updatePluginData({ studyGuides: [guide, ...savedGuides].slice(0, 30) })
+        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message: `Saved "${title}" to Library`, type: 'success', duration: 2000 } }))
       }
-      updatePluginData({ studyGuides: [guide, ...savedGuides].slice(0, 30) })
-      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message: `Saved "${title}"`, type: 'success', duration: 2000 } }))
     } catch {
       window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message: 'Failed to save study guide', type: 'error', duration: 3000 } }))
     }
@@ -355,9 +404,9 @@ export default function NousaiStudyGenerator() {
                 </button>
                 <button className="btn btn-primary btn-sm" onClick={download}><Download size={14} /> Download</button>
                 <button className="btn btn-sm" style={{ background: 'var(--accent-color, #F5A623)', color: '#000', border: 'none' }} onClick={saveToLibrary}>
-                  <FileText size={14} /> Save
+                  <FileText size={14} /> {currentGuideId ? 'Update in Library' : 'Save to Library'}
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => { setGenHTML(''); setPhase('idle'); setSections([]); setEditMode(false); setShowHtmlEditor(false) }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setGenHTML(''); setPhase('idle'); setSections([]); setEditMode(false); setShowHtmlEditor(false); setCurrentGuideId(null) }}>
                   <X size={14} /> Reset
                 </button>
               </>
@@ -434,7 +483,7 @@ export default function NousaiStudyGenerator() {
       )}
 
       {/* ── Previous Sessions ── */}
-      {phase === 'idle' && savedGuides.length > 0 && (
+      {(phase === 'idle' || phase === 'done') && savedGuides.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Previous Sessions ({savedGuides.length})</div>
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
@@ -646,10 +695,14 @@ export default function NousaiStudyGenerator() {
                 <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600, borderTop: '1px solid var(--border)', paddingTop: 4, textAlign: 'right' }}>{toks.total.toLocaleString()} tokens</span>
               </div>
               <div style={{ fontSize: 11, color: '#10b981', marginTop: 6, fontFamily: 'var(--font-mono)' }}>
-                Est. cost: ${cost.total.toFixed(4)} <span style={{ color: 'var(--text-muted)', fontFamily: 'inherit' }}>(based on Gemini Flash pricing — actual cost varies by model)</span>
+                Est. cost: ${cost.total.toFixed(4)} <span style={{ color: 'var(--text-muted)', fontFamily: 'inherit' }}>
+                  {hasPricing
+                    ? `(pricing for ${model.split('/')[1] || model})`
+                    : selectedModel?.free ? '(free model)' : '(est. — pricing unavailable for this model)'}
+                </span>
               </div>
               <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
-                1 token ~ 0.75 words. Free models cost $0. Check openrouter.ai/models for exact model pricing.
+                1 token ~ 0.75 words. Free models cost $0.
               </div>
             </div>
           )}
@@ -690,6 +743,17 @@ export default function NousaiStudyGenerator() {
             <span className="badge badge-yellow" style={{ fontSize: 11 }}>offline-ready</span>
             <span className="badge badge-blue" style={{ fontSize: 11 }}>{model.split('/')[1]}</span>
           </div>
+
+          {currentGuideId && (
+            <div style={{
+              padding: '6px 12px', background: 'rgba(16,185,129,0.08)',
+              border: '1px solid rgba(16,185,129,0.15)',
+              borderRadius: 'var(--radius-sm)', fontSize: 11, color: '#10b981',
+              marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <Check size={12} /> Auto-saved to Library. Use "Update in Library" to save edits.
+            </div>
+          )}
 
           {/* Section regeneration */}
           {sections.length > 0 && (
@@ -805,7 +869,7 @@ export default function NousaiStudyGenerator() {
               fontSize: 11, color: '#10b981', fontFamily: 'var(--font-mono)', marginBottom: 16,
               padding: '8px 12px', background: 'rgba(16,185,129,0.06)', borderRadius: 'var(--radius-sm)',
             }}>
-              Est. cost: ~${cost.total.toFixed(4)} (based on Gemini Flash pricing — free models cost $0)
+              Est. cost: ~${cost.total.toFixed(4)} {hasPricing ? `(pricing for ${model.split('/')[1] || model})` : selectedModel?.free ? '(free model)' : '(est. — actual cost varies by model)'}
             </div>
 
             <div style={{

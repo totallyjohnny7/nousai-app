@@ -30,12 +30,19 @@ export function estimateTokens(text: string, depth: string) {
   return { input, output, total: input + output }
 }
 
-// Rough estimate based on Gemini Flash pricing ($0.10/1M in, $0.40/1M out)
-// Actual cost varies by model — check openrouter.ai/models for exact pricing
-const COST_PER_1M = { input: 0.10, output: 0.40 }
-export function estimateCost(t: { input: number; output: number }) {
-  const i = (t.input / 1e6) * COST_PER_1M.input
-  const o = (t.output / 1e6) * COST_PER_1M.output
+// Fallback pricing (Gemini Flash) when model-specific pricing unavailable
+const FALLBACK_COST_PER_1M = { input: 0.10, output: 0.40 }
+export function estimateCost(
+  t: { input: number; output: number },
+  pricing?: { promptPrice?: number; completionPrice?: number },
+) {
+  // pricing values are per-token from OpenRouter; convert to per-million for calculation
+  const inputRate = pricing?.promptPrice != null && pricing.promptPrice > 0
+    ? pricing.promptPrice * 1e6 : FALLBACK_COST_PER_1M.input
+  const outputRate = pricing?.completionPrice != null && pricing.completionPrice > 0
+    ? pricing.completionPrice * 1e6 : FALLBACK_COST_PER_1M.output
+  const i = (t.input / 1e6) * inputRate
+  const o = (t.output / 1e6) * outputRate
   return { input: i, output: o, total: i + o }
 }
 
@@ -287,9 +294,13 @@ FILTER + DOWNLOAD JS:
     });
   });
 })();
-// Download button
+// Download button — show all cards before capturing HTML
 document.getElementById('dl-btn')?.addEventListener('click', function() {
+  var allCards = document.querySelectorAll('.card[data-section]');
+  var savedDisplay = [];
+  allCards.forEach(function(c) { savedDisplay.push(c.style.display); c.style.display = ''; });
   var blob = new Blob([document.documentElement.outerHTML], {type:'text/html'});
+  allCards.forEach(function(c, i) { c.style.display = savedDisplay[i]; });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'study_guide.html';
@@ -364,11 +375,15 @@ export const FILTER_INJECT_JS = `
       this.classList.add('active');
     });
   });
-  // Download button
+  // Download button — show all cards before capturing HTML
   var dlBtn = document.getElementById('dl-btn');
   if (dlBtn) {
     dlBtn.addEventListener('click', function() {
+      var allCards = document.querySelectorAll('.card[data-section]');
+      var savedDisplay = [];
+      allCards.forEach(function(c) { savedDisplay.push(c.style.display); c.style.display = ''; });
       var blob = new Blob([document.documentElement.outerHTML], {type:'text/html'});
+      allCards.forEach(function(c, i) { c.style.display = savedDisplay[i]; });
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'study_guide.html';
@@ -459,6 +474,8 @@ export interface ModelOption {
   id: string
   label: string
   free?: boolean
+  promptPrice?: number    // cost per token (from OpenRouter API)
+  completionPrice?: number // cost per token (from OpenRouter API)
 }
 
 // Fallback models if API fetch fails
@@ -491,12 +508,12 @@ export async function fetchOpenRouterModels(apiKey?: string): Promise<ModelOptio
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
 
     const json = await resp.json()
-    const raw: Array<{ id: string; name: string; pricing?: { prompt?: string }; context_length?: number }> = json.data || []
+    const raw: Array<{ id: string; name: string; pricing?: { prompt?: string; completion?: string }; context_length?: number }> = json.data || []
 
     // Build model list: Auto/Free routers first, then sorted by provider priority
     const models: ModelOption[] = [
-      { id: 'openrouter/auto', label: 'Auto Router (best match)' },
-      { id: 'openrouter/free', label: 'Free Router (random free model)', free: true },
+      { id: 'openrouter/auto', label: 'Auto Router (best match)', promptPrice: 0, completionPrice: 0 },
+      { id: 'openrouter/free', label: 'Free Router (random free model)', free: true, promptPrice: 0, completionPrice: 0 },
     ]
 
     // Group by provider, pick top models per provider
@@ -516,7 +533,11 @@ export async function fetchOpenRouterModels(apiKey?: string): Promise<ModelOptio
       providerModels.sort((a, b) => (b.context_length || 0) - (a.context_length || 0))
       for (const m of providerModels.slice(0, 4)) {
         const isFree = m.id.endsWith(':free') || m.pricing?.prompt === '0'
-        models.push({ id: m.id, label: `${m.name}${isFree ? ' (free)' : ''}`, free: isFree })
+        models.push({
+          id: m.id, label: `${m.name}${isFree ? ' (free)' : ''}`, free: isFree,
+          promptPrice: parseFloat(m.pricing?.prompt || '0'),
+          completionPrice: parseFloat(m.pricing?.completion || '0'),
+        })
         added.add(m.id)
       }
     }
@@ -528,7 +549,11 @@ export async function fetchOpenRouterModels(apiKey?: string): Promise<ModelOptio
       for (const m of providerModels.slice(0, 2)) {
         if (added.has(m.id)) continue
         const isFree = m.id.endsWith(':free') || m.pricing?.prompt === '0'
-        models.push({ id: m.id, label: `${m.name}${isFree ? ' (free)' : ''}`, free: isFree })
+        models.push({
+          id: m.id, label: `${m.name}${isFree ? ' (free)' : ''}`, free: isFree,
+          promptPrice: parseFloat(m.pricing?.prompt || '0'),
+          completionPrice: parseFloat(m.pricing?.completion || '0'),
+        })
       }
     }
 
