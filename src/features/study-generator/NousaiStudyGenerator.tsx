@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import {
   processFile, estimateTokens, estimateCost, buildSystemPrompt,
-  callOpenRouter, PALETTES, fetchOpenRouterModels,
+  callOpenRouter, PALETTES, fetchOpenRouterModels, modelTag,
   type GenSettings, type ModelOption,
 } from './studyGenUtils'
 
@@ -274,12 +274,35 @@ export default function NousaiStudyGenerator() {
                 <option value="openrouter/auto">Auto Router (best match)</option>
                 {modelsLoading
                   ? <option disabled>Loading models...</option>
-                  : models.map(m => <option key={m.id} value={m.id}>{m.label}</option>)
+                  : models.map(m => <option key={m.id} value={m.id}>{m.label} — {modelTag(m)}</option>)
                 }
               </select>
               <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 3 }}>
                 {modelsLoading ? 'Fetching models...' : `${models.length} models · live from OpenRouter API`}
               </div>
+              {/* Selected model info */}
+              {(() => {
+                const sel = models.find(m => m.id === model)
+                if (!sel) return null
+                return (
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6, padding: '6px 8px', background: 'rgba(255,255,255,0.04)', borderRadius: 6, lineHeight: 1.5 }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                      <span style={{ color: sel.isFree ? '#4ade80' : '#F5A623' }}>{sel.isFree ? 'Free' : `In: ${modelTag(sel).split(' · ')[1]} · Out: ${(() => { const p = sel.completionPrice * 1_000_000; return p < 0.01 ? '<$0.01/M' : p < 1 ? `$${p.toFixed(2)}/M` : `$${p.toFixed(1)}/M`; })()}`}</span>
+                      <span>Context: {modelTag(sel).split(' · ')[0]}</span>
+                      {sel.maxCompletionTokens > 0 && <span>Max output: {sel.maxCompletionTokens > 1000 ? `${Math.round(sel.maxCompletionTokens / 1000)}K` : sel.maxCompletionTokens}</span>}
+                    </div>
+                    {sel.supportedParams.length > 0 && (
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {sel.supportedParams.includes('tools') && <span style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', padding: '1px 5px', borderRadius: 3, fontSize: 10 }}>Tools</span>}
+                        {sel.supportedParams.includes('reasoning') && <span style={{ background: 'rgba(245,166,35,0.2)', color: '#F5A623', padding: '1px 5px', borderRadius: 3, fontSize: 10 }}>Reasoning</span>}
+                        {sel.inputModalities.includes('image') && <span style={{ background: 'rgba(74,222,128,0.2)', color: '#4ade80', padding: '1px 5px', borderRadius: 3, fontSize: 10 }}>Vision</span>}
+                        {sel.supportedParams.includes('structured_outputs') && <span style={{ background: 'rgba(96,165,250,0.2)', color: '#60a5fa', padding: '1px 5px', borderRadius: 3, fontSize: 10 }}>Structured</span>}
+                      </div>
+                    )}
+                    {sel.description && <div style={{ marginTop: 4, fontSize: 10, opacity: 0.7 }}>{sel.description.slice(0, 120)}{sel.description.length > 120 ? '…' : ''}</div>}
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Tone */}

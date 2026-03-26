@@ -647,30 +647,52 @@ export default function SettingsPage() {
   const [connectionResult, setConnectionResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
   // Live OpenRouter models
-  const [liveORModels, setLiveORModels] = useState<{ value: string; label: string; provider: string }[]>([])
+  interface ORModel { value: string; label: string; provider: string; contextLength: number; promptPrice: number; completionPrice: number; isFree: boolean; description: string; supportedParams: string[]; inputModalities: string[]; maxCompletionTokens: number }
+  const [liveORModels, setLiveORModels] = useState<ORModel[]>([])
   const [orModelsLoading, setOrModelsLoading] = useState(false)
+  const [selectedORModel, setSelectedORModel] = useState<ORModel | null>(null)
   useEffect(() => {
     if (aiConfig.provider !== 'openrouter') return
     setOrModelsLoading(true)
     fetch('https://openrouter.ai/api/v1/models?output_modalities=text')
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(json => {
-        const models = (json.data || [])
+        const models: ORModel[] = (json.data || [])
           .filter((m: any) => m.id && m.name && m.context_length >= 4096)
-          .map((m: any) => ({ value: m.id, label: m.name, provider: m.id.split('/')[0] || 'other' }))
-          .sort((a: any, b: any) => a.label.localeCompare(b.label))
+          .map((m: any) => {
+            const pp = parseFloat(m.pricing?.prompt || '0')
+            const cp = parseFloat(m.pricing?.completion || '0')
+            return {
+              value: m.id, label: m.name, provider: m.id.split('/')[0] || 'other',
+              contextLength: m.context_length || 0, promptPrice: pp, completionPrice: cp,
+              isFree: pp === 0 && cp === 0,
+              description: (m.description || '').slice(0, 200),
+              supportedParams: m.supported_parameters || [],
+              inputModalities: m.architecture?.input_modalities || ['text'],
+              maxCompletionTokens: m.top_provider?.max_completion_tokens || 0,
+            }
+          })
+          .sort((a: ORModel, b: ORModel) => a.label.localeCompare(b.label))
         setLiveORModels(models)
       })
       .catch(() => {})
       .finally(() => setOrModelsLoading(false))
   }, [aiConfig.provider])
 
+  // Update selected model info when model changes
+  useEffect(() => {
+    setSelectedORModel(liveORModels.find(m => m.value === aiConfig.model) || null)
+  }, [aiConfig.model, liveORModels])
+
   // Group live OpenRouter models by provider for optgroup rendering
-  const orByProvider = liveORModels.reduce<Record<string, { value: string; label: string }[]>>((acc, m) => {
+  const orByProvider = liveORModels.reduce<Record<string, ORModel[]>>((acc, m) => {
     ;(acc[m.provider] ??= []).push(m)
     return acc
   }, {})
   const OR_PROVIDER_ORDER = ['anthropic', 'openai', 'google', 'meta-llama', 'deepseek', 'mistralai', 'qwen', 'x-ai']
+
+  const fmtPrice = (p: number) => { const m = p * 1_000_000; return m === 0 ? 'Free' : m < 0.01 ? '<$0.01/M' : m < 1 ? `$${m.toFixed(2)}/M` : `$${m.toFixed(1)}/M` }
+  const fmtCtx = (t: number) => t >= 1_000_000 ? `${(t / 1_000_000).toFixed(1)}M` : `${Math.round(t / 1000)}K`
 
   // Feature slot overrides state
   const SLOTS: AIFeatureSlot[] = ['chat', 'generation', 'analysis', 'ocr', 'japanese', 'physics']
@@ -1880,12 +1902,12 @@ export default function SettingsPage() {
                             ? <>
                                 {OR_PROVIDER_ORDER.filter(p => orByProvider[p]).map(p => (
                                   <optgroup key={p} label={p}>
-                                    {orByProvider[p].map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                    {orByProvider[p].map(m => <option key={m.value} value={m.value}>{m.label} — {fmtCtx(m.contextLength)} · {m.isFree ? 'Free' : fmtPrice(m.promptPrice)}</option>)}
                                   </optgroup>
                                 ))}
                                 {Object.keys(orByProvider).filter(p => !OR_PROVIDER_ORDER.includes(p)).map(p => (
                                   <optgroup key={p} label={p}>
-                                    {orByProvider[p].map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                    {orByProvider[p].map(m => <option key={m.value} value={m.value}>{m.label} — {fmtCtx(m.contextLength)} · {m.isFree ? 'Free' : fmtPrice(m.promptPrice)}</option>)}
                                   </optgroup>
                                 ))}
                               </>
@@ -1895,6 +1917,27 @@ export default function SettingsPage() {
                       <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                         {orModelsLoading ? 'Fetching models...' : liveORModels.length > 0 ? `${liveORModels.length} models · live from OpenRouter API` : 'Using cached model list'}
                       </p>
+                      {/* Selected model transparency card */}
+                      {selectedORModel && (
+                        <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, fontSize: 12, lineHeight: 1.6 }}>
+                          <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--text-primary)' }}>{selectedORModel.label}</div>
+                          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', color: 'var(--text-muted)', fontSize: 11 }}>
+                            <span>Context: <b style={{ color: 'var(--text-primary)' }}>{fmtCtx(selectedORModel.contextLength)}</b></span>
+                            {selectedORModel.maxCompletionTokens > 0 && <span>Max output: <b style={{ color: 'var(--text-primary)' }}>{fmtCtx(selectedORModel.maxCompletionTokens)}</b></span>}
+                            <span style={{ color: selectedORModel.isFree ? '#4ade80' : '#F5A623' }}>
+                              {selectedORModel.isFree ? 'Free' : `In: ${fmtPrice(selectedORModel.promptPrice)} · Out: ${fmtPrice(selectedORModel.completionPrice)}`}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+                            {selectedORModel.supportedParams.includes('tools') && <span style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>Tools</span>}
+                            {selectedORModel.supportedParams.includes('reasoning') && <span style={{ background: 'rgba(245,166,35,0.2)', color: '#F5A623', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>Reasoning</span>}
+                            {selectedORModel.inputModalities.includes('image') && <span style={{ background: 'rgba(74,222,128,0.2)', color: '#4ade80', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>Vision</span>}
+                            {selectedORModel.supportedParams.includes('structured_outputs') && <span style={{ background: 'rgba(96,165,250,0.2)', color: '#60a5fa', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>Structured</span>}
+                            {selectedORModel.supportedParams.includes('temperature') && <span style={{ background: 'rgba(168,85,247,0.15)', color: '#a855f7', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>Temperature</span>}
+                          </div>
+                          {selectedORModel.description && <p style={{ margin: '6px 0 0', fontSize: 10, color: 'var(--text-dim)', lineHeight: 1.4 }}>{selectedORModel.description.slice(0, 150)}{selectedORModel.description.length > 150 ? '…' : ''}</p>}
+                        </div>
+                      )}
                     </div>
                     <div style={fieldGroupStyle}>
                       <label style={labelStyle}>Or enter a custom model ID</label>

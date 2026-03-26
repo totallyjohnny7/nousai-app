@@ -306,7 +306,45 @@ export const PALETTES = [
 ]
 
 /* ── Model Options — fetched live from OpenRouter API ──────── */
-export interface ModelOption { id: string; label: string; provider: string }
+export interface ModelOption {
+  id: string
+  label: string
+  provider: string
+  contextLength: number
+  promptPrice: number    // USD per 1M tokens
+  completionPrice: number // USD per 1M tokens
+  isFree: boolean
+  description: string
+  inputModalities: string[]
+  outputModalities: string[]
+  supportedParams: string[]
+  maxCompletionTokens: number
+}
+
+/** Format token price as human-readable string */
+export function formatPrice(pricePerToken: number): string {
+  if (pricePerToken === 0) return 'Free'
+  const perMillion = pricePerToken * 1_000_000
+  if (perMillion < 0.01) return '<$0.01/M'
+  if (perMillion < 1) return `$${perMillion.toFixed(2)}/M`
+  return `$${perMillion.toFixed(1)}/M`
+}
+
+/** Format context length as human-readable string */
+export function formatContext(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`
+  return `${Math.round(tokens / 1000)}K`
+}
+
+/** Build a short info tag for dropdown display */
+export function modelTag(m: ModelOption): string {
+  const parts: string[] = []
+  parts.push(formatContext(m.contextLength))
+  parts.push(m.isFree ? 'Free' : formatPrice(m.promptPrice))
+  if (m.supportedParams.includes('tools')) parts.push('Tools')
+  if (m.supportedParams.includes('reasoning')) parts.push('Reasoning')
+  return parts.join(' · ')
+}
 
 /** Fetch text-capable models from OpenRouter, grouped by provider */
 export async function fetchOpenRouterModels(): Promise<ModelOption[]> {
@@ -315,11 +353,24 @@ export async function fetchOpenRouterModels(): Promise<ModelOption[]> {
   const json = await res.json()
   const models: ModelOption[] = (json.data || [])
     .filter((m: any) => m.id && m.name && m.context_length >= 4096)
-    .map((m: any) => ({
-      id: m.id,
-      label: m.name,
-      provider: m.id.split('/')[0] || 'other',
-    }))
+    .map((m: any) => {
+      const promptPrice = parseFloat(m.pricing?.prompt || '0')
+      const completionPrice = parseFloat(m.pricing?.completion || '0')
+      return {
+        id: m.id,
+        label: m.name,
+        provider: m.id.split('/')[0] || 'other',
+        contextLength: m.context_length || 0,
+        promptPrice,
+        completionPrice,
+        isFree: promptPrice === 0 && completionPrice === 0,
+        description: (m.description || '').slice(0, 200),
+        inputModalities: m.architecture?.input_modalities || ['text'],
+        outputModalities: m.architecture?.output_modalities || ['text'],
+        supportedParams: m.supported_parameters || [],
+        maxCompletionTokens: m.top_provider?.max_completion_tokens || 0,
+      }
+    })
     .sort((a: ModelOption, b: ModelOption) => a.label.localeCompare(b.label))
   return models
 }
