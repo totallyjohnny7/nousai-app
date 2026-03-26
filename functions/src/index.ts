@@ -1,5 +1,6 @@
 /**
  * NousAI Cloud Function — Server-side sync conflict arbiter.
+ * Deployed via GitHub Actions → Firebase Functions (Node 20).
  *
  * Trigger: onDocumentWritten for user sync metadata docs.
  * Prevents stale writes from overwriting newer data and logs conflicts.
