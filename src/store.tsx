@@ -394,6 +394,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setDataRaw(prev => prev ? valOrFn(prev) : prev);
     } else {
       setDataRaw(valOrFn);
+      // Write-through: when setting data for the first time (onboarding/import),
+      // persist immediately — don't rely on the debounced save effect,
+      // which can lose data due to leader election race conditions.
+      if (!dataRef.current && valOrFn) {
+        log('[STORE] First data write (onboarding/import) — persisting immediately');
+        saveToIDB(valOrFn);
+        saveToRxDB(valOrFn).catch(() => {});
+      }
     }
   }, []);
 
@@ -517,8 +525,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Follower tabs: send mutation to leader instead of writing IDB directly
-      if (!isLeader()) {
+      // Follower tabs: send mutation to leader instead of writing IDB directly.
+      // IMPORTANT: 'undecided' tabs (leader election pending) save directly —
+      // otherwise data from onboarding/import is lost because sendMutationToLeader
+      // broadcasts to a leader that doesn't exist yet.
+      if (getRole() === 'follower') {
         if (!fromSyncRef.current) {
           sendMutationToLeader(data);
         } else {
