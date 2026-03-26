@@ -21,7 +21,7 @@ const DrawPage = lazyWithRetry(() => import('./DrawPage'));
 const StudyModesPage = lazyWithRetry(() => import('./StudyModesPage'));
 import { useStore } from '../store';
 import { useSessionStore } from '../store/sessionStore';
-import type { Course } from '../types';
+import type { Course, StudyGuide } from '../types';
 import { speak, stopSpeaking } from '../utils/speechTools';
 import { callAI, isAIConfigured } from '../utils/ai';
 import RichTextEditor, { markdownToHtml, htmlToMarkdown } from '../components/RichTextEditor';
@@ -48,7 +48,7 @@ type SortKey = 'name' | 'date' | 'size';
 type SortDir = 'asc' | 'desc';
 type FilterType = 'all' | 'note' | 'quiz' | 'flashcard' | 'ai-output' | 'match';
 type ViewMode = 'list' | 'viewer' | 'editor';
-type LibraryTab = 'courses' | 'notes' | 'drawings' | 'study' | 'annotations';
+type LibraryTab = 'courses' | 'notes' | 'drawings' | 'study' | 'annotations' | 'guides';
 
 /* ── Helpers ────────────────────────────────────────── */
 function generateId(): string {
@@ -111,7 +111,7 @@ export default function LibraryPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<LibraryTab>(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'notes' || tab === 'drawings' || tab === 'study') return tab;
+    if (tab === 'notes' || tab === 'drawings' || tab === 'study' || tab === 'guides') return tab;
     return 'courses';
   });
 
@@ -595,6 +595,25 @@ export default function LibraryPage() {
             marginLeft: 2,
           }}>
             {annotationCount}
+          </span>
+        </button>
+        <button
+          className={`cx-chip${activeTab === 'guides' ? ' active' : ''}`}
+          onClick={() => setActiveTab('guides')}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', fontSize: 12, fontWeight: 700,
+            minHeight: 36,
+          }}
+        >
+          <Sparkles size={14} /> Study Guides
+          <span style={{
+            background: activeTab === 'guides' ? 'var(--text-primary)' : 'var(--border)',
+            color: activeTab === 'guides' ? 'var(--bg-primary)' : 'var(--text-muted)',
+            borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 800,
+            marginLeft: 2,
+          }}>
+            {(data?.pluginData?.studyGuides as unknown[] | undefined)?.length ?? 0}
           </span>
         </button>
       </div>
@@ -1460,6 +1479,13 @@ export default function LibraryPage() {
           ═════════════════════════════════════════════════════ */}
       {activeTab === 'annotations' && (
         <AnnotationsTab />
+      )}
+
+      {/* ═════════════════════════════════════════════════════
+          TAB 6: STUDY GUIDES
+          ═════════════════════════════════════════════════════ */}
+      {activeTab === 'guides' && (
+        <StudyGuidesTab />
       )}
     </div>
   );
@@ -3011,6 +3037,148 @@ function NoteEditor({ note, folders, courses, onSave, onCancel }: {
           />
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Study Guides Tab ────────────────────────────────── */
+function StudyGuidesTab() {
+  const { data, updatePluginData } = useStore();
+  const navigate = useNavigate();
+  const guides: StudyGuide[] = (data?.pluginData?.studyGuides as StudyGuide[] | undefined) || [];
+  const [search, setSearch] = useState('');
+  const [previewId, setPreviewId] = useState<string | null>(null);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return guides;
+    const q = search.toLowerCase();
+    return guides.filter(g => g.title.toLowerCase().includes(q) || g.model?.toLowerCase().includes(q));
+  }, [guides, search]);
+
+  const deleteGuide = (id: string) => {
+    updatePluginData({ studyGuides: guides.filter(g => g.id !== id) });
+    if (previewId === id) setPreviewId(null);
+  };
+
+  const downloadGuide = (g: StudyGuide) => {
+    const blob = new Blob([g.html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${g.title.replace(/[^a-zA-Z0-9 ]/g, '')}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const previewGuide = guides.find(g => g.id === previewId);
+
+  if (guides.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+        <Sparkles size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
+        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No study guides yet</h3>
+        <p style={{ fontSize: 13, marginBottom: 16 }}>Generate study guides from the Study Gen page</p>
+        <button
+          className="cx-btn"
+          onClick={() => navigate('/studygen')}
+          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600 }}
+        >
+          Go to Study Gen
+        </button>
+      </div>
+    );
+  }
+
+  if (previewGuide) {
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <button className="cx-btn" onClick={() => setPreviewId(null)} style={{ padding: '6px 14px', fontSize: 12 }}>
+            <ChevronLeft size={14} /> Back
+          </button>
+          <span style={{ flex: 1, fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{previewGuide.title}</span>
+          <button className="cx-btn" onClick={() => downloadGuide(previewGuide)} style={{ padding: '6px 14px', fontSize: 12 }}>
+            <Download size={14} /> Download
+          </button>
+          <button className="cx-btn" onClick={() => deleteGuide(previewGuide.id)} style={{ padding: '6px 14px', fontSize: 12, color: '#ef4444' }}>
+            <Trash2 size={14} /> Delete
+          </button>
+        </div>
+        <div style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', minHeight: 400 }}>
+          <iframe
+            srcDoc={previewGuide.html}
+            style={{ width: '100%', minHeight: 600, border: 'none', borderRadius: 10 }}
+            title={previewGuide.title}
+            sandbox="allow-scripts"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ position: 'relative', marginBottom: 14 }}>
+        <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+        <input
+          type="text"
+          placeholder="Search study guides…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            width: '100%', padding: '10px 12px 10px 36px', borderRadius: 8,
+            border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)', fontSize: 13,
+          }}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+        {filtered.map(g => (
+          <div
+            key={g.id}
+            className="card"
+            style={{
+              padding: 16, cursor: 'pointer', borderRadius: 10,
+              border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+              transition: 'border-color 0.15s',
+            }}
+            onClick={() => setPreviewId(g.id)}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.3, flex: 1 }}>
+                {g.title}
+              </h4>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+              <span>{g.model || 'Unknown model'}</span>
+              <span>{formatDateShort(g.createdAt)}</span>
+              <span>{Math.round((g.html?.length || 0) / 1024)} KB</span>
+            </div>
+            {g.sourcePreview && (
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {g.sourcePreview}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 6, marginTop: 10 }} onClick={e => e.stopPropagation()}>
+              <button className="cx-btn" onClick={() => setPreviewId(g.id)} style={{ padding: '4px 10px', fontSize: 11 }}>
+                <Eye size={12} /> View
+              </button>
+              <button className="cx-btn" onClick={() => downloadGuide(g)} style={{ padding: '4px 10px', fontSize: 11 }}>
+                <Download size={12} /> Download
+              </button>
+              <button className="cx-btn" onClick={() => deleteGuide(g.id)} style={{ padding: '4px 10px', fontSize: 11, color: '#ef4444' }}>
+                <Trash2 size={12} /> Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {filtered.length === 0 && search && (
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: 20 }}>
+          No guides match "{search}"
+        </p>
+      )}
     </div>
   );
 }
