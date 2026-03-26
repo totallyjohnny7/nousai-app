@@ -23,21 +23,36 @@ const ROUTES = [
 ];
 
 async function waitForApp(page: Page) {
-  // Wait for React to render something meaningful
+  // Wait for React to render something meaningful (including onboarding)
   await page.waitForSelector(
     'nav, .bottom-nav, button, h1, h2, input, [data-testid]',
-    { timeout: 15_000 }
+    { timeout: 20_000 }
   );
   // Ensure no React error boundary is showing
   const errorBoundary = await page.locator('text=Something went wrong').count();
   return errorBoundary === 0;
 }
 
+/** Bypass onboarding if shown — clicks "Start Fresh" to create a workspace */
+async function bypassOnboarding(page: Page) {
+  const startFresh = page.locator('text=Start Fresh');
+  if (await startFresh.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await startFresh.click();
+    await page.waitForTimeout(2000);
+  }
+}
+
 // ── 1. Page Load Tests ──────────────────────────────────────────────────────
 
 for (const route of ROUTES) {
   test(`Page loads: ${route.name} (${route.path})`, async ({ page }) => {
-    await page.goto(route.path);
+    await page.goto('/');
+    await waitForApp(page);
+    await bypassOnboarding(page);
+    if (route.path !== '/') {
+      await page.goto(route.path);
+      await page.waitForTimeout(2000);
+    }
     const ok = await waitForApp(page);
 
     // Screenshot for visual verification
@@ -58,8 +73,11 @@ for (const route of ROUTES) {
 // ── 2. Settings Page Specific (React #310 regression) ────────────────────────
 
 test('Settings page does not crash (React #310 regression)', async ({ page }) => {
-  await page.goto('/#/settings');
+  await page.goto('/');
   await waitForApp(page);
+  await bypassOnboarding(page);
+  await page.goto('/#/settings');
+  await page.waitForTimeout(2000);
 
   // Should NOT show error boundary
   const hasError = await page.locator('text=Something went wrong').count();
@@ -77,6 +95,7 @@ test('Settings page does not crash (React #310 regression)', async ({ page }) =>
 test('Japanese IME badge appears on Alt+J', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
+  await bypassOnboarding(page);
 
   // Press Alt+J to toggle IME
   await page.keyboard.press('Alt+j');
@@ -105,6 +124,7 @@ test('Japanese IME badge appears on Alt+J', async ({ page }) => {
 test('Handwriting overlay appears on Alt+H', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page);
+  await bypassOnboarding(page);
 
   await page.keyboard.press('Alt+h');
 
@@ -125,8 +145,11 @@ test('Handwriting overlay appears on Alt+H', async ({ page }) => {
 // ── 4. Study Generator ──────────────────────────────────────────────────────
 
 test('Study Generator loads with model dropdown', async ({ page }) => {
-  await page.goto('/#/study-gen');
+  await page.goto('/');
   await waitForApp(page);
+  await bypassOnboarding(page);
+  await page.goto('/#/study-gen');
+  await page.waitForTimeout(2000);
 
   // Should show the Study Visual Generator header
   const header = page.locator('text=Study Visual Generator');
@@ -146,8 +169,11 @@ test('Study Generator loads with model dropdown', async ({ page }) => {
 // ── 5. Learn Page / AI Tools ─────────────────────────────────────────────────
 
 test('Learn page loads with tool grid', async ({ page }) => {
-  await page.goto('/#/learn');
+  await page.goto('/');
   await waitForApp(page);
+  await bypassOnboarding(page);
+  await page.goto('/#/learn');
+  await page.waitForTimeout(2000);
 
   // Should have some tool buttons/cards
   const toolCount = await page.locator('button, [role="button"], .card').count();
@@ -159,8 +185,11 @@ test('Learn page loads with tool grid', async ({ page }) => {
 // ── 6. Quiz Gen Transparency Dropdown ────────────────────────────────────────
 
 test('Quiz Gen has transparency level selector', async ({ page }) => {
-  await page.goto('/#/learn');
+  await page.goto('/');
   await waitForApp(page);
+  await bypassOnboarding(page);
+  await page.goto('/#/learn');
+  await page.waitForTimeout(2000);
 
   // Find and click Quiz Gen tool
   const quizGenBtn = page.locator('text=Quiz Gen').first();
@@ -189,6 +218,7 @@ test.describe('Mobile', () => {
   test('Dashboard renders on mobile', async ({ page }) => {
     await page.goto('/');
     await waitForApp(page);
+    await bypassOnboarding(page);
 
     const hasError = await page.locator('text=Something went wrong').count();
     expect(hasError).toBe(0);
@@ -197,8 +227,11 @@ test.describe('Mobile', () => {
   });
 
   test('Settings renders on mobile without crash', async ({ page }) => {
-    await page.goto('/#/settings');
+    await page.goto('/');
     await waitForApp(page);
+    await bypassOnboarding(page);
+    await page.goto('/#/settings');
+    await page.waitForTimeout(2000);
 
     const hasError = await page.locator('text=Something went wrong').count();
     expect(hasError).toBe(0);
@@ -220,6 +253,7 @@ test('No React errors in console on dashboard load', async ({ page }) => {
 
   await page.goto('/');
   await waitForApp(page);
+  await bypassOnboarding(page);
   await page.waitForTimeout(3000); // Wait for async effects
 
   // Filter out non-critical errors (RxDB init failures are expected in test env)
