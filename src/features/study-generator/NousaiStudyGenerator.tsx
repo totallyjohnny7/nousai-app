@@ -11,6 +11,7 @@ import {
 } from './studyGenUtils'
 import { useStore } from '../../store'
 import type { StudyGuide } from '../../types'
+import { saveGuideHtml, loadGuideHtml, deleteGuideHtml } from './studyGuideStore'
 
 /* ── Types ──────────────────────────────────────────────── */
 interface FileEntry {
@@ -238,16 +239,17 @@ export default function NousaiStudyGenerator() {
       setPhase('done')
       setProgress('')
 
-      // Auto-save to library
+      // Auto-save: HTML goes to dedicated IDB, metadata to pluginData
       const title = html.match(/<h1[^>]*>(.*?)<\/h1>/i)?.[1]?.replace(/<[^>]*>/g, '') || 'Study Guide'
       const guideId = crypto.randomUUID()
       setCurrentGuideId(guideId)
+      await saveGuideHtml(guideId, html).catch(() => {})
       const guide: StudyGuide = {
         id: guideId,
         title,
-        html,
         model,
         sourcePreview: allText.slice(0, 200),
+        sizeKb: Math.round(html.length / 1024),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -276,14 +278,15 @@ export default function NousaiStudyGenerator() {
     }, 1000)
   }
 
-  const saveToLibrary = () => {
+  const saveToLibrary = async () => {
     try {
       const title = genHTML.match(/<h1[^>]*>(.*?)<\/h1>/i)?.[1]?.replace(/<[^>]*>/g, '') || 'Study Guide'
       if (currentGuideId) {
-        // Update existing auto-saved entry (avoid duplicates)
+        // Update HTML in IDB + metadata in pluginData
+        await saveGuideHtml(currentGuideId, genHTML)
         const updated = savedGuides.map(g =>
           g.id === currentGuideId
-            ? { ...g, html: genHTML, title, updatedAt: new Date().toISOString() }
+            ? { ...g, title, sizeKb: Math.round(genHTML.length / 1024), updatedAt: new Date().toISOString() }
             : g
         )
         updatePluginData({ studyGuides: updated })
@@ -291,7 +294,8 @@ export default function NousaiStudyGenerator() {
       } else {
         const id = crypto.randomUUID()
         setCurrentGuideId(id)
-        const guide: StudyGuide = { id, title, html: genHTML, model, sourcePreview: allText.slice(0, 200), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+        await saveGuideHtml(id, genHTML)
+        const guide: StudyGuide = { id, title, model, sourcePreview: allText.slice(0, 200), sizeKb: Math.round(genHTML.length / 1024), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
         updatePluginData({ studyGuides: [guide, ...savedGuides].slice(0, 30) })
         window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message: `Saved "${title}" to Library`, type: 'success', duration: 2000 } }))
       }
@@ -301,9 +305,15 @@ export default function NousaiStudyGenerator() {
   }
 
   // Load a previously saved study guide
-  const loadGuide = (guide: StudyGuide) => {
-    setGenHTML(guide.html)
-    const secMatches = [...guide.html.matchAll(/data-section="([^"]+)"/g)]
+  const loadGuide = async (guide: StudyGuide) => {
+    const html = await loadGuideHtml(guide.id) || guide.html || ''
+    if (!html) {
+      setError('Study guide HTML not found — it may have been cleared from this browser.')
+      return
+    }
+    setGenHTML(html)
+    setCurrentGuideId(guide.id)
+    const secMatches = [...html.matchAll(/data-section="([^"]+)"/g)]
     setSections([...new Set(secMatches.map(m => m[1]))])
     setPhase('done')
     setProgress('')
@@ -312,6 +322,7 @@ export default function NousaiStudyGenerator() {
 
   // Delete a saved study guide
   const deleteGuide = (id: string) => {
+    deleteGuideHtml(id).catch(() => {})
     updatePluginData({ studyGuides: savedGuides.filter(g => g.id !== id) })
   }
 
@@ -498,7 +509,7 @@ export default function NousaiStudyGenerator() {
                   {g.title}
                 </div>
                 <div style={{ color: 'var(--text-muted)', fontSize: 10 }}>
-                  {g.model?.split('/')[1] || 'unknown'} · {new Date(g.createdAt).toLocaleDateString()}
+                  {g.model?.split('/')[1] || 'unknown'} · {new Date(g.createdAt).toLocaleDateString()}{g.sizeKb ? ` · ${g.sizeKb}kb` : ''}
                 </div>
                 <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
                   <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: 10 }} onClick={() => loadGuide(g)}>Open</button>
