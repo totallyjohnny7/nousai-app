@@ -11,6 +11,9 @@ export type AIFeatureSlot = 'chat' | 'generation' | 'analysis' | 'ocr' | 'japane
 export type AIContentPart =
   | { type: 'text'; text: string }
   | { type: 'image_url'; image_url: { url: string } }
+  | { type: 'file'; file: { filename: string; file_data: string } }
+  | { type: 'input_audio'; input_audio: { data: string; format: string } }
+  | { type: 'video_url'; video_url: { url: string } }
 
 export interface AIMessage {
   role: 'system' | 'user' | 'assistant'
@@ -21,7 +24,13 @@ export interface AIOptions {
   temperature?: number
   maxTokens?: number
   json?: boolean
+  jsonSchema?: { name: string; strict?: boolean; schema: object }
   onChunk?: (chunk: string) => void
+  reasoning?: { effort?: string; max_tokens?: number; exclude?: boolean }
+  modalities?: string[]
+  plugins?: Array<{ id: string; [key: string]: any }>
+  models?: string[]
+  provider?: { sort?: string; order?: string[]; allow_fallbacks?: boolean; max_price?: { prompt?: number; completion?: number } }
 }
 
 interface AIConfig {
@@ -34,6 +43,14 @@ interface AIConfig {
   maxTokens: number
   systemPrompt: string
   streaming: boolean
+  // OpenRouter-specific advanced settings
+  orVariant: string
+  orFallback: string
+  orSort: string
+  orWebSearch: boolean
+  orReasoning: boolean
+  orReasoningEffort: string
+  orHealing: boolean
 }
 
 function getConfig(): AIConfig {
@@ -47,6 +64,13 @@ function getConfig(): AIConfig {
     maxTokens: parseInt(localStorage.getItem('nousai-ai-max-tokens') || '2048'),
     systemPrompt: localStorage.getItem('nousai-ai-system-prompt') || '',
     streaming: localStorage.getItem('nousai-ai-streaming') !== 'false',
+    orVariant: localStorage.getItem('nousai-ai-or-variant') || '',
+    orFallback: localStorage.getItem('nousai-ai-or-fallback') || '',
+    orSort: localStorage.getItem('nousai-ai-or-sort') || 'auto',
+    orWebSearch: localStorage.getItem('nousai-ai-or-websearch') === 'true',
+    orReasoning: localStorage.getItem('nousai-ai-or-reasoning') === 'true',
+    orReasoningEffort: localStorage.getItem('nousai-ai-or-reasoning-effort') || 'medium',
+    orHealing: localStorage.getItem('nousai-ai-or-healing') === 'true',
   }
 }
 
@@ -180,6 +204,7 @@ export async function callAI(
           'HTTP-Referer': window.location.origin,
           'X-Title': 'NousAI Study Companion',
         },
+        cfg,
       )
       break
 
@@ -274,18 +299,77 @@ async function callOpenAICompatible(
   maxTokens: number,
   options: AIOptions,
   headers: Record<string, string>,
+  cfg?: AIConfig,
 ): Promise<string> {
   const stream = !!options.onChunk
+  const isOpenRouter = baseUrl.includes('openrouter.ai')
+
+  // Apply OpenRouter model variant suffix
+  let effectiveModel = model
+  if (isOpenRouter && cfg?.orVariant) {
+    effectiveModel = `${model}${cfg.orVariant}`
+  }
 
   const body: any = {
-    model,
+    model: effectiveModel,
     messages,
     temperature,
     max_tokens: maxTokens,
     stream,
   }
-  if (options.json) {
+
+  // Response format: prefer json_schema over json_object when schema provided
+  if (options.jsonSchema) {
+    body.response_format = { type: 'json_schema', json_schema: options.jsonSchema }
+  } else if (options.json) {
     body.response_format = { type: 'json_object' }
+  }
+
+  // ── OpenRouter-specific enhancements ──
+  if (isOpenRouter && cfg) {
+    // Model fallbacks
+    if (cfg.orFallback) {
+      body.models = [effectiveModel, cfg.orFallback]
+    }
+    if (options.models) {
+      body.models = options.models
+    }
+
+    // Provider routing preferences
+    if (cfg.orSort && cfg.orSort !== 'auto') {
+      body.provider = { sort: cfg.orSort }
+    }
+    if (options.provider) {
+      body.provider = { ...body.provider, ...options.provider }
+    }
+
+    // Web search plugin
+    if (cfg.orWebSearch) {
+      body.plugins = [{ id: 'web' }]
+    }
+
+    // Response healing plugin (auto-fix malformed JSON)
+    if (cfg.orHealing && (options.json || options.jsonSchema)) {
+      body.plugins = [...(body.plugins || []), { id: 'response-healing' }]
+    }
+
+    // Reasoning tokens
+    if (cfg.orReasoning) {
+      body.reasoning = { effort: cfg.orReasoningEffort || 'medium' }
+    }
+    if (options.reasoning) {
+      body.reasoning = options.reasoning
+    }
+
+    // Caller-provided plugins (merged with config-based ones)
+    if (options.plugins) {
+      body.plugins = [...(body.plugins || []), ...options.plugins]
+    }
+
+    // Modalities (for image gen, audio output)
+    if (options.modalities) {
+      body.modalities = options.modalities
+    }
   }
 
   const { signal, cleanup } = withTimeout()
