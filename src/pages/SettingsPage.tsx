@@ -161,6 +161,14 @@ function getAIConfig() {
     systemPrompt: localStorage.getItem('nousai-ai-system-prompt') || '',
     streaming: localStorage.getItem('nousai-ai-streaming') !== 'false',
     responseFormat: localStorage.getItem('nousai-ai-response-format') || 'text',
+    // OpenRouter advanced features
+    orVariant: localStorage.getItem('nousai-ai-or-variant') || '',
+    orFallback: localStorage.getItem('nousai-ai-or-fallback') || '',
+    orSort: localStorage.getItem('nousai-ai-or-sort') || 'auto',
+    orWebSearch: localStorage.getItem('nousai-ai-or-websearch') === 'true',
+    orReasoning: localStorage.getItem('nousai-ai-or-reasoning') === 'true',
+    orReasoningEffort: localStorage.getItem('nousai-ai-or-reasoning-effort') || 'medium',
+    orHealing: localStorage.getItem('nousai-ai-or-healing') === 'true',
   }
 }
 
@@ -175,6 +183,14 @@ function saveAIConfig(config: ReturnType<typeof getAIConfig>) {
   localStorage.setItem('nousai-ai-system-prompt', config.systemPrompt)
   localStorage.setItem('nousai-ai-streaming', String(config.streaming))
   localStorage.setItem('nousai-ai-response-format', config.responseFormat)
+  // OpenRouter advanced features
+  localStorage.setItem('nousai-ai-or-variant', config.orVariant)
+  localStorage.setItem('nousai-ai-or-fallback', config.orFallback)
+  localStorage.setItem('nousai-ai-or-sort', config.orSort)
+  localStorage.setItem('nousai-ai-or-websearch', String(config.orWebSearch))
+  localStorage.setItem('nousai-ai-or-reasoning', String(config.orReasoning))
+  localStorage.setItem('nousai-ai-or-reasoning-effort', config.orReasoningEffort)
+  localStorage.setItem('nousai-ai-or-healing', String(config.orHealing))
 }
 
 // ─── localStorage helpers for study prefs ──────────────────
@@ -2074,6 +2090,101 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* ─── OpenRouter Features ─── */}
+                {aiConfig.provider === 'openrouter' && (
+                  <div style={{ borderTop: '1px solid var(--border)', marginTop: 12, paddingTop: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Zap size={12} /> OpenRouter Features
+                    </div>
+
+                    {/* Model Variant */}
+                    <div style={fieldGroupStyle}>
+                      <label style={labelStyle}>Model Variant</label>
+                      <select style={selectStyle} value={aiConfig.orVariant} onChange={e => updateAiConfig({ orVariant: e.target.value })}>
+                        {[
+                          { v: '', l: 'None (default)' },
+                          { v: ':free', l: ':free — Zero cost' },
+                          { v: ':nitro', l: ':nitro — Fastest provider' },
+                          { v: ':online', l: ':online — Web search enabled' },
+                          { v: ':thinking', l: ':thinking — Extended reasoning' },
+                          { v: ':extended', l: ':extended — Larger context' },
+                          { v: ':exacto', l: ':exacto — Best tool-calling' },
+                          { v: ':floor', l: ':floor — Cheapest provider' },
+                        ].map(v => <option key={v.v} value={v.v}>{v.l}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Fallback Model */}
+                    <div style={fieldGroupStyle}>
+                      <label style={labelStyle}>Fallback Model <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span></label>
+                      <input
+                        type="text"
+                        placeholder="e.g. anthropic/claude-sonnet-4.5"
+                        style={inputStyle}
+                        value={aiConfig.orFallback}
+                        onChange={e => updateAiConfig({ orFallback: e.target.value })}
+                      />
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Auto-failover if primary model is unavailable</div>
+                    </div>
+
+                    {/* Provider Sort */}
+                    <div style={fieldGroupStyle}>
+                      <label style={labelStyle}>Provider Sort</label>
+                      <select style={selectStyle} value={aiConfig.orSort} onChange={e => updateAiConfig({ orSort: e.target.value })}>
+                        <option value="auto">Auto (price-weighted load balance)</option>
+                        <option value="price">Price (cheapest first)</option>
+                        <option value="throughput">Throughput (fastest tokens/sec)</option>
+                        <option value="latency">Latency (lowest response time)</option>
+                      </select>
+                    </div>
+
+                    {/* Web Search toggle */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>Web Search</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Augment responses with real-time web results</div>
+                      </div>
+                      <button style={toggleStyle(aiConfig.orWebSearch)} onClick={() => updateAiConfig({ orWebSearch: !aiConfig.orWebSearch })}>
+                        <div style={toggleKnobStyle(aiConfig.orWebSearch)} />
+                      </button>
+                    </div>
+
+                    {/* Reasoning toggle + effort */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>Reasoning Tokens</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Enhanced step-by-step thinking</div>
+                      </div>
+                      <button style={toggleStyle(aiConfig.orReasoning)} onClick={() => updateAiConfig({ orReasoning: !aiConfig.orReasoning })}>
+                        <div style={toggleKnobStyle(aiConfig.orReasoning)} />
+                      </button>
+                    </div>
+                    {aiConfig.orReasoning && (
+                      <div style={{ ...fieldGroupStyle, marginTop: 0 }}>
+                        <label style={labelStyle}>Reasoning Effort</label>
+                        <select style={selectStyle} value={aiConfig.orReasoningEffort} onChange={e => updateAiConfig({ orReasoningEffort: e.target.value })}>
+                          <option value="minimal">Minimal (~10% of tokens)</option>
+                          <option value="low">Low (~20% of tokens)</option>
+                          <option value="medium">Medium (~50% of tokens)</option>
+                          <option value="high">High (~80% of tokens)</option>
+                          <option value="xhigh">Extra High (~95% of tokens)</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Response Healing toggle */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>Response Healing</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Auto-fix malformed JSON responses</div>
+                      </div>
+                      <button style={toggleStyle(aiConfig.orHealing)} onClick={() => updateAiConfig({ orHealing: !aiConfig.orHealing })}>
+                        <div style={toggleKnobStyle(aiConfig.orHealing)} />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Test Connection */}
                 <div style={{ marginTop: 8, marginBottom: 8 }}>
