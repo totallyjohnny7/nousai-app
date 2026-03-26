@@ -2085,24 +2085,25 @@ export default function SettingsPage() {
 
                     {/* Model Variant */}
                     <div style={fieldGroupStyle}>
-                      <label style={labelStyle}>Model Variant</label>
+                      <label style={labelStyle}>Model Mode</label>
                       <select style={selectStyle} value={aiConfig.orVariant} onChange={e => updateAiConfig({ orVariant: e.target.value })}>
                         {[
-                          { v: '', l: 'None (default)' },
-                          { v: ':free', l: ':free — Zero cost' },
-                          { v: ':nitro', l: ':nitro — Fastest provider' },
-                          { v: ':online', l: ':online — Web search enabled' },
-                          { v: ':thinking', l: ':thinking — Extended reasoning' },
-                          { v: ':extended', l: ':extended — Larger context' },
-                          { v: ':exacto', l: ':exacto — Best tool-calling' },
-                          { v: ':floor', l: ':floor — Cheapest provider' },
+                          { v: '', l: 'Standard (default)' },
+                          { v: ':free', l: 'Free — No cost, lower rate limits' },
+                          { v: ':nitro', l: 'Speed — Fastest available server' },
+                          { v: ':online', l: 'Live Web — Includes real-time search results' },
+                          { v: ':thinking', l: 'Deep Think — Extra reasoning for hard problems' },
+                          { v: ':extended', l: 'Extended — Process longer documents' },
+                          { v: ':exacto', l: 'Precision — Best accuracy for structured tasks' },
+                          { v: ':floor', l: 'Budget — Always use cheapest server' },
                         ].map(v => <option key={v.v} value={v.v}>{v.l}</option>)}
                       </select>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Changes how OpenRouter handles your request. Free mode costs nothing but may be slower.</div>
                     </div>
 
                     {/* Fallback Model */}
                     <div style={fieldGroupStyle}>
-                      <label style={labelStyle}>Fallback Model <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span></label>
+                      <label style={labelStyle}>Backup Model <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span></label>
                       <input
                         type="text"
                         placeholder="e.g. anthropic/claude-sonnet-4.5"
@@ -2110,36 +2111,37 @@ export default function SettingsPage() {
                         value={aiConfig.orFallback}
                         onChange={e => updateAiConfig({ orFallback: e.target.value })}
                       />
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Auto-failover if primary model is unavailable</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>If your main model is down or overloaded, this model is used automatically. Leave blank to let OpenRouter choose.</div>
                     </div>
 
-                    {/* Provider Sort */}
+                    {/* Optimization Priority */}
                     <div style={fieldGroupStyle}>
-                      <label style={labelStyle}>Provider Sort</label>
+                      <label style={labelStyle}>Optimization Priority</label>
                       <select style={selectStyle} value={aiConfig.orSort} onChange={e => updateAiConfig({ orSort: e.target.value })}>
-                        <option value="auto">Auto (price-weighted load balance)</option>
-                        <option value="price">Price (cheapest first)</option>
-                        <option value="throughput">Throughput (fastest tokens/sec)</option>
-                        <option value="latency">Latency (lowest response time)</option>
+                        <option value="auto">Balanced (smart mix of cost and speed)</option>
+                        <option value="price">Lowest Cost (cheapest server first)</option>
+                        <option value="throughput">Fastest Speed (highest words/sec)</option>
+                        <option value="latency">Quickest Reply (lowest wait time)</option>
                       </select>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Controls which server handles your request when multiple are available for the same model.</div>
                     </div>
 
                     {/* Web Search toggle */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>Web Search</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Augment responses with real-time web results</div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>Live Web Search</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>AI searches the web before answering, for up-to-date facts (+~$0.02/request)</div>
                       </div>
                       <button style={toggleStyle(aiConfig.orWebSearch)} onClick={() => updateAiConfig({ orWebSearch: !aiConfig.orWebSearch })}>
                         <div style={toggleKnobStyle(aiConfig.orWebSearch)} />
                       </button>
                     </div>
 
-                    {/* Reasoning toggle + effort */}
+                    {/* Deep Thinking toggle + effort */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>Reasoning Tokens</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Enhanced step-by-step thinking</div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>Deep Thinking</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>AI reasons step-by-step before answering (better for complex questions, uses more tokens)</div>
                       </div>
                       <button style={toggleStyle(aiConfig.orReasoning)} onClick={() => updateAiConfig({ orReasoning: !aiConfig.orReasoning })}>
                         <div style={toggleKnobStyle(aiConfig.orReasoning)} />
@@ -2147,22 +2149,23 @@ export default function SettingsPage() {
                     </div>
                     {aiConfig.orReasoning && (
                       <div style={{ ...fieldGroupStyle, marginTop: 0 }}>
-                        <label style={labelStyle}>Reasoning Effort</label>
+                        <label style={labelStyle}>Thinking Depth</label>
                         <select style={selectStyle} value={aiConfig.orReasoningEffort} onChange={e => updateAiConfig({ orReasoningEffort: e.target.value })}>
-                          <option value="minimal">Minimal (~10% of tokens)</option>
-                          <option value="low">Low (~20% of tokens)</option>
-                          <option value="medium">Medium (~50% of tokens)</option>
-                          <option value="high">High (~80% of tokens)</option>
-                          <option value="xhigh">Extra High (~95% of tokens)</option>
+                          <option value="minimal">Quick glance — fast, minimal extra thinking</option>
+                          <option value="low">Light review — brief consideration</option>
+                          <option value="medium">Standard — balanced thinking (recommended)</option>
+                          <option value="high">Thorough — detailed step-by-step analysis</option>
+                          <option value="xhigh">Maximum — exhaustive reasoning for hardest problems</option>
                         </select>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Higher = better answers for hard questions, but slower and costs more.</div>
                       </div>
                     )}
 
-                    {/* Response Healing toggle */}
+                    {/* Fix Broken Responses toggle */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>Response Healing</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Auto-fix malformed JSON responses</div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>Auto-Fix Responses</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Automatically repairs broken or incomplete AI responses (for flashcard/quiz generation)</div>
                       </div>
                       <button style={toggleStyle(aiConfig.orHealing)} onClick={() => updateAiConfig({ orHealing: !aiConfig.orHealing })}>
                         <div style={toggleKnobStyle(aiConfig.orHealing)} />

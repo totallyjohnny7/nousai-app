@@ -30,6 +30,8 @@ export function estimateTokens(text: string, depth: string) {
   return { input, output, total: input + output }
 }
 
+// Rough estimate based on Gemini Flash pricing ($0.10/1M in, $0.40/1M out)
+// Actual cost varies by model — check openrouter.ai/models for exact pricing
 const COST_PER_1M = { input: 0.10, output: 0.40 }
 export function estimateCost(t: { input: number; output: number }) {
   const i = (t.input / 1e6) * COST_PER_1M.input
