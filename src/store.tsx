@@ -128,6 +128,7 @@ export function mergeLocalCardMeta(local: NousAIData | null, cloud: NousAIData):
   const mergedMatchSets = mergeById(localPD.matchSets, cloudPD.matchSets);
   const mergedQuizHistory = mergeById(localPD.quizHistory, cloudPD.quizHistory);
   const mergedSavedVideos = mergeById(localPD.savedVideos, cloudPD.savedVideos);
+  const mergedStudyGuides = mergeById(localPD.studyGuides, cloudPD.studyGuides);
 
   return {
     ...cloud,
@@ -146,6 +147,7 @@ export function mergeLocalCardMeta(local: NousAIData | null, cloud: NousAIData):
       ...(mergedMatchSets !== undefined && { matchSets: mergedMatchSets }),
       ...(mergedQuizHistory !== undefined && { quizHistory: mergedQuizHistory }),
       ...(mergedSavedVideos !== undefined && { savedVideos: mergedSavedVideos }),
+      ...(mergedStudyGuides !== undefined && { studyGuides: mergedStudyGuides }),
     },
   };
 }
@@ -754,10 +756,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSyncStatus('syncing');
       const cloudData = await syncFromCloud(uid);
       if (cloudData) {
-        setData(cloudData);
+        // Merge cloud data with local data to prevent overwriting newer local changes
+        const merged = mergeLocalCardMeta(dataRef.current, normalizeData(cloudData));
+        setData(merged);
         setSyncStatus('synced');
         setLastSyncAt(new Date().toISOString());
-        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Loaded from cloud!' }));
+        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Synced from cloud (merged with local)' }));
       } else {
         setSyncStatus('idle');
         window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'No cloud data found' }));
