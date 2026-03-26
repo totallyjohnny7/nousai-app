@@ -408,40 +408,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       let d: NousAIData | null = null;
-      let source = 'rxdb';
+      let source = 'legacy-idb';
 
+      // PRIMARY: Load from legacy IDB (reliable, always works)
+      // RxDB is disabled due to persistent DB9 schema errors that delete user data.
+      // Legacy IDB is the single source of truth until RxDB migration is fixed.
       try {
-        // Initialize RxDB + run migration from old blob if needed
-        await initRxStore();
-        d = await loadFromRxDB();
-        // If RxDB returned null but old IDB has data, reset migration flag and use legacy
-        if (!d) {
-          const legacyData = await loadFromIDB();
-          if (legacyData) {
-            warn('[STORE] RxDB returned null but legacy IDB has data — using legacy, will retry migration');
-            localStorage.removeItem('nousai-rxdb-migrated');
-            d = legacyData;
-            source = 'idb-fallback';
-          }
-        }
-      } catch (rxErr) {
-        console.error('[STORE] RxDB load failed, falling back to legacy IDB:', rxErr);
-        source = 'idb-fallback';
         d = await loadFromIDB();
-        // If legacy IDB also empty, try cloud sync as last resort
-        if (!d) {
-          try {
-            const uid = localStorage.getItem('nousai-auth-uid');
-            if (uid) {
-              const { syncFromCloud } = await import('./utils/auth');
-              d = await syncFromCloud(uid);
-              if (d) {
-                source = 'cloud-recovery';
-                console.warn('[STORE] Recovered data from cloud after local storage failure');
-              }
-            }
-          } catch { /* cloud also unavailable */ }
+        if (d) {
+          log('[STORE] Loaded from legacy IDB');
         }
+      } catch (idbErr) {
+        console.error('[STORE] Legacy IDB load failed:', idbErr);
+      }
+
+      // FALLBACK: Try RxDB only if legacy IDB is empty
+      if (!d) {
+        try {
+          await initRxStore();
+          d = await loadFromRxDB();
+          if (d) {
+            source = 'rxdb-fallback';
+            log('[STORE] Legacy IDB empty, loaded from RxDB');
+          }
+        } catch (rxErr) {
+          console.error('[STORE] RxDB also failed:', rxErr);
+        }
+      }
+
+      // LAST RESORT: Try cloud sync if signed in
+      if (!d) {
+        try {
+          const uid = localStorage.getItem('nousai-auth-uid');
+          if (uid) {
+            const { syncFromCloud } = await import('./utils/auth');
+            d = await syncFromCloud(uid);
+            if (d) {
+              source = 'cloud-recovery';
+              console.warn('[STORE] Recovered data from cloud after local storage failure');
+            }
+          }
+        } catch { /* cloud also unavailable */ }
       }
 
       // Check crash-recovery data from a follower tab that closed
@@ -521,19 +528,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Leader tab: write to RxDB (per-document, only changed collections)
+      // Leader tab: save to legacy IDB (primary, reliable)
       const MAX_QUIZ_HISTORY = 500;
       const qh = data.pluginData?.quizHistory;
       const dataToSave = (qh && qh.length > MAX_QUIZ_HISTORY)
         ? { ...data, pluginData: { ...data.pluginData, quizHistory: qh.slice(-MAX_QUIZ_HISTORY) } }
         : data;
-      try {
-        await saveToRxDB(dataToSave);
-      } catch (rxErr) {
-        console.error('[STORE] RxDB save failed, falling back to legacy IDB:', rxErr);
-      }
-      // ALWAYS save to legacy IDB as backup — prevents data loss if RxDB gets corrupted
+      // PRIMARY: Legacy IDB — always works, never corrupts
       saveToIDB(dataToSave);
+      // SECONDARY: Try RxDB in background (non-blocking, best-effort)
+      saveToRxDB(dataToSave).catch(() => {});
       localDirtyRef.current = false;
       localStorage.setItem('nousai-data-modified-at', new Date().toISOString());
       // Only broadcast if this was a local change, not a cross-tab sync echo
