@@ -89,17 +89,25 @@ export async function startReplication(uid: string): Promise<void> {
           collection: firestoreCollection,
         },
         pull: {
-          // Use serverTimestamp for ordering
-          filter: undefined, // no filter — sync everything
-        },
-        push: {
-          // Push all local changes to Firestore
           filter: undefined,
         },
-        live: true,          // real-time sync (onSnapshot)
-        retryTime: 5000,     // retry failed ops every 5s
-        waitForLeadership: true,  // only leader tab pushes to Firestore
+        push: {
+          filter: undefined,
+        },
+        live: true,
+        retryTime: 5000,
+        waitForLeadership: true,
         autoStart: true,
+        // Conflict handler: higher updatedAt wins, fallback to local
+        conflictHandler: async (input: any) => {
+          const local = input.newDocumentState;
+          const remote = input.realMasterState;
+          const localTs = local?.updatedAt ?? local?.createdAt ?? '';
+          const remoteTs = remote?.updatedAt ?? remote?.createdAt ?? '';
+          // Compare as strings (ISO) or numbers — String comparison works for both
+          if (String(localTs) >= String(remoteTs)) return { isEqual: false, documentData: local };
+          return { isEqual: false, documentData: remote };
+        },
       });
 
       // Log replication events

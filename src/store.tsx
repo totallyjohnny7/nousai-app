@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
-import type { NousAIData, FlashcardItem, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext, SavedVideo, VideoCaption, VideoNote, VideoNoteCategory, VideoNoteTemplate, DeviceSettings } from './types';
+import type { NousAIData, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext, SavedVideo, VideoCaption, VideoNote, VideoNoteCategory, VideoNoteTemplate, DeviceSettings } from './types';
 import { writeClipboard, saveFilePicker, openFilePicker, getPermPref } from './utils/permissions';
 import { syncToCloud, syncFromCloud, subscribeToMetadataChanges } from './utils/auth';
 import { runMigrations } from './utils/migrations';
@@ -10,6 +10,10 @@ import { saveGoldenCopy } from './utils/goldenCopy';
 import { initLeaderElection, destroyLeaderElection, broadcast, isLeader, getRole, TAB_ID, type TabRole } from './utils/tabLeader';
 import { initRxStore, loadFromRxDB, saveToRxDB, subscribeToRxChanges } from './db/useRxStore';
 import { log, warn } from './utils/logger';
+import { mergeAppData } from './sync/mergeEngine';
+import { detectConflict, type SyncResolution } from './utils/conflictDetection';
+import { mergeLamportClock } from './sync/lamportClock';
+import { withExponentialBackoff } from './sync/retrySync';
 
 /* ── Default empty state ──────────────────────────────── */
 const emptyGamification: GamificationData = {
@@ -26,131 +30,7 @@ const emptyTimer: TimerState = {
   pomoRemainingMs: 0, savedAt: Date.now()
 };
 
-/* ── Card-level merge: preserve local topic/media when cloud data lacks them ──
- *
- * Called before replacing local state with cloud data. Cards are matched by
- * their front+back content fingerprint (FlashcardItem has no id field).
- * Rule: cloud wins on conflicts; local fills in gaps (never overwrites cloud).
- * This prevents a cloud sync from silently wiping locally-set topic tags or
- * media attachments that haven't been uploaded to cloud yet.
- */
-export function mergeLocalCardMeta(local: NousAIData | null, cloud: NousAIData): NousAIData {
-  const localCourses = local?.pluginData?.coachData?.courses ?? [];
-  const cloudCourses = cloud.pluginData?.coachData?.courses ?? [];
-  if (localCourses.length === 0 || cloudCourses.length === 0) return cloud;
-
-  // Per-course merge using updatedAt timestamps (Lamport 1978 simplified)
-  const localById = new Map(localCourses.map(c => [c.id, c]));
-  const cloudById = new Map(cloudCourses.map(c => [c.id, c]));
-  const allIds = new Set([...localById.keys(), ...cloudById.keys()]);
-  const mergedCourses: Course[] = [];
-
-  for (const id of allIds) {
-    const localCourse = localById.get(id);
-    const cloudCourse = cloudById.get(id);
-
-    if (!localCourse && cloudCourse) {
-      // Only in cloud — new from other device
-      mergedCourses.push(cloudCourse);
-    } else if (localCourse && !cloudCourse) {
-      // Only in local — new on this device
-      mergedCourses.push(localCourse);
-    } else if (localCourse && cloudCourse) {
-      // Both exist — compare updatedAt, merge card metadata for the winner
-      const localTime = localCourse.updatedAt || '';
-      const cloudTime = cloudCourse.updatedAt || '';
-
-      let winner: Course;
-      if (cloudTime > localTime) {
-        winner = cloudCourse;
-      } else if (localTime > cloudTime) {
-        winner = localCourse;
-      } else {
-        // Equal timestamps — trust cloud's card list; deletions bump updatedAt so they won't land here
-        winner = cloudCourse;
-      }
-
-      // Preserve locally-set topic/media that cloud may lack
-      const localCards = new Map((localCourse.flashcards ?? []).map(c => [`${c.front}\0${c.back}`, c]));
-      const flashcards = (winner.flashcards ?? []).map(winnerCard => {
-        const localCard = localCards.get(`${winnerCard.front}\0${winnerCard.back}`);
-        if (!localCard) return winnerCard;
-        const merged: FlashcardItem = { ...winnerCard };
-        const cloudHasTopic = winnerCard.topic && winnerCard.topic !== '__none__';
-        const localHasTopic = localCard.topic && localCard.topic !== '__none__';
-        if (!cloudHasTopic && localHasTopic) merged.topic = localCard.topic;
-        if (!winnerCard.media && localCard.media) merged.media = localCard.media;
-        return merged;
-      });
-
-      mergedCourses.push({ ...winner, flashcards });
-    }
-  }
-
-  // ── Merge pluginData arrays that have id + updatedAt fields ──────────
-  // Without this, a cloud sync overwrites local annotations/notes/sessions
-  // if the cloud snapshot was taken before the local edits.
-  const localPD = local?.pluginData ?? {} as any;
-  const cloudPD = cloud.pluginData ?? {} as any;
-
-  function mergeById<T extends { id: string; updatedAt?: string | number; createdAt?: string | number }>(
-    localArr: T[] | undefined,
-    cloudArr: T[] | undefined,
-  ): T[] | undefined {
-    if (!localArr?.length && !cloudArr?.length) return cloudArr;
-    if (!localArr?.length) return cloudArr;
-    if (!cloudArr?.length) return localArr;
-
-    const map = new Map<string, T>();
-    // Seed with local entries
-    for (const item of localArr) map.set(item.id, item);
-    // Cloud wins if newer or equal; otherwise local keeps its version
-    for (const item of cloudArr) {
-      const existing = map.get(item.id);
-      if (!existing) {
-        map.set(item.id, item);
-      } else {
-        const cloudTime = String(item.updatedAt || item.createdAt || '');
-        const localTime = String(existing.updatedAt || existing.createdAt || '');
-        if (cloudTime >= localTime) map.set(item.id, item);
-      }
-    }
-    return [...map.values()];
-  }
-
-  const mergedAnnotations = mergeById(localPD.annotations, cloudPD.annotations);
-  const mergedNotes = mergeById(localPD.notes, cloudPD.notes);
-  const mergedAiChatSessions = mergeById(localPD.aiChatSessions, cloudPD.aiChatSessions);
-  const mergedToolSessions = mergeById(localPD.toolSessions, cloudPD.toolSessions);
-  const mergedProcedures = mergeById(localPD.savedProcedures, cloudPD.savedProcedures);
-  const mergedDrawings = mergeById(localPD.drawings, cloudPD.drawings);
-  // Previously missing — offline-created entities in these arrays were being dropped
-  const mergedMatchSets = mergeById(localPD.matchSets, cloudPD.matchSets);
-  const mergedQuizHistory = mergeById(localPD.quizHistory, cloudPD.quizHistory);
-  const mergedSavedVideos = mergeById(localPD.savedVideos, cloudPD.savedVideos);
-  const mergedStudyGuides = mergeById(localPD.studyGuides, cloudPD.studyGuides);
-
-  return {
-    ...cloud,
-    pluginData: {
-      ...cloud.pluginData,
-      coachData: {
-        ...cloud.pluginData.coachData,
-        courses: mergedCourses,
-      },
-      ...(mergedAnnotations !== undefined && { annotations: mergedAnnotations }),
-      ...(mergedNotes !== undefined && { notes: mergedNotes }),
-      ...(mergedAiChatSessions !== undefined && { aiChatSessions: mergedAiChatSessions }),
-      ...(mergedToolSessions !== undefined && { toolSessions: mergedToolSessions }),
-      ...(mergedProcedures !== undefined && { savedProcedures: mergedProcedures }),
-      ...(mergedDrawings !== undefined && { drawings: mergedDrawings }),
-      ...(mergedMatchSets !== undefined && { matchSets: mergedMatchSets }),
-      ...(mergedQuizHistory !== undefined && { quizHistory: mergedQuizHistory }),
-      ...(mergedSavedVideos !== undefined && { savedVideos: mergedSavedVideos }),
-      ...(mergedStudyGuides !== undefined && { studyGuides: mergedStudyGuides }),
-    },
-  };
-}
+/* ── Merge logic moved to src/sync/mergeEngine.ts ── */
 
 /* ── Data normalization — fills in missing optional fields ── */
 export function normalizeData(d: NousAIData): NousAIData {
@@ -604,7 +484,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           // A follower tab sent us its updated state — merge it
           const followerData = msg.payload as NousAIData;
           if (followerData) {
-            const merged = mergeLocalCardMeta(dataRef.current, normalizeData(followerData));
+            const merged = mergeAppData(dataRef.current, normalizeData(followerData));
             fromSyncRef.current = false; // this IS a real change, broadcast after saving
             setDataRaw(merged);
           }
@@ -754,14 +634,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     try {
       setSyncStatus('syncing');
-      const cloudData = await syncFromCloud(uid);
+      const cloudData = await withExponentialBackoff(() => syncFromCloud(uid));
       if (cloudData) {
-        // Merge cloud data with local data to prevent overwriting newer local changes
-        const merged = mergeLocalCardMeta(dataRef.current, normalizeData(cloudData));
-        setData(merged);
-        setSyncStatus('synced');
-        setLastSyncAt(new Date().toISOString());
-        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Synced from cloud (merged with local)' }));
+        const localSnapshot = dataRef.current;
+        const safeCloud = normalizeData(cloudData);
+
+        // Sync Lamport clocks
+        mergeLamportClock((safeCloud as unknown as Record<string, unknown>).lamport as number ?? 0);
+
+        // Detect conflict resolution strategy
+        const localTs = localStorage.getItem('nousai-data-modified-at') || '';
+        const cloudTs = (safeCloud as unknown as Record<string, unknown>).updatedAt as string || '';
+        const resolution: SyncResolution = detectConflict(localTs, cloudTs);
+
+        if (resolution === 'local-wins') {
+          console.warn('[Sync] Local wins — pushing local to cloud');
+          if (localSnapshot) {
+            await withExponentialBackoff(() => syncToCloud(uid, localSnapshot));
+          }
+          setSyncStatus('synced');
+          setLastSyncAt(new Date().toISOString());
+        } else if (resolution === 'cloud-wins') {
+          console.warn('[Sync] Cloud wins — replacing local with cloud data');
+          setData(safeCloud);
+          setSyncStatus('synced');
+          setLastSyncAt(new Date().toISOString());
+        } else {
+          // resolution === 'merge'
+          console.warn('[Sync] Merging local + cloud data');
+          const merged = mergeAppData(localSnapshot, safeCloud);
+          setData(merged);
+          // Push merged result back to cloud so both sides converge
+          await withExponentialBackoff(() => syncToCloud(uid, merged)).catch(e => {
+            console.warn('[Sync] Merge push-back failed (non-critical):', e);
+          });
+          setSyncStatus('synced');
+          setLastSyncAt(new Date().toISOString());
+        }
+
+        // Notify UI of resolution
+        window.dispatchEvent(new CustomEvent('nousai-sync-resolution', { detail: resolution }));
       } else {
         setSyncStatus('idle');
         window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'No cloud data found' }));
