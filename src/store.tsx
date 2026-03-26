@@ -9,6 +9,7 @@ import { dataHealthCheck, type HealthReport } from './utils/dataHealthCheck';
 import { saveGoldenCopy } from './utils/goldenCopy';
 import { initLeaderElection, destroyLeaderElection, broadcast, isLeader, getRole, TAB_ID, type TabRole } from './utils/tabLeader';
 import { initRxStore, loadFromRxDB, saveToRxDB, subscribeToRxChanges } from './db/useRxStore';
+import { log } from './utils/logger';
 
 /* ── Default empty state ──────────────────────────────── */
 const emptyGamification: GamificationData = {
@@ -278,7 +279,7 @@ class AutoSyncScheduler {
       localStorage.setItem('nousai-last-sync', now);
       this.lastPushedTimestamp = now; // track for self-trigger guard
       this.failCount = 0; // reset on success
-      console.log('[AUTO-SYNC] Synced to cloud at', now);
+      log('[AUTO-SYNC] Synced to cloud at', now);
       window.dispatchEvent(new CustomEvent('nousai-synced'));
       this.onFlushEnd?.(true);
     } catch (e) {
@@ -430,6 +431,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setDataRaw(prev => prev ? valOrFn(prev) : prev);
     } else {
       setDataRaw(valOrFn);
+      // Write-through: when setting data for the first time (onboarding/import),
+      // persist immediately to RxDB — don't rely on the debounced save effect,
+      // which can lose data due to leader election race conditions.
+      if (!dataRef.current && valOrFn) {
+        log('[STORE] First data write (onboarding/import) — persisting immediately');
+        saveToRxDB(valOrFn).catch((err) => {
+          console.error('[STORE] Immediate RxDB save failed, trying legacy IDB:', err);
+          saveToIDB(valOrFn);
+        });
+      }
     }
   }, []);
 
@@ -476,7 +487,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           if (recovered?.pluginData?.coachData) {
             d = recovered;
             source = 'crash-recovery';
-            console.log('[STORE] Restored from crash-recovery (follower tab that closed)');
+            log('[STORE] Restored from crash-recovery (follower tab that closed)');
           }
         } catch { /* corrupt crash recovery data — ignore */ }
       }
@@ -491,13 +502,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (!report.healthy) {
           console.warn('[HEALTH CHECK]', report.score + '/100 —', report.issues.length, 'issues:', report.issues.map(i => `[${i.severity}] ${i.code}: ${i.message}`).join('; '));
         } else {
-          console.log('[HEALTH CHECK] Score:', report.score + '/100 — healthy');
+          log('[HEALTH CHECK] Score:', report.score + '/100 — healthy');
         }
         if (report.autoRepaired.length > 0) {
-          console.log('[HEALTH CHECK] Auto-repaired:', report.autoRepaired.join('; '));
+          log('[HEALTH CHECK] Auto-repaired:', report.autoRepaired.join('; '));
         }
         setHealthReport(report);
-        console.log(`[STORE] Loaded from ${source}:`, final.pluginData?.coachData?.courses?.length ?? 0, 'courses,', final.pluginData?.quizHistory?.length ?? 0, 'quiz entries');
+        log(`[STORE] Loaded from ${source}:`, final.pluginData?.coachData?.courses?.length ?? 0, 'courses,', final.pluginData?.quizHistory?.length ?? 0, 'quiz entries');
         lastSavedData = final;
         saveSnapshot(final, 'boot').catch(() => {});
         setDataRaw(final);
@@ -519,8 +530,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Follower tabs: send mutation to leader instead of writing IDB directly
-      if (!isLeader()) {
+      // Follower tabs: send mutation to leader instead of writing IDB directly.
+      // IMPORTANT: If role is still 'undecided' (leader election pending), save directly —
+      // otherwise data from onboarding/import is lost because sendMutationToLeader
+      // broadcasts to a leader that doesn't exist yet (race condition).
+      const role = getRole();
+      if (role === 'follower') {
         if (!fromSyncRef.current) {
           sendMutationToLeader(data);
         } else {
@@ -565,7 +580,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     initLeaderElection({
       onBecomeLeader: () => {
         tabRoleRef.current = 'leader';
-        console.log('[STORE] Became leader — owning RxDB writes');
+        log('[STORE] Became leader — owning RxDB writes');
         // Force-write current state to RxDB to establish baseline
         if (dataRef.current && loaded) {
           saveToRxDB(dataRef.current).catch(() => saveToIDB(dataRef.current!));
@@ -573,17 +588,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       onLoseLeadership: () => {
         tabRoleRef.current = 'follower';
-        console.log('[STORE] Lost leadership — switching to read-only');
+        log('[STORE] Lost leadership — switching to read-only');
       },
       onMessage: (msg: any) => {
         if (msg?.type === 'data-changed') {
           // Another tab (leader) updated RxDB — reload
           if (debounce) clearTimeout(debounce);
           debounce = setTimeout(async () => {
-            const fresh = await loadFromRxDB() || await loadFromIDB();
-            if (fresh) {
-              fromSyncRef.current = true;
-              setDataRaw(normalizeData(fresh));
+            try {
+              const fresh = await loadFromRxDB() || await loadFromIDB();
+              if (fresh) {
+                fromSyncRef.current = true;
+                setDataRaw(normalizeData(fresh));
+              }
+            } catch (e) {
+              console.error('[STORE] Cross-tab data reload failed:', e);
+              fromSyncRef.current = false;
             }
           }, 300);
         } else if (msg?.type === 'follower-mutation' && isLeader()) {
@@ -649,7 +669,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSyncStatus(prev => prev === 'offline' ? 'idle' : prev);
       // Flush any pending changes accumulated while offline
       if (autoSyncRef.current.dirty) {
-        console.log('[STORE] Back online — flushing pending changes');
+        log('[STORE] Back online — flushing pending changes');
         autoSyncRef.current.flush();
       }
     };
@@ -675,7 +695,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const localModified = localStorage.getItem('nousai-data-modified-at');
         const lastSync = localStorage.getItem('nousai-last-sync');
         if (localModified && lastSync && localModified > lastSync) {
-          console.log('[STORE] Remote update + local unsynced — flushing local first');
+          log('[STORE] Remote update + local unsynced — flushing local first');
           autoSyncRef.current.flush().then(() => {
             window.dispatchEvent(new CustomEvent('nousai-remote-update-available'));
           });
@@ -1083,7 +1103,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 export const useStore = () => useContext(Ctx);
 
 /* ── IDB timeout wrapper ─────────────────────────────────── */
-function withTimeout<T>(promise: Promise<T>, ms = 5000): Promise<T> {
+function withTimeout<T>(promise: Promise<T>, ms = 15000): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) =>
@@ -1147,7 +1167,7 @@ export async function clearPWACache(): Promise<boolean> {
       const keys = await caches.keys();
       for (const k of keys) { await caches.delete(k); cleared = true; }
     }
-    if (cleared) console.log('[PWA] Cleared service worker + caches');
+    if (cleared) log('[PWA] Cleared service worker + caches');
   } catch (e) {
     console.warn('[PWA] Cache clear failed:', e);
   }
@@ -1198,7 +1218,7 @@ async function writeBackupFile(handle: FileSystemDirectoryHandle, json: string):
     const writable = await file.createWritable();
     await writable.write(json);
     await writable.close();
-    console.log('[BACKUP] Wrote', filename);
+    log('[BACKUP] Wrote', filename);
 
     // Prune old backups beyond MAX_BACKUPS
     const backups: string[] = [];
@@ -1208,7 +1228,7 @@ async function writeBackupFile(handle: FileSystemDirectoryHandle, json: string):
     backups.sort();
     if (backups.length > MAX_BACKUPS) {
       for (const old of backups.slice(0, backups.length - MAX_BACKUPS)) {
-        try { await handle.removeEntry(old); console.log('[BACKUP] Pruned', old); } catch { /* skip */ }
+        try { await handle.removeEntry(old); log('[BACKUP] Pruned', old); } catch { /* skip */ }
       }
     }
 
