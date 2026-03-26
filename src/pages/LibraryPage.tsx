@@ -21,7 +21,8 @@ const DrawPage = lazyWithRetry(() => import('./DrawPage'));
 const StudyModesPage = lazyWithRetry(() => import('./StudyModesPage'));
 import { useStore } from '../store';
 import { useSessionStore } from '../store/sessionStore';
-import type { Course } from '../types';
+import type { Course, StudyGuide } from '../types';
+import { loadGuideHtml, deleteGuideHtml } from '../features/study-generator/studyGuideStore';
 import { speak, stopSpeaking } from '../utils/speechTools';
 import { callAI, isAIConfigured } from '../utils/ai';
 import RichTextEditor, { markdownToHtml, htmlToMarkdown } from '../components/RichTextEditor';
@@ -48,7 +49,7 @@ type SortKey = 'name' | 'date' | 'size';
 type SortDir = 'asc' | 'desc';
 type FilterType = 'all' | 'note' | 'quiz' | 'flashcard' | 'ai-output' | 'match';
 type ViewMode = 'list' | 'viewer' | 'editor';
-type LibraryTab = 'courses' | 'notes' | 'drawings' | 'study' | 'annotations';
+type LibraryTab = 'courses' | 'notes' | 'drawings' | 'study' | 'annotations' | 'guides';
 
 /* ── Helpers ────────────────────────────────────────── */
 function generateId(): string {
@@ -111,7 +112,7 @@ export default function LibraryPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<LibraryTab>(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'notes' || tab === 'drawings' || tab === 'study') return tab;
+    if (tab === 'notes' || tab === 'drawings' || tab === 'study' || tab === 'guides') return tab;
     return 'courses';
   });
 
@@ -595,6 +596,25 @@ export default function LibraryPage() {
             marginLeft: 2,
           }}>
             {annotationCount}
+          </span>
+        </button>
+        <button
+          className={`cx-chip${activeTab === 'guides' ? ' active' : ''}`}
+          onClick={() => setActiveTab('guides')}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', fontSize: 12, fontWeight: 700,
+            minHeight: 36,
+          }}
+        >
+          <Sparkles size={14} /> Study Guides
+          <span style={{
+            background: activeTab === 'guides' ? 'var(--text-primary)' : 'var(--border)',
+            color: activeTab === 'guides' ? 'var(--bg-primary)' : 'var(--text-muted)',
+            borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 800,
+            marginLeft: 2,
+          }}>
+            {(data?.pluginData?.studyGuides as unknown[])?.length || 0}
           </span>
         </button>
       </div>
@@ -1460,6 +1480,13 @@ export default function LibraryPage() {
           ═════════════════════════════════════════════════════ */}
       {activeTab === 'annotations' && (
         <AnnotationsTab />
+      )}
+
+      {/* ═════════════════════════════════════════════════════
+          TAB 6: STUDY GUIDES
+          ═════════════════════════════════════════════════════ */}
+      {activeTab === 'guides' && (
+        <StudyGuidesTab />
       )}
     </div>
   );
@@ -3010,6 +3037,116 @@ function NoteEditor({ note, folders, courses, onSave, onCancel }: {
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(liveHtml) }}
           />
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Study Guides Tab ────────────────────────────────── */
+function StudyGuidesTab() {
+  const { data, updatePluginData } = useStore();
+  const guides: StudyGuide[] = (data?.pluginData?.studyGuides as StudyGuide[] | undefined) || [];
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const openGuide = async (g: StudyGuide) => {
+    setLoading(true);
+    const html = await loadGuideHtml(g.id) || g.html || '';
+    setLoading(false);
+    if (!html) {
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message: 'HTML not found — open in Study Gen to regenerate', type: 'error', duration: 3000 } }));
+      return;
+    }
+    setPreviewId(g.id);
+    setPreviewHtml(html);
+  };
+
+  const downloadGuide = async (g: StudyGuide) => {
+    const html = await loadGuideHtml(g.id) || g.html || '';
+    if (!html) return;
+    const blob = new Blob([html], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${g.title.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 500);
+  };
+
+  const removeGuide = (id: string) => {
+    deleteGuideHtml(id).catch(() => {});
+    updatePluginData({ studyGuides: guides.filter(g => g.id !== id) });
+    if (previewId === id) { setPreviewId(null); setPreviewHtml(''); }
+  };
+
+  if (previewId && previewHtml) {
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => { setPreviewId(null); setPreviewHtml(''); }}>
+            <ChevronLeft size={14} /> Back
+          </button>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+            {guides.find(g => g.id === previewId)?.title || 'Study Guide'}
+          </span>
+        </div>
+        <div style={{ borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)', background: 'white' }}>
+          <iframe
+            srcDoc={previewHtml}
+            title="Study Guide"
+            sandbox="allow-scripts allow-same-origin"
+            style={{ width: '100%', border: 'none', background: 'white', display: 'block', minHeight: 700 }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (guides.length === 0) {
+    return (
+      <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+        <Sparkles size={32} style={{ color: 'var(--text-dim)', marginBottom: 12 }} />
+        <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>No study guides yet</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>Generate one from the Study Gen page</div>
+        <button className="btn btn-primary btn-sm" onClick={() => navigate('/study-gen')}>
+          <Sparkles size={14} /> Go to Study Gen
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {loading && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Loading guide...</div>}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+        {guides.map(g => (
+          <div key={g.id} className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {g.title}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {g.model?.split('/')[1] || 'unknown'} · {formatDateShort(g.createdAt)}{g.sizeKb ? ` · ${g.sizeKb}kb` : ''}
+            </div>
+            {g.sourcePreview && (
+              <div style={{ fontSize: 10, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {g.sourcePreview}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+              <button className="btn btn-primary btn-sm" style={{ fontSize: 10, padding: '3px 10px' }} onClick={() => openGuide(g)}>
+                <Eye size={12} /> View
+              </button>
+              <button className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: '3px 10px' }} onClick={() => downloadGuide(g)}>
+                <Download size={12} /> Download
+              </button>
+              <button className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: '3px 10px', color: 'var(--red, #ef4444)' }} onClick={() => removeGuide(g.id)}>
+                <Trash2 size={12} /> Delete
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
