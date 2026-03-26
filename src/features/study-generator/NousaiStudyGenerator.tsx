@@ -547,9 +547,10 @@ export default function NousaiStudyGenerator() {
 
             {/* Token Limit */}
             <div>
-              <label style={labelSt}>Max Output Tokens</label>
+              <label style={labelSt}>Response Length</label>
               <input type="number" value={settings.tokenLimit} onChange={e => setSetting('tokenLimit', parseInt(e.target.value) || 8000)}
                 min={2000} max={65000} step={1000} style={inputSt} />
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Max words the AI can write (~{Math.round(settings.tokenLimit * 0.75).toLocaleString()} words). Higher = longer guide, more cost.</div>
             </div>
           </div>
         </div>
@@ -630,22 +631,25 @@ export default function NousaiStudyGenerator() {
             />
           </div>
 
-          {/* Token Estimate */}
+          {/* Size & Cost Estimate */}
           {toks && cost && (
             <div className="card" style={{ padding: 14, marginBottom: 16 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: '#a855f7', marginBottom: 8, letterSpacing: '0.05em' }}>
-                TOKEN ESTIMATE
+                SIZE & COST ESTIMATE
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '4px 16px', fontSize: 12 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Input (source + system)</span>
-                <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>{toks.input.toLocaleString()}</span>
-                <span style={{ color: 'var(--text-muted)' }}>Output (guide generation)</span>
-                <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>{toks.output.toLocaleString()}</span>
+                <span style={{ color: 'var(--text-muted)' }}>Your source material</span>
+                <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>{toks.input.toLocaleString()} tokens</span>
+                <span style={{ color: 'var(--text-muted)' }}>Generated guide (est.)</span>
+                <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>{toks.output.toLocaleString()} tokens</span>
                 <span style={{ color: 'var(--text-primary)', fontWeight: 600, borderTop: '1px solid var(--border)', paddingTop: 4 }}>Total</span>
-                <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600, borderTop: '1px solid var(--border)', paddingTop: 4, textAlign: 'right' }}>{toks.total.toLocaleString()}</span>
+                <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600, borderTop: '1px solid var(--border)', paddingTop: 4, textAlign: 'right' }}>{toks.total.toLocaleString()} tokens</span>
               </div>
               <div style={{ fontSize: 11, color: '#10b981', marginTop: 6, fontFamily: 'var(--font-mono)' }}>
-                Est. cost: ${cost.total.toFixed(5)}
+                Est. cost: ${cost.total.toFixed(4)} <span style={{ color: 'var(--text-muted)', fontFamily: 'inherit' }}>(based on Gemini Flash pricing — actual cost varies by model)</span>
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
+                1 token ~ 0.75 words. Free models cost $0. Check openrouter.ai/models for exact model pricing.
               </div>
             </div>
           )}
@@ -801,7 +805,7 @@ export default function NousaiStudyGenerator() {
               fontSize: 11, color: '#10b981', fontFamily: 'var(--font-mono)', marginBottom: 16,
               padding: '8px 12px', background: 'rgba(16,185,129,0.06)', borderRadius: 'var(--radius-sm)',
             }}>
-              Est. cost: ${cost.input.toFixed(5)} + ${cost.output.toFixed(5)} = ${cost.total.toFixed(5)}
+              Est. cost: ~${cost.total.toFixed(4)} (based on Gemini Flash pricing — free models cost $0)
             </div>
 
             <div style={{
