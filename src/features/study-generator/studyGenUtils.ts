@@ -305,12 +305,21 @@ export const PALETTES = [
   { name: 'Indigo', hex: '#3D2B8C', bg: '#f3f0ff' },
 ]
 
-/* ── Model Options ────────────────────────────────────────── */
-export const MODELS = [
-  { id: 'google/gemini-2.0-flash-001', label: 'Gemini 2.0 Flash (recommended)' },
-  { id: 'google/gemini-2.5-flash-preview', label: 'Gemini 2.5 Flash Preview' },
-  { id: 'google/gemini-flash-1.5-8b', label: 'Gemini 1.5 Flash 8B (fast/cheap)' },
-  { id: 'google/gemini-pro-1.5', label: 'Gemini Pro 1.5 (high quality)' },
-  { id: 'openai/gpt-4o-mini', label: 'GPT-4o Mini' },
-  { id: 'anthropic/claude-3-haiku', label: 'Claude 3 Haiku' },
-]
+/* ── Model Options — fetched live from OpenRouter API ──────── */
+export interface ModelOption { id: string; label: string; provider: string }
+
+/** Fetch text-capable models from OpenRouter, grouped by provider */
+export async function fetchOpenRouterModels(): Promise<ModelOption[]> {
+  const res = await fetch('https://openrouter.ai/api/v1/models?output_modalities=text')
+  if (!res.ok) throw new Error(`OpenRouter API ${res.status}`)
+  const json = await res.json()
+  const models: ModelOption[] = (json.data || [])
+    .filter((m: any) => m.id && m.name && m.context_length >= 4096)
+    .map((m: any) => ({
+      id: m.id,
+      label: m.name,
+      provider: m.id.split('/')[0] || 'other',
+    }))
+    .sort((a: ModelOption, b: ModelOption) => a.label.localeCompare(b.label))
+  return models
+}

@@ -5,8 +5,8 @@ import {
 } from 'lucide-react'
 import {
   processFile, estimateTokens, estimateCost, buildSystemPrompt,
-  callOpenRouter, PALETTES, MODELS,
-  type GenSettings,
+  callOpenRouter, PALETTES, fetchOpenRouterModels,
+  type GenSettings, type ModelOption,
 } from './studyGenUtils'
 
 /* ── Types ──────────────────────────────────────────────── */
@@ -29,7 +29,9 @@ function getStoredApiKey(): string {
 /* ── Component ──────────────────────────────────────────── */
 export default function NousaiStudyGenerator() {
   const [apiKey, setApiKey] = useState(getStoredApiKey)
-  const [model, setModel] = useState('google/gemini-2.0-flash-001')
+  const [model, setModel] = useState('openrouter/auto')
+  const [models, setModels] = useState<ModelOption[]>([])
+  const [modelsLoading, setModelsLoading] = useState(true)
   const [files, setFiles] = useState<FileEntry[]>([])
   const [paste, setPaste] = useState('')
   const [settings, setSettings] = useState<GenSettings>({
@@ -47,6 +49,15 @@ export default function NousaiStudyGenerator() {
   const [showSettings, setShowSettings] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Fetch models from OpenRouter API on mount
+  useEffect(() => {
+    let cancelled = false
+    fetchOpenRouterModels()
+      .then(m => { if (!cancelled) { setModels(m); setModelsLoading(false) } })
+      .catch(() => { if (!cancelled) setModelsLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   const allText = [
     ...files.filter(f => f.status === 'done').map(f => f.text),
@@ -260,8 +271,15 @@ export default function NousaiStudyGenerator() {
             <div>
               <label style={labelSt}>Model</label>
               <select value={model} onChange={e => setModel(e.target.value)} style={inputSt}>
-                {MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                <option value="openrouter/auto">Auto Router (best match)</option>
+                {modelsLoading
+                  ? <option disabled>Loading models...</option>
+                  : models.map(m => <option key={m.id} value={m.id}>{m.label}</option>)
+                }
               </select>
+              <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 3 }}>
+                {modelsLoading ? 'Fetching models...' : `${models.length} models · live from OpenRouter API`}
+              </div>
             </div>
 
             {/* Tone */}

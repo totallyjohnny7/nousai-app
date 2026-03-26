@@ -97,7 +97,7 @@ Step-by-step setup for OpenRouter:
 4. Copy the key (it starts with "sk-or-...")
 5. In NousAI: Settings → "AI Configuration" → set Provider to "OpenRouter"
 6. Paste your key into the API Key field
-7. Set Model to "google/gemini-flash-1.5" (this is free to use)
+7. Set Model to "Auto Router (best match)" — OpenRouter picks the optimal model per request
 8. Click "Test Connection" → wait a few seconds → you should see a green "Connected" badge
 
 What are Feature Slots?

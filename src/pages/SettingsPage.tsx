@@ -646,6 +646,32 @@ export default function SettingsPage() {
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionResult, setConnectionResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
+  // Live OpenRouter models
+  const [liveORModels, setLiveORModels] = useState<{ value: string; label: string; provider: string }[]>([])
+  const [orModelsLoading, setOrModelsLoading] = useState(false)
+  useEffect(() => {
+    if (aiConfig.provider !== 'openrouter') return
+    setOrModelsLoading(true)
+    fetch('https://openrouter.ai/api/v1/models?output_modalities=text')
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(json => {
+        const models = (json.data || [])
+          .filter((m: any) => m.id && m.name && m.context_length >= 4096)
+          .map((m: any) => ({ value: m.id, label: m.name, provider: m.id.split('/')[0] || 'other' }))
+          .sort((a: any, b: any) => a.label.localeCompare(b.label))
+        setLiveORModels(models)
+      })
+      .catch(() => {})
+      .finally(() => setOrModelsLoading(false))
+  }, [aiConfig.provider])
+
+  // Group live OpenRouter models by provider for optgroup rendering
+  const orByProvider = liveORModels.reduce<Record<string, { value: string; label: string }[]>>((acc, m) => {
+    ;(acc[m.provider] ??= []).push(m)
+    return acc
+  }, {})
+  const OR_PROVIDER_ORDER = ['anthropic', 'openai', 'google', 'meta-llama', 'deepseek', 'mistralai', 'qwen', 'x-ai']
+
   // Feature slot overrides state
   const SLOTS: AIFeatureSlot[] = ['chat', 'generation', 'analysis', 'ocr', 'japanese', 'physics']
   const [slotConfigs, setSlotConfigs] = useState<Record<AIFeatureSlot, SlotConfig>>(() =>
@@ -1847,22 +1873,28 @@ export default function SettingsPage() {
                     <div style={fieldGroupStyle}>
                       <label style={labelStyle}>Model</label>
                       <select style={selectStyle} value={aiConfig.model} onChange={e => updateAiConfig({ model: e.target.value })}>
-                        <optgroup label="Anthropic">
-                          {OPENROUTER_MODELS.filter(m => m.value.startsWith('anthropic/')).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                        </optgroup>
-                        <optgroup label="OpenAI">
-                          {OPENROUTER_MODELS.filter(m => m.value.startsWith('openai/')).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                        </optgroup>
-                        <optgroup label="Google">
-                          {OPENROUTER_MODELS.filter(m => m.value.startsWith('google/')).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                        </optgroup>
-                        <optgroup label="Meta">
-                          {OPENROUTER_MODELS.filter(m => m.value.startsWith('meta-llama/')).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                        </optgroup>
-                        <optgroup label="Other">
-                          {OPENROUTER_MODELS.filter(m => !['anthropic/', 'openai/', 'google/', 'meta-llama/'].some(p => m.value.startsWith(p))).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                        </optgroup>
+                        <option value="openrouter/auto">Auto Router (best match)</option>
+                        {orModelsLoading
+                          ? <option disabled>Loading models...</option>
+                          : liveORModels.length > 0
+                            ? <>
+                                {OR_PROVIDER_ORDER.filter(p => orByProvider[p]).map(p => (
+                                  <optgroup key={p} label={p}>
+                                    {orByProvider[p].map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                  </optgroup>
+                                ))}
+                                {Object.keys(orByProvider).filter(p => !OR_PROVIDER_ORDER.includes(p)).map(p => (
+                                  <optgroup key={p} label={p}>
+                                    {orByProvider[p].map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                  </optgroup>
+                                ))}
+                              </>
+                            : OPENROUTER_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)
+                        }
                       </select>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                        {orModelsLoading ? 'Fetching models...' : liveORModels.length > 0 ? `${liveORModels.length} models · live from OpenRouter API` : 'Using cached model list'}
+                      </p>
                     </div>
                     <div style={fieldGroupStyle}>
                       <label style={labelStyle}>Or enter a custom model ID</label>
