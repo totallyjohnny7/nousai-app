@@ -64,8 +64,10 @@ let fbFns: {
   doc: any;
   setDoc: any;
   getDoc: any;
+  getDocFromServer: any;
   collection: any;
   getDocs: any;
+  getDocsFromServer: any;
   writeBatch: any;
   deleteDoc: any;
   deleteField: any;
@@ -96,7 +98,7 @@ async function _doLoadFirebase(): Promise<boolean> {
     ]);
     const { initializeApp } = appMod;
     const { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } = authMod;
-    const { getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch, deleteDoc, deleteField, onSnapshot } = storeMod;
+    const { getFirestore, doc, setDoc, getDoc, getDocFromServer, collection, getDocs, getDocsFromServer, writeBatch, deleteDoc, deleteField, onSnapshot } = storeMod;
     const { getStorage, ref: storageRefFn, uploadString, getDownloadURL, getBytes, getBlob, uploadBytesResumable, deleteObject } = storageMod;
 
     firebaseApp = initializeApp(FIREBASE_CONFIG);
@@ -117,8 +119,10 @@ async function _doLoadFirebase(): Promise<boolean> {
       doc,
       setDoc,
       getDoc,
+      getDocFromServer,
       collection,
       getDocs,
+      getDocsFromServer,
       writeBatch,
       deleteDoc,
       deleteField,
@@ -597,8 +601,8 @@ export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
   const docRef = fb.doc(firebaseDb, 'users', uid);
 
   try {
-    log('[AUTH] syncFromCloud: reading from Firestore...');
-    const snap = await fb.getDoc(docRef);
+    log('[AUTH] syncFromCloud: reading from Firestore (bypassing cache)...');
+    const snap = await fb.getDocFromServer(docRef);
     log('[AUTH] syncFromCloud: doc exists =', snap.exists());
 
     if (snap.exists()) {
@@ -611,7 +615,7 @@ export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
           const prefix = raw.chunkPrefix || 'chunk_'; // fallback for pre-atomic V2 format
           log('[AUTH] syncFromCloud: reading', raw.totalChunks, 'chunks (prefix:', prefix + ')');
           const chunksCol = fb.collection(firebaseDb, 'users', uid, 'sync-chunks');
-          const chunksSnap = await fb.getDocs(chunksCol);
+          const chunksSnap = await fb.getDocsFromServer(chunksCol);
           // Only read chunks matching the current version prefix
           const sorted = chunksSnap.docs
             .filter((d: any) => d.id.startsWith(prefix))

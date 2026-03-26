@@ -1,9 +1,11 @@
-import { StrictMode } from 'react'
+import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import { StoreProvider } from './store'
 import App from './App'
 import './index.css'
+
+const SyncConflictToast = lazy(() => import('./components/SyncConflictToast'))
 import { requestPersistentStorage } from './utils/permissions'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -29,6 +31,7 @@ createRoot(document.getElementById('root')!).render(
     <HashRouter>
       <StoreProvider>
         <App />
+        <Suspense fallback={null}><SyncConflictToast /></Suspense>
       </StoreProvider>
     </HashRouter>
   </StrictMode>

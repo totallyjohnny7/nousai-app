@@ -965,11 +965,12 @@ export interface ScaleSet {
 export interface StudyGuide {
   id: string
   title: string
-  html: string
+  html?: string            // Only used for legacy migration — HTML now in dedicated IDB store
   model: string
   sourcePreview: string
   createdAt: string
   updatedAt: string
+  sizeKb?: number
 }
 
 /** Inline card type for suspended session serialization (avoids circular import with OmniProtocol) */
