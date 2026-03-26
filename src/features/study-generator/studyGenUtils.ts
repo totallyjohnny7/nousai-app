@@ -323,9 +323,65 @@ QUALITY CHECKLIST:
 [ ] Valid HTML — all tags closed`
 }
 
-/* ── OpenRouter API Call ──────────────────────────────────── */
+/* ── Filter JS injected into iframe after generation ────── */
+export const FILTER_INJECT_JS = `
+(function() {
+  var cards = document.querySelectorAll('.card[data-section]');
+  var filterRow = document.querySelector('.filter-row');
+  var sections = [];
+  var seen = {};
+  cards.forEach(function(c) {
+    var s = c.getAttribute('data-section');
+    if (s && !seen[s]) { seen[s] = true; sections.push(s); }
+  });
+  if (filterRow && sections.length > 0) {
+    // Clear existing buttons and rebuild
+    filterRow.innerHTML = '';
+    var allBtn = document.createElement('button');
+    allBtn.className = 'filter-btn active';
+    allBtn.setAttribute('data-filter', 'all');
+    allBtn.textContent = 'Show All';
+    filterRow.appendChild(allBtn);
+    sections.forEach(function(s) {
+      var btn = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.setAttribute('data-filter', s);
+      btn.textContent = s.replace(/-/g, ' ').replace(/\\b\\w/g, function(c) { return c.toUpperCase(); });
+      filterRow.appendChild(btn);
+    });
+  }
+  document.querySelectorAll('.filter-btn').forEach(function(b) {
+    b.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var id = this.getAttribute('data-filter');
+      document.querySelectorAll('.card[data-section]').forEach(function(c) {
+        c.style.display = (id === 'all' || c.getAttribute('data-section') === id) ? '' : 'none';
+      });
+      document.querySelectorAll('.filter-btn').forEach(function(x) { x.classList.remove('active'); });
+      this.classList.add('active');
+    });
+  });
+  // Download button
+  var dlBtn = document.getElementById('dl-btn');
+  if (dlBtn) {
+    dlBtn.addEventListener('click', function() {
+      var blob = new Blob([document.documentElement.outerHTML], {type:'text/html'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'study_guide.html';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 500);
+    });
+  }
+})();
+`
+
+/* ── OpenRouter API Call (streaming with progress) ────────── */
 export async function callOpenRouter(
   apiKey: string, model: string, systemPrompt: string, userMsg: string, maxTokens: number,
+  onProgress?: (chars: number, elapsed: number) => void,
 ): Promise<string> {
   const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -339,6 +395,7 @@ export async function callOpenRouter(
       model,
       max_tokens: maxTokens,
       temperature: 0.65,
+      stream: true,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMsg },
@@ -349,9 +406,34 @@ export async function callOpenRouter(
     const err = await resp.json().catch(() => ({}))
     throw new Error((err as { error?: { message?: string } }).error?.message || `HTTP ${resp.status}: ${resp.statusText}`)
   }
-  const data = await resp.json()
-  const content: string = (data as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content || ''
-  return content
+
+  const reader = resp.body!.getReader()
+  const decoder = new TextDecoder()
+  let full = ''
+  let buffer = ''
+  const startTime = Date.now()
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed.startsWith('data:')) continue
+      const jsonStr = trimmed.slice(5).trim()
+      if (jsonStr === '[DONE]') continue
+      try {
+        const parsed = JSON.parse(jsonStr)
+        const delta = parsed.choices?.[0]?.delta?.content || ''
+        full += delta
+        if (delta) onProgress?.(full.length, (Date.now() - startTime) / 1000)
+      } catch { /* skip malformed chunks */ }
+    }
+  }
+
+  return full
     .replace(/^```html?\s*/i, '')
     .replace(/\s*```$/, '')
     .trim()

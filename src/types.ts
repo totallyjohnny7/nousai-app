@@ -551,6 +551,8 @@ export interface PluginData {
   dashboardNotes?: StickyNote[];
   // Video Studio
   savedVideos?: SavedVideo[];
+  // Study Visual Generator — saved study guides
+  studyGuides?: StudyGuide[];
   // Card quality cache — keyed by cardKey; stripped from trimForSync (ephemeral)
   cardQualityCache?: Record<string, CardQualityScore>;
   // Omni Protocol V6 — session history, Feynman gaps, arc phase per course
@@ -958,6 +960,16 @@ export interface ScaleSet {
   nodes: ScaleNode[]
   created_at: string
   updated_at: string
+}
+
+export interface StudyGuide {
+  id: string
+  title: string
+  html: string
+  model: string
+  sourcePreview: string
+  createdAt: string
+  updatedAt: string
 }
 
 /** Inline card type for suspended session serialization (avoids circular import with OmniProtocol) */
