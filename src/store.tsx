@@ -428,6 +428,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         console.error('[STORE] RxDB load failed, falling back to legacy IDB:', rxErr);
         source = 'idb-fallback';
         d = await loadFromIDB();
+        // If legacy IDB also empty, try cloud sync as last resort
+        if (!d) {
+          try {
+            const uid = localStorage.getItem('nousai-auth-uid');
+            if (uid) {
+              const { syncFromCloud } = await import('./utils/auth');
+              d = await syncFromCloud(uid);
+              if (d) {
+                source = 'cloud-recovery';
+                console.warn('[STORE] Recovered data from cloud after local storage failure');
+              }
+            }
+          } catch { /* cloud also unavailable */ }
+        }
       }
 
       // Check crash-recovery data from a follower tab that closed
@@ -517,8 +531,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await saveToRxDB(dataToSave);
       } catch (rxErr) {
         console.error('[STORE] RxDB save failed, falling back to legacy IDB:', rxErr);
-        saveToIDB(dataToSave);
       }
+      // ALWAYS save to legacy IDB as backup — prevents data loss if RxDB gets corrupted
+      saveToIDB(dataToSave);
       localDirtyRef.current = false;
       localStorage.setItem('nousai-data-modified-at', new Date().toISOString());
       // Only broadcast if this was a local change, not a cross-tab sync echo

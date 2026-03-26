@@ -55,18 +55,24 @@ export async function getDb(): Promise<RxDatabase> {
           ignoreDuplicate: true, // allow reopening after HMR in dev
         });
       } catch (e: any) {
-        // DB9 = database already exists (React Strict Mode double-invoke or HMR)
+        // DB9 = database already exists with different options (React Strict Mode, HMR, schema version)
+        // CRITICAL: Do NOT call removeRxDatabase — that DELETES ALL USER DATA.
+        // Instead, retry with ignoreDuplicate which should handle most cases.
         if (e?.code === 'DB9' || e?.message?.includes('DB9')) {
-          // Try again with a removeRxDatabase first
-          const { removeRxDatabase } = await import('rxdb');
-          await removeRxDatabase(DB_NAME, getRxStorageDexie());
-          db = await createRxDatabase({
-            name: DB_NAME,
-            storage: validatedStorage || getRxStorageDexie(),
-            multiInstance: true,
-            eventReduce: true,
-            ignoreDuplicate: true,
-          });
+          console.warn('[RxDB] DB9 — database already exists, retrying with fresh storage instance');
+          try {
+            db = await createRxDatabase({
+              name: DB_NAME,
+              storage: getRxStorageDexie(), // fresh storage instance (no validated wrapper)
+              multiInstance: true,
+              eventReduce: true,
+              ignoreDuplicate: true,
+            });
+          } catch (retryErr) {
+            // If it still fails, throw to fall back to legacy IDB (do NOT delete data)
+            console.error('[RxDB] DB9 retry failed — falling back to legacy IDB:', retryErr);
+            throw retryErr;
+          }
         } else {
           throw e;
         }
