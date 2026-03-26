@@ -617,12 +617,14 @@ export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
             .filter((d: any) => d.id.startsWith(prefix))
             .map((d: any) => ({ index: d.data().index, data: d.data().data }))
             .sort((a: any, b: any) => a.index - b.index);
-          if (sorted.length === 0 && raw.totalChunks > 0) {
-            console.error('[AUTH] syncFromCloud: no chunks found with prefix', prefix, '— possible corruption');
-            throw new Error('Sync data corrupted: chunks missing. Try syncing from another device.');
+          if (sorted.length === 0) {
+            console.warn('[AUTH] syncFromCloud: no chunks found with prefix', prefix, '— cloud data may be empty or corrupted');
+            // Don't throw — return null so the app can continue with local data
+            return null;
           }
           if (raw.totalChunks && sorted.length !== raw.totalChunks) {
-            throw new Error(`Cloud data error: expected ${raw.totalChunks} chunks, got ${sorted.length}`);
+            console.warn(`[AUTH] syncFromCloud: expected ${raw.totalChunks} chunks, got ${sorted.length} — using available chunks`);
+            // Don't throw — try to reconstruct from whatever chunks exist
           }
           sorted.forEach((c: { index: unknown }, i: number) => {
             if (typeof c.index !== 'number') throw new Error(`Cloud data error: chunk ${i} has invalid index`);

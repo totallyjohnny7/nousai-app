@@ -721,7 +721,7 @@ function K20SettingsSection({ onToast }: { onToast: (msg: string) => void }) {
 
 // ─── Main Component ────────────────────────────────────────
 export default function SettingsPage() {
-  const { data, setData, updatePluginData, importData, exportData, einkMode, setEinkMode, betaMode, setBetaMode, backupNow, startRemoteWatch, stopRemoteWatch, deviceSettings, setDeviceSettings } = useStore()
+  const { data, setData, updatePluginData, importData, exportData, einkMode, setEinkMode, betaMode, setBetaMode, backupNow, startRemoteWatch, stopRemoteWatch, deviceSettings, setDeviceSettings, triggerSyncToCloud, triggerSyncFromCloud } = useStore()
   const fileRef = useRef<HTMLInputElement>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [updateInfo, setUpdateInfo] = useState(getStoredUpdate())
@@ -1562,6 +1562,16 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* Cloud Sync */}
+                <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                  <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => triggerSyncToCloud()}>
+                    <Upload size={14} /> Sync to Cloud
+                  </button>
+                  <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => triggerSyncFromCloud()}>
+                    <Download size={14} /> Sync from Cloud
+                  </button>
                 </div>
 
                 {/* Sign out */}

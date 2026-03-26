@@ -727,13 +727,45 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // ── Global sync triggers (for Ctrl+S / Ctrl+Shift+S hotkeys) ────
   const triggerSyncToCloud = useCallback(async () => {
-    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
-    window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync is automatic via RxDB' }));
+    const uid = localStorage.getItem('nousai-auth-uid');
+    if (!uid || !data) {
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sign in first to sync' }));
+      return;
+    }
+    try {
+      setSyncStatus('syncing');
+      await syncToCloud(uid, data);
+      setSyncStatus('synced');
+      setLastSyncAt(new Date().toISOString());
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Synced to cloud!' }));
+    } catch (e: unknown) {
+      setSyncStatus('error');
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: `Sync failed: ${e instanceof Error ? e.message : 'Unknown error'}` }));
+    }
   }, [data]);
 
   const triggerSyncFromCloud = useCallback(async () => {
-    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
-    window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sync is automatic via RxDB' }));
+    const uid = localStorage.getItem('nousai-auth-uid');
+    if (!uid) {
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sign in first to sync' }));
+      return;
+    }
+    try {
+      setSyncStatus('syncing');
+      const cloudData = await syncFromCloud(uid);
+      if (cloudData) {
+        setData(cloudData);
+        setSyncStatus('synced');
+        setLastSyncAt(new Date().toISOString());
+        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Loaded from cloud!' }));
+      } else {
+        setSyncStatus('idle');
+        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'No cloud data found' }));
+      }
+    } catch (e: unknown) {
+      setSyncStatus('error');
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: `Cloud load failed: ${e instanceof Error ? e.message : 'Unknown error'}` }));
+    }
   }, [setData]);
 
   // Debounce markDirty to avoid excessive sync scheduling during rapid updates (e.g. AI streaming)
