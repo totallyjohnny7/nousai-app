@@ -6,8 +6,11 @@ import {
 import {
   processFile, estimateTokens, estimateCost, buildSystemPrompt,
   callOpenRouter, PALETTES, fetchOpenRouterModels, getCachedModels,
+  FILTER_INJECT_JS,
   type GenSettings, type ModelOption,
 } from './studyGenUtils'
+import { useStore } from '../../store'
+import type { StudyGuide } from '../../types'
 
 /* ── Types ──────────────────────────────────────────────── */
 interface FileEntry {
@@ -51,6 +54,15 @@ export default function NousaiStudyGenerator() {
   const [showHtmlEditor, setShowHtmlEditor] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
+  // Progress tracking
+  const [genChars, setGenChars] = useState(0)
+  const [genElapsed, setGenElapsed] = useState(0)
+  const [genPhase, setGenPhase] = useState(0)
+
+  // Store for auto-save + previous sessions
+  const { data, updatePluginData } = useStore()
+  const savedGuides: StudyGuide[] = (data?.pluginData?.studyGuides as StudyGuide[] | undefined) || []
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch latest models from OpenRouter API when apiKey is available
@@ -65,6 +77,24 @@ export default function NousaiStudyGenerator() {
     })
     return () => { cancelled = true }
   }, [apiKey])
+
+  // Inject filter JS into iframe after HTML loads
+  useEffect(() => {
+    if (!genHTML || phase !== 'done') return
+    const iframe = iframeRef.current
+    if (!iframe) return
+    const onLoad = () => {
+      const doc = iframe.contentDocument
+      if (!doc) return
+      const script = doc.createElement('script')
+      script.textContent = FILTER_INJECT_JS
+      doc.body.appendChild(script)
+    }
+    iframe.addEventListener('load', onLoad)
+    // Also fire immediately in case iframe already loaded
+    if (iframe.contentDocument?.readyState === 'complete') onLoad()
+    return () => iframe.removeEventListener('load', onLoad)
+  }, [genHTML, phase])
 
   const allText = [
     ...files.filter(f => f.status === 'done').map(f => f.text),
@@ -136,13 +166,27 @@ export default function NousaiStudyGenerator() {
 
   const confirmGenerate = async () => {
     setPhase('generating')
+    setGenChars(0)
+    setGenElapsed(0)
+    setGenPhase(0)
     setProgress('Sending to model...')
     try {
       const sys = buildSystemPrompt(settings)
       const userMsg = `SOURCE MATERIAL:\n\n${allText}\n\n---\n\nGenerate the complete interactive study guide HTML now. Start immediately with <!DOCTYPE html>.`
       const maxOut = Math.max(toks?.output || 10000, settings.tokenLimit)
-      setProgress(`Generating with ${model.split('/')[1]}...`)
-      const html = await callOpenRouter(apiKey, model, sys, userMsg, maxOut)
+      const expectedChars = maxOut * 3.5
+
+      setGenPhase(1)
+      const html = await callOpenRouter(apiKey, model, sys, userMsg, maxOut, (chars, elapsed) => {
+        setGenChars(chars)
+        setGenElapsed(elapsed)
+        if (chars < 500) setGenPhase(1)
+        else if (chars < 2000) setGenPhase(2)
+        else if (chars < expectedChars * 0.8) setGenPhase(3)
+        else setGenPhase(4)
+      })
+
+      setGenPhase(5)
       if (!html.startsWith('<!DOCTYPE') && !html.startsWith('<html')) {
         throw new Error('Model did not return valid HTML. Response: ' + html.slice(0, 200))
       }
@@ -151,6 +195,19 @@ export default function NousaiStudyGenerator() {
       setSections([...new Set(secMatches.map(m => m[1]))])
       setPhase('done')
       setProgress('')
+
+      // Auto-save to library
+      const title = html.match(/<h1[^>]*>(.*?)<\/h1>/i)?.[1]?.replace(/<[^>]*>/g, '') || 'Study Guide'
+      const guide: StudyGuide = {
+        id: crypto.randomUUID(),
+        title,
+        html,
+        model,
+        sourcePreview: allText.slice(0, 200),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      updatePluginData({ studyGuides: [guide, ...savedGuides].slice(0, 30) })
     } catch (e: unknown) {
       setError(`Generation failed: ${e instanceof Error ? e.message : 'Unknown error'}`)
       setPhase('error')
@@ -177,22 +234,36 @@ export default function NousaiStudyGenerator() {
 
   const saveToLibrary = () => {
     try {
-      const existing = JSON.parse(localStorage.getItem('nousai-study-guides') || '[]')
       const title = genHTML.match(/<h1[^>]*>(.*?)<\/h1>/i)?.[1]?.replace(/<[^>]*>/g, '') || 'Study Guide'
-      existing.unshift({
+      const guide: StudyGuide = {
         id: crypto.randomUUID(),
         title,
         html: genHTML,
-        createdAt: new Date().toISOString(),
         model,
-      })
-      // Keep max 20 guides
-      if (existing.length > 20) existing.length = 20
-      localStorage.setItem('nousai-study-guides', JSON.stringify(existing))
-      alert(`Saved "${title}" to library!`)
-    } catch (e) {
-      alert('Failed to save — study guide may be too large for localStorage.')
+        sourcePreview: allText.slice(0, 200),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      updatePluginData({ studyGuides: [guide, ...savedGuides].slice(0, 30) })
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message: `Saved "${title}"`, type: 'success', duration: 2000 } }))
+    } catch {
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message: 'Failed to save study guide', type: 'error', duration: 3000 } }))
     }
+  }
+
+  // Load a previously saved study guide
+  const loadGuide = (guide: StudyGuide) => {
+    setGenHTML(guide.html)
+    const secMatches = [...guide.html.matchAll(/data-section="([^"]+)"/g)]
+    setSections([...new Set(secMatches.map(m => m[1]))])
+    setPhase('done')
+    setProgress('')
+    setError('')
+  }
+
+  // Delete a saved study guide
+  const deleteGuide = (id: string) => {
+    updatePluginData({ studyGuides: savedGuides.filter(g => g.id !== id) })
   }
 
   // Toggle contentEditable on the iframe document for inline editing
@@ -294,14 +365,55 @@ export default function NousaiStudyGenerator() {
           </div>
         </div>
 
-        {/* Status line */}
-        {isWorking && (
+        {/* Step-based progress */}
+        {phase === 'generating' && (
+          <div style={{
+            padding: '12px 14px',
+            background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.15)',
+            borderRadius: 'var(--radius-sm)', fontSize: 12,
+          }}>
+            {[
+              'Sending to model',
+              'Generating header & styles',
+              'Generating sections',
+              'Generating term index',
+              'Finalizing',
+            ].map((label, i) => {
+              const step = i + 1
+              const done = genPhase > step
+              const active = genPhase === step
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', color: done ? '#22c55e' : active ? '#a855f7' : 'var(--text-muted)', opacity: done ? 0.7 : active ? 1 : 0.4 }}>
+                  {done ? <Check size={13} /> : active ? <Loader size={13} className="spin" /> : <span style={{ width: 13, height: 13, display: 'inline-block', borderRadius: '50%', border: '1.5px solid currentColor' }} />}
+                  <span style={{ fontWeight: active ? 600 : 400 }}>{label}</span>
+                </div>
+              )
+            })}
+            {genChars > 0 && (
+              <>
+                <div style={{ marginTop: 8, height: 4, background: 'rgba(168,85,247,0.12)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${Math.min(98, (genChars / ((toks?.output || settings.tokenLimit) * 3.5)) * 100)}%`,
+                    background: 'linear-gradient(90deg, #06b6d4, #a855f7)',
+                    borderRadius: 2,
+                    transition: 'width 0.3s ease',
+                  }} />
+                </div>
+                <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-muted)' }}>
+                  {(genChars / 1000).toFixed(1)}k chars · {genElapsed.toFixed(0)}s elapsed
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        {phase === 'extracting' && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
             background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.15)',
             borderRadius: 'var(--radius-sm)', fontSize: 12, color: '#a855f7',
           }}>
-            <Loader size={14} className="spin" /> {progress || 'Working...'}
+            <Loader size={14} className="spin" /> {progress || 'Extracting text...'}
           </div>
         )}
       </div>
@@ -318,6 +430,34 @@ export default function NousaiStudyGenerator() {
           <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0 }}>
             <X size={14} />
           </button>
+        </div>
+      )}
+
+      {/* ── Previous Sessions ── */}
+      {phase === 'idle' && savedGuides.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Previous Sessions ({savedGuides.length})</div>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            {savedGuides.slice(0, 10).map(g => (
+              <div key={g.id} style={{
+                minWidth: 180, maxWidth: 220, padding: '10px 12px',
+                background: 'var(--bg-primary)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)', fontSize: 11, cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', gap: 4,
+              }}>
+                <div style={{ fontWeight: 600, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} onClick={() => loadGuide(g)}>
+                  {g.title}
+                </div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 10 }}>
+                  {g.model?.split('/')[1] || 'unknown'} · {new Date(g.createdAt).toLocaleDateString()}
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                  <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: 10 }} onClick={() => loadGuide(g)}>Open</button>
+                  <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: 10, color: 'var(--red, #ef4444)' }} onClick={() => deleteGuide(g.id)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
