@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx playwright install --with-deps chromium 2>&1 || true",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Bash",
@@ -13,6 +24,13 @@
           }
         ]
       }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npx playwright*)",
+      "Bash(npx vite preview*)",
+      "Bash(npm run build*)"
     ]
   }
 }

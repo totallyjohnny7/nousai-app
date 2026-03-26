@@ -17,7 +17,9 @@
     "cap:build-android": "npm run build && npx cap sync android",
     "cap:build-ios": "npm run build && npx cap sync ios",
     "remotion:dev": "npx remotion studio remotion/src/index.ts",
-    "remotion:render": "npx remotion render remotion/src/index.ts NousAIDemo --output nousai-demo.mp4"
+    "remotion:render": "npx remotion render remotion/src/index.ts NousAIDemo --output nousai-demo.mp4",
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",
