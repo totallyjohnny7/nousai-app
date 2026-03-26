@@ -14,7 +14,9 @@ import { checkForUpdates, getAppVersion, getStoredUpdate, dismissUpdate, getPlat
 import { signUp, signIn, logOut, onAuthChange, syncToCloud, syncFromCloud, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, saveOmiConfig, type AuthUser } from '../utils/auth'
 // testData is lazy-loaded only when user clicks "Load Test Data" button
 import { SHORTCUT_DEFS, getShortcutKey, setShortcutKey, resetAllShortcuts, formatKey } from '../utils/shortcuts'
-import { scanK20Conflicts } from '../utils/k20ConflictScanner'
+import { K20_KEYS, K20_ACTIONS, K20_ACTION_ICONS, K20_DEFAULT_BINDINGS, type K20ActionId } from '../utils/k20Types'
+import { useK20Bindings } from '../hooks/useK20Bindings'
+import { useK20Hotkeys } from '../hooks/useK20Hotkeys'
 import { getLevel, THEME_PRESETS } from '../utils/gamification'
 import {
   checkAllPermissions, requestMicrophone, requestPersistentStorage,
@@ -25,6 +27,7 @@ import {
 import { requestFCMPermission, getFCMToken, clearFCMToken, isFCMSupported } from '../utils/fcm'
 import { getSpotifyAuthUrl, isSpotifyConnected, disconnectSpotify } from '../utils/spotify'
 import { runFullCanvasSync } from '../utils/canvasSync'
+import { log } from '../utils/logger'
 
 // ─── Section Collapse State ────────────────────────────────
 type SectionId = 'account' | 'ai' | 'extensions' | 'study' | 'display' | 'permissions' | 'data' | 'howto' | 'appinfo' | 'spotify' | 'inputdevices' | 'guide'
@@ -472,7 +475,7 @@ function ShortcutRow({ shortcut }: { shortcut: (typeof SHORTCUT_DEFS)[number] })
 
 // ─── Main Component ────────────────────────────────────────
 export default function SettingsPage() {
-  const { data, setData, updatePluginData, importData, exportData, einkMode, setEinkMode, betaMode, setBetaMode, backupNow, startRemoteWatch, stopRemoteWatch, deviceSettings, setDeviceSettings } = useStore()
+  const { data, setData, updatePluginData, importData, exportData, einkMode, setEinkMode, betaMode, setBetaMode, backupNow, startRemoteWatch, stopRemoteWatch } = useStore()
   const fileRef = useRef<HTMLInputElement>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [updateInfo, setUpdateInfo] = useState(getStoredUpdate())
@@ -844,10 +847,7 @@ export default function SettingsPage() {
   }
 
   async function handleSyncToCloud() {
-    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
-    showToast('Sync is now automatic — changes sync in real-time via RxDB.')
-    return
-    console.log('[SYNC] handleSyncToCloud called', { authUser: !!authUser, data: !!data })
+    log('[SYNC] handleSyncToCloud called', { authUser: !!authUser, data: !!data })
     if (!authUser || !data) {
       console.warn('[SYNC] Early return — authUser:', !!authUser, 'data:', !!data)
       if (!data) showToast('No data to sync. Import your data first.')
@@ -870,9 +870,9 @@ export default function SettingsPage() {
     }
     setSyncing(true)
     try {
-      console.log('[SYNC] Calling syncToCloud with uid:', authUser.uid)
+      log('[SYNC] Calling syncToCloud with uid:', authUser.uid)
       await syncToCloud(authUser.uid, data)
-      console.log('[SYNC] syncToCloud succeeded')
+      log('[SYNC] syncToCloud succeeded')
       const now = new Date().toISOString()
       localStorage.setItem('nousai-last-sync', now)
       setLastSync(now)
@@ -887,10 +887,7 @@ export default function SettingsPage() {
   }
 
   async function handleSyncFromCloud() {
-    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
-    showToast('Sync is now automatic — changes sync in real-time via RxDB.')
-    return
-    console.log('[SYNC] handleSyncFromCloud called', { authUser: !!authUser })
+    log('[SYNC] handleSyncFromCloud called', { authUser: !!authUser })
     if (!authUser) {
       console.warn('[SYNC] Early return — no authUser')
       return
@@ -899,11 +896,11 @@ export default function SettingsPage() {
     try {
       // Step 1: Clear PWA cache first so stale service worker doesn't interfere
       const cacheCleared = await clearPWACache()
-      if (cacheCleared) console.log('[SYNC] PWA cache cleared before sync')
+      if (cacheCleared) log('[SYNC] PWA cache cleared before sync')
 
-      console.log('[SYNC] Calling syncFromCloud with uid:', authUser.uid)
+      log('[SYNC] Calling syncFromCloud with uid:', authUser.uid)
       const cloudData = await syncFromCloud(authUser.uid)
-      console.log('[SYNC] syncFromCloud returned:', cloudData ? 'data found' : 'null')
+      log('[SYNC] syncFromCloud returned:', cloudData ? 'data found' : 'null')
       if (cloudData) {
         // Conflict detection: warn before overwriting local data
         const localModifiedAt = localStorage.getItem('nousai-data-modified-at')
@@ -943,7 +940,7 @@ export default function SettingsPage() {
 
         // Step 3: Force-write to IndexedDB immediately (don't wait for 500ms debounce)
         await forceWriteToIDB(normalized)
-        console.log('[SYNC] Force-wrote cloud data to IDB')
+        log('[SYNC] Force-wrote cloud data to IDB')
 
         const now = new Date().toISOString()
         localStorage.setItem('nousai-last-sync', now)
@@ -1799,6 +1796,10 @@ export default function SettingsPage() {
                       style={{ ...inputStyle, paddingRight: 40 }}
                       value={aiConfig.apiKey}
                       onChange={e => updateAiConfig({ apiKey: e.target.value })}
+                      autoComplete="off"
+                      name="nousai-api-key"
+                      data-1p-ignore
+                      data-lpignore="true"
                     />
                     <button
                       style={{
@@ -2123,6 +2124,9 @@ export default function SettingsPage() {
                                 style={inputStyle}
                                 value={cfg.apiKey}
                                 onChange={e => updateSlotConfig(slot, { apiKey: e.target.value })}
+                                autoComplete="off"
+                                data-1p-ignore
+                                data-lpignore="true"
                               />
                             </div>
 
@@ -3704,86 +3708,6 @@ export default function SettingsPage() {
         {expanded.inputdevices && (
           <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* ── Device Toggles ── */}
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Device Toggles</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {([
-                  { key: 'keyboard' as const, label: 'Keyboard', icon: '⌨️', locked: true, desc: 'Always on' },
-                  { key: 'k20' as const, label: 'HUION K20', icon: '🎛️', locked: false, desc: 'KeyDial Mini hotkeys' },
-                  { key: 'gamepad' as const, label: 'Game Controller', icon: '🎮', locked: false, desc: 'Gamepad API' },
-                  { key: 'streamDeck' as const, label: 'Stream Deck', icon: '⌨️', locked: false, desc: 'Elgato WebHID' },
-                  { key: 'midi' as const, label: 'MIDI Controller', icon: '🎹', locked: false, desc: 'Web MIDI API' },
-                  { key: 'otherHID' as const, label: 'Other HID', icon: '🔌', locked: false, desc: 'Generic HID devices' },
-                ] as const).map(d => (
-                  <div key={d.key} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '8px 12px', background: 'var(--bg-secondary)',
-                    borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)',
-                  }}>
-                    <span style={{ fontSize: 16 }}>{d.icon}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{d.label}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.desc}</div>
-                    </div>
-                    {d.locked ? (
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>ON</span>
-                    ) : (
-                      <label style={{ position: 'relative', width: 40, height: 22, cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={deviceSettings[d.key]}
-                          onChange={e => setDeviceSettings({ ...deviceSettings, [d.key]: e.target.checked })}
-                          style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
-                        />
-                        <span style={{
-                          position: 'absolute', inset: 0, borderRadius: 11,
-                          background: deviceSettings[d.key] ? 'var(--color-accent)' : 'var(--bg-card)',
-                          border: '1px solid var(--border)', transition: 'background 0.2s',
-                        }} />
-                        <span style={{
-                          position: 'absolute', top: 2, left: deviceSettings[d.key] ? 20 : 2,
-                          width: 18, height: 18, borderRadius: '50%',
-                          background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                          transition: 'left 0.2s',
-                        }} />
-                      </label>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* K20 conflict warnings */}
-              {(() => {
-                const conflicts = scanK20Conflicts();
-                if (conflicts.length === 0) return null;
-                return (
-                  <div style={{
-                    marginTop: 10, padding: '10px 12px',
-                    background: 'rgba(239,68,68,0.07)', borderRadius: 'var(--radius)',
-                    border: '1px solid rgba(239,68,68,0.25)', fontSize: 12, color: 'var(--text-secondary)',
-                  }}>
-                    <div style={{ fontWeight: 700, color: '#ef4444', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <AlertTriangle size={14} /> K20 Shortcut Conflicts
-                    </div>
-                    <div>
-                      The following K20 combos conflict with reserved browser shortcuts and may not work:{' '}
-                      {conflicts.map((c, i) => (
-                        <kbd key={c} style={{
-                          background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                          borderRadius: 3, padding: '1px 5px', fontSize: 11,
-                          fontFamily: 'var(--font-mono, monospace)', marginRight: i < conflicts.length - 1 ? 4 : 0,
-                        }}>{c}</kbd>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* ── Divider ── */}
-            <div style={{ borderTop: '1px solid var(--border)' }} />
-
             {/* ── Gamepad / Controller ── */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -3982,7 +3906,7 @@ export default function SettingsPage() {
                       fc_flip: { emoji: '🔄', label: 'FLIP' }, fc_next: { emoji: '➡️', label: 'NEXT' },
                       fc_prev: { emoji: '⬅️', label: 'PREV' }, fc_rsvp: { emoji: '⏩', label: 'RSVP' },
                       fc_cram: { emoji: '⚡', label: 'CRAM' }, fc_type_recall: { emoji: '✍️', label: 'TYPE' },
-                      fc_zen: { emoji: '🧘', label: 'ZEN' },
+                      fc_zen: { emoji: '🧘', label: 'ZEN' }, relay_send: { emoji: '📤', label: 'RELAY' },
                       screen_lasso: { emoji: '✂️', label: 'LASSO' }, notes_speak: { emoji: '🔊', label: 'TTS' },
                       fc_conf1: { emoji: '❌', label: 'AGAIN' }, fc_conf2: { emoji: '😰', label: 'HARD' },
                       fc_conf3: { emoji: '✅', label: 'GOOD' }, fc_conf4: { emoji: '🚀', label: 'EASY' },
@@ -4008,7 +3932,7 @@ export default function SettingsPage() {
                         color: '#F5A623',
                         keys: [
                           'fc_flip', 'fc_next', 'fc_prev', 'fc_rsvp', 'fc_cram',
-                          'fc_type_recall', 'fc_zen', 'screen_lasso', 'notes_speak',
+                          'fc_type_recall', 'fc_zen', 'relay_send', 'screen_lasso', 'notes_speak',
                           'fc_conf1', 'fc_conf2', 'fc_conf3', 'fc_conf4', 'nav_next',
                         ],
                       },
@@ -4118,6 +4042,174 @@ export default function SettingsPage() {
               )}
             </div>
 
+            {/* ── Divider ── */}
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+
+            {/* ── HUION K20 KeyDial Mini ── */}
+            {(() => {
+              const k20 = useK20Bindings();
+              useK20Hotkeys(true, k20.version);
+
+              // Group keys by row for visual layout
+              const rows = new Map<number, typeof K20_KEYS>();
+              for (const key of K20_KEYS) {
+                if (!rows.has(key.row)) rows.set(key.row, []);
+                rows.get(key.row)!.push(key);
+              }
+              const sortedRows = [...rows.entries()].sort(([a], [b]) => a - b);
+
+              // Build conflict lookup: keyId → conflict messages
+              const conflictsByKey = new Map<string, string[]>();
+              for (const c of k20.conflicts) {
+                const existing = conflictsByKey.get(c.keyId) ?? [];
+                existing.push(c.message);
+                conflictsByKey.set(c.keyId, existing);
+              }
+
+              return (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>🎛️ HUION K20 KeyDial Mini</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '2px 7px', borderRadius: 20 }}>
+                      Keyboard shortcuts · fully remappable
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+                    Click any key to reassign its action. The K20 sends keyboard shortcuts that NousAI intercepts.
+                  </div>
+
+                  {/* Conflict warnings */}
+                  {k20.conflicts.length > 0 && (
+                    <div style={{ marginBottom: 12, padding: '8px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius)', fontSize: 11 }}>
+                      <div style={{ fontWeight: 700, color: '#EF4444', marginBottom: 4 }}>⚠ Binding Conflicts</div>
+                      {[...new Set(k20.conflicts.map(c => c.message))].map((msg, i) => (
+                        <div key={i} style={{ color: 'var(--text-secondary)', marginTop: 2 }}>• {msg}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Visual key map */}
+                  <div style={{
+                    background: '#111',
+                    borderRadius: 20,
+                    padding: 16,
+                    border: '2px solid rgba(245,166,35,0.25)',
+                    maxWidth: 420,
+                    boxShadow: '0 0 20px rgba(245,166,35,0.05)',
+                  }}>
+                    {sortedRows.map(([rowIdx, keys]) => (
+                      <div
+                        key={rowIdx}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          gap: 6,
+                          marginBottom: rowIdx < sortedRows.length - 1 ? 6 : 0,
+                        }}
+                      >
+                        {keys.map(keyDef => {
+                          const actionId = k20.bindings[keyDef.id] ?? 'none';
+                          const actionDef = K20_ACTIONS.find(a => a.id === actionId);
+                          const icon = K20_ACTION_ICONS[actionId] ?? '⬜';
+                          const hasConflict = conflictsByKey.has(keyDef.id);
+                          const isDial = keyDef.isDial;
+
+                          return (
+                            <div
+                              key={keyDef.id}
+                              style={{
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 2,
+                                padding: isDial ? '8px 6px 6px' : '8px 6px 4px',
+                                background: isDial ? '#1a1a2e' : '#1e1e1e',
+                                borderRadius: isDial ? '50%' : 10,
+                                border: hasConflict
+                                  ? '2px solid #EF4444'
+                                  : isDial
+                                    ? '2px solid #F5A62340'
+                                    : '1px solid #333',
+                                minWidth: isDial ? 56 : 80,
+                                minHeight: isDial ? 56 : 68,
+                                cursor: 'pointer',
+                                transition: 'border-color 0.15s, transform 0.1s',
+                              }}
+                            >
+                              {/* Conflict badge */}
+                              {hasConflict && (
+                                <div
+                                  title={conflictsByKey.get(keyDef.id)?.join('\n')}
+                                  style={{
+                                    position: 'absolute', top: -4, right: -4,
+                                    width: 14, height: 14, borderRadius: '50%',
+                                    background: '#EF4444', color: '#fff',
+                                    fontSize: 9, fontWeight: 700,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  }}
+                                >
+                                  !
+                                </div>
+                              )}
+
+                              {/* Physical key label */}
+                              <div style={{ fontSize: 8, color: '#666', fontWeight: 600, letterSpacing: 0.5 }}>
+                                {keyDef.label}
+                              </div>
+
+                              {/* Action icon */}
+                              <div style={{ fontSize: isDial ? 16 : 20, lineHeight: 1 }}>{icon}</div>
+
+                              {/* Action dropdown */}
+                              <select
+                                style={{
+                                  width: '100%',
+                                  fontSize: 8,
+                                  fontWeight: 600,
+                                  background: 'transparent',
+                                  color: '#F5A623',
+                                  border: 'none',
+                                  textAlign: 'center',
+                                  cursor: 'pointer',
+                                  appearance: 'none',
+                                  padding: 0,
+                                  outline: 'none',
+                                }}
+                                value={actionId}
+                                onChange={e => k20.updateBinding(keyDef.id, e.target.value as K20ActionId)}
+                              >
+                                {K20_ACTIONS.map(a => (
+                                  <option key={a.id} value={a.id}>{a.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Combo reference + reset */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                      Bindings saved to localStorage · persists across sessions
+                    </span>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        k20.resetToDefaults();
+                        showToast('K20 bindings reset to defaults');
+                      }}
+                    >
+                      Reset to Defaults
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
           </div>
         )}
       </div>
@@ -4193,7 +4285,7 @@ Modes (auto-switch by page):
 • Quiz Mode — on /quiz: Btn 1-4 = select options, Btn 5=SUBMIT, Btn 6=NEXT
 • Drawing Mode — on /draw: Btn 1=UNDO, Btn 2=REDO
 • Navigation Mode — all other pages: Btn 1-15 = jump to any NousAI page
-• Notes Mode — on /library or /learn: Btn 4=LASSO
+• Notes Mode — on /library or /learn: Btn 3=RELAY, Btn 4=LASSO
 
 Remapping: Settings → Input Devices → choose mode → click any button → select new action
 
@@ -4301,6 +4393,28 @@ What happens over time:
 Daily Cap: 50 cards per course per day (configurable in Settings). This prevents overwhelm when you add a large deck all at once.
 
 ⚡ Pro Tip: Grade honestly. Rating "Easy" when it was "Hard" corrupts the schedule. The algorithm only works if your self-ratings are accurate.`,
+  },
+  {
+    id: 'relay',
+    title: 'Content Relay — Step-by-Step Cross-Device',
+    tldr: 'Send text, notes, or URLs from any device to any other device instantly via Firebase.',
+    content: `Method 1 — Screen Lasso (Windows → Boox):
+1. Stream Deck Notes Btn 4, OR: Learn → Screen Lasso tool
+2. Select your screen (browser permission asked once)
+3. Draw a polygon around the text you want
+4. AI extracts the text (OCR)
+5. Click "Send to Relay"
+6. On Boox: amber dot appears → tap → "Save to Notes"
+
+Method 2 — Manual Relay (any device):
+1. Tap the relay button (bottom-right corner, circle icon)
+2. Type or paste content → select type: Text/URL/Note → Send
+3. Other device: amber dot appears within 5 seconds → accept
+
+Requirements: Both devices must be logged in with the same account.
+Works across: Windows, macOS, Boox, iPad, iOS, Android — any browser.
+
+⚡ Pro Tip: Relay works offline-to-online — if your Boox is offline when you send, the message waits in Firestore and delivers when Boox reconnects.`,
   },
   {
     id: 'pretest',

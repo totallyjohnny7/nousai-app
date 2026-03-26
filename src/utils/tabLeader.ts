@@ -7,6 +7,11 @@
  * updated state back.
  *
  * If the leader tab closes, another tab is automatically elected within ~3s.
+ *
+ * IMPORTANT: Chrome extensions (Claude in Chrome, Kapture, etc.) can register
+ * on the same BroadcastChannel and interfere with leader election, causing
+ * `onduplicate` to fire even with a single app tab open. The ping/pong
+ * protocol below verifies real app tabs exist before yielding leadership.
  */
 import { BroadcastChannel as BC, createLeaderElection, type LeaderElector } from 'broadcast-channel';
 
@@ -33,6 +38,50 @@ export function isLeader(): boolean {
   return _role === 'leader';
 }
 
+/**
+ * Verify another real NousAI tab exists by sending a ping and waiting for a
+ * pong. Returns true if another tab responds within 500ms.
+ */
+function verifyOtherTabExists(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!channel) { resolve(false); return; }
+
+    let answered = false;
+    const onMsg = (msg: any) => {
+      if (msg?.type === 'leader-pong' && msg?.tabId !== TAB_ID) {
+        answered = true;
+        resolve(true);
+      }
+    };
+
+    // Temporarily listen for pong
+    const origHandler = channel.onmessage;
+    channel.onmessage = (msg: any) => {
+      onMsg(msg);
+      // Still run original handler
+      if (msg?.tabId !== TAB_ID) _onMessage?.(msg);
+    };
+
+    channel.postMessage({ type: 'leader-ping', tabId: TAB_ID });
+
+    setTimeout(() => {
+      // Restore original handler
+      if (channel) {
+        channel.onmessage = origHandler;
+      }
+      if (!answered) resolve(false);
+    }, 500);
+  });
+}
+
+/** Force this tab to leader — used when no other real tabs exist */
+function forceLeader() {
+  if (_role === 'leader') return;
+  _role = 'leader';
+  console.log('[TAB-LEADER] This tab is now the leader');
+  _onBecomeLeader?.();
+}
+
 /** Initialize the leader election system */
 export async function initLeaderElection(opts: {
   onBecomeLeader: () => void;
@@ -50,29 +99,48 @@ export async function initLeaderElection(opts: {
     // Listen for messages from other tabs
     channel.onmessage = (msg: any) => {
       if (msg?.tabId === TAB_ID) return; // ignore own messages
+
+      // Respond to pings so other tabs can verify we're a real app tab
+      if (msg?.type === 'leader-ping') {
+        channel?.postMessage({ type: 'leader-pong', tabId: TAB_ID });
+        return;
+      }
+
       _onMessage?.(msg);
     };
 
     // Attempt to become leader — resolves when this tab IS the leader
     elector.awaitLeadership().then(() => {
-      _role = 'leader';
-      console.log('[TAB-LEADER] This tab is now the leader');
-      _onBecomeLeader?.();
+      forceLeader();
     });
 
-    // The library handles re-election when the leader tab closes.
-    // `elector.onduplicate` fires if another tab also thinks it's leader (rare).
-    elector.onduplicate = () => {
-      console.warn('[TAB-LEADER] Duplicate leader detected — yielding');
-      _role = 'follower';
-      _onLoseLeadership?.();
+    // `elector.onduplicate` fires if another tab also thinks it's leader.
+    // Chrome extensions can trigger this falsely — verify before yielding.
+    elector.onduplicate = async () => {
+      console.warn('[TAB-LEADER] Duplicate leader detected — verifying other tabs...');
+      const otherExists = await verifyOtherTabExists();
+      if (otherExists) {
+        console.log('[TAB-LEADER] Confirmed other app tab — yielding to follower');
+        _role = 'follower';
+        _onLoseLeadership?.();
+      } else {
+        console.log('[TAB-LEADER] No other app tab responded — keeping leadership');
+        forceLeader();
+      }
     };
 
-    // If we're not the leader after a short wait, we're a follower
-    setTimeout(() => {
+    // If we're not the leader after a short wait, check if another tab exists.
+    // If no real tab responds, promote ourselves to leader (single-tab scenario).
+    setTimeout(async () => {
       if (_role === 'undecided') {
-        _role = 'follower';
-        console.log('[TAB-LEADER] This tab is a follower');
+        const otherExists = await verifyOtherTabExists();
+        if (otherExists) {
+          _role = 'follower';
+          console.log('[TAB-LEADER] This tab is a follower');
+        } else {
+          console.log('[TAB-LEADER] No other tabs found — promoting to leader');
+          forceLeader();
+        }
       }
     }, 2000);
   } catch (e) {
