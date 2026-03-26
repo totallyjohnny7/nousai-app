@@ -1499,7 +1499,7 @@ export default function SettingsPage() {
                 {(data?.pluginData?.loginHistory ?? []).length > 0 && (
                   <div style={{ marginTop: 12 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 6, color: 'var(--text-secondary)' }}>Recent logins</div>
-                    {(data!.pluginData!.loginHistory!).slice(-5).reverse().map((entry, i) => (
+                    {(data?.pluginData?.loginHistory ?? []).slice(-5).reverse().map((entry, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
                         <span>{entry.device}</span>
                         <span>{new Date(entry.timestamp).toLocaleString()}</span>
