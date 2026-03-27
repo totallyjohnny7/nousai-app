@@ -679,7 +679,7 @@ function ExcalidrawEditor({
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-primary, #111)' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-primary, #111)' }}>
       {/* Header bar */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,

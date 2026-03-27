@@ -325,138 +325,37 @@ function decompressString(base64: string): string {
   return pako.ungzip(bytes, { to: 'string' });
 }
 
-// ─── Cloud Sync ─────────────────────────────────────────
+// ─── Sync Lock (D1) ─────────────────────────────────────
+// Prevents concurrent sync operations from racing
+let _isSyncing = false;
+export function isSyncing(): boolean { return _isSyncing; }
 
-/**
- * Trim data before cloud sync to stay under Firestore's 1MB document limit.
- * Strips bulky quiz question objects, caps history arrays, and limits tutor sessions.
- */
-function trimForSync(data: any): any {
-  const d = structuredClone(data);
-  const pd = d.pluginData || {};
-
-  // 1. Quiz history: keep last 100 attempts, preserve metadata + slim answers for question display
-  if (Array.isArray(pd.quizHistory)) {
-    pd.quizHistory = pd.quizHistory.slice(-100).map((a: any) => {
-      const base: any = {
-        id: a.id, name: a.name, subject: a.subject, subtopic: a.subtopic,
-        score: a.score, correct: a.correct, questionCount: a.questionCount,
-        total: a.total, date: a.date, type: a.type, mode: a.mode,
-        folder: a.folder,
-      };
-      // Keep questions for ALL untaken quizzes (needed to play them later)
-      // score === -1 means quiz hasn't been taken yet, regardless of mode
-      if (a.score === -1 && Array.isArray(a.questions) && a.questions.length > 0) {
-        base.questions = a.questions;
-      }
-      // Keep slim answers for all taken quizzes (strip timeMs/explanation to save space)
-      if (Array.isArray(a.answers) && a.answers.length > 0) {
-        base.answers = a.answers.map((ans: any) => ({
-          question: ans.question ? {
-            type: ans.question.type,
-            question: ans.question.question,
-            options: ans.question.options,
-            correctAnswer: ans.question.correctAnswer,
-            explanation: ans.question.explanation,
-          } : ans.question,
-          userAnswer: ans.userAnswer,
-          correct: ans.correct,
-        }));
-      }
-      return base;
-    });
-  }
-
-  // 2. Proficiency data: keep last 20 attempts per topic (prevents unbounded growth)
-  if (pd.proficiencyData && typeof pd.proficiencyData === 'object') {
-    for (const subj of Object.keys(pd.proficiencyData)) {
-      const topics = pd.proficiencyData[subj];
-      if (topics && typeof topics === 'object') {
-        for (const topic of Object.keys(topics)) {
-          if (Array.isArray(topics[topic]) && topics[topic].length > 20)
-            topics[topic] = topics[topic].slice(-20);
-        }
-      }
-    }
-  }
-
-  // 3. Spaced-repetition card history: keep last 30 reviews per card
-  if (pd.srData?.cards && Array.isArray(pd.srData.cards)) {
-    pd.srData.cards = pd.srData.cards.map((c: any) => ({
-      ...c,
-      history: Array.isArray(c.history) ? c.history.slice(-30) : c.history,
-    }));
-  }
-
-  // 4a. Strip canvas storage keys from annotations (canvas PNG lives in IDB only)
-  if (Array.isArray(pd.annotations)) {
-    pd.annotations = pd.annotations.map((a: any) => {
-      const { canvasStorageKey: _strip, ...rest } = a;
-      return rest;
-    });
-  }
-
-  // 4. Tutor sessions: keep last 30 messages per session
-  if (d.tutorSessions && typeof d.tutorSessions === 'object') {
-    for (const key of Object.keys(d.tutorSessions)) {
-      if (Array.isArray(d.tutorSessions[key]) && d.tutorSessions[key].length > 30)
-        d.tutorSessions[key] = d.tutorSessions[key].slice(-30);
-    }
-  }
-
-  // 5. Cap localData to prevent unbounded growth (mindmaps, flashcards, notes, etc.)
-  // Priority keys are always included first; large content keys only get remaining budget.
-  if (d.localData && typeof d.localData === 'object') {
-    const MAX_KEY_BYTES = 500_000;  // 500 KB per key
-    const MAX_TOTAL_BYTES = 2_000_000; // 2 MB total for all localData
-    // Process critical keys first so they're never crowded out by large content
-    const PRIORITY_KEYS = [
-      'nousai-bank-deleted', 'nousai-bank-edits',
-      'nousai-quiz-folders', 'nousai-quiz-folder-map',
-      'nousai-study-plan', 'nousai-jp-vocab', 'nousai-formulas', 'nousai-solver-recent',
-      'nousai-pref-daily-xp', 'nousai-pref-quiz-count', 'nousai-pref-flashcard-flip',
-      'nousai-pref-pomo-work', 'nousai-pref-pomo-break', 'nousai-pref-language',
-      'nousai-pref-difficulty', 'nousai-pref-sound', 'nousai-pref-fontsize',
-      'nousai-pref-compact', 'nousai-tts-prefs', 'nousai-stt-prefs',
-      'nousai-palm-rejection',
-    ];
-    const localData = d.localData as Record<string, string>;
-    const remaining = Object.keys(localData).filter(k => !PRIORITY_KEYS.includes(k));
-    const orderedKeys = [...PRIORITY_KEYS.filter(k => k in localData), ...remaining];
-    let total = 0;
-    const trimmedLocal: Record<string, string> = {};
-    for (const k of orderedKeys) {
-      const v = localData[k];
-      if (typeof v !== 'string') continue;
-      if (v.length <= MAX_KEY_BYTES && total + v.length <= MAX_TOTAL_BYTES) {
-        trimmedLocal[k] = v;
-        total += v.length;
-      }
-    }
-    d.localData = trimmedLocal;
-  }
-
-  // 6a. Strip cardQualityCache — ephemeral, regenerated on demand, never sync to Firestore
-  if (pd.cardQualityCache) {
-    delete pd.cardQualityCache;
-  }
-
-  // 6. Video metadata: strip downloadUrl + thumbnailBase64 (regenerated on demand), cap at 50
-  if (Array.isArray(pd.savedVideos)) {
-    pd.savedVideos = pd.savedVideos
-      .sort((a: any, b: any) => (a.createdAt > b.createdAt ? -1 : 1))
-      .slice(0, 50)
-      .map((v: any) => {
-        const { downloadUrl: _du, thumbnailBase64: _tb, ...rest } = v;
-        return rest;
-      });
-  }
-
-  d.pluginData = pd;
-  return d;
+// ─── Toast helper ────────────────────────────────────────
+function syncToast(message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info', duration = 3000) {
+  window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message, type, duration } }));
 }
 
+// ─── Cloud Sync ─────────────────────────────────────────
+// trimForSync REMOVED — compression handles size; trimming was silently dropping user data.
+// The data flow is now: credential strip → JSON.stringify → gzip → chunk.
+
 export async function syncToCloud(uid: string, data: NousAIData): Promise<void> {
+  // D1: Sync lock — prevent concurrent syncs
+  if (_isSyncing) {
+    log('[AUTH] syncToCloud: skipped — another sync is in progress');
+    return;
+  }
+  _isSyncing = true;
+  try {
+    await _syncToCloudInner(uid, data);
+  } finally {
+    _isSyncing = false;
+  }
+}
+
+async function _syncToCloudInner(uid: string, dataArg: NousAIData): Promise<void> {
+  // data may be reassigned if we auto-merge with cloud during stale-write recovery
+  let data: NousAIData = dataArg;
   log('[AUTH] syncToCloud: loading firebase...');
   const loaded = await loadFirebase();
   log('[AUTH] syncToCloud: firebase loaded =', loaded);
@@ -464,6 +363,36 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
 
   const fb = fbFns!;
   const docRef = fb.doc(firebaseDb, 'users', uid);
+
+  // D2: Stale write prevention — if cloud is newer than our last push, auto-pull + merge
+  try {
+    const metaSnap = await fb.getDocFromServer(docRef);
+    if (metaSnap.exists()) {
+      const cloudUpdatedAt = metaSnap.data()?.updatedAt;
+      const lastPush = localStorage.getItem('nousai-last-push');
+      if (cloudUpdatedAt && lastPush && cloudUpdatedAt > lastPush) {
+        log('[SYNC] Cloud is newer (cloud:', cloudUpdatedAt, 'vs last push:', lastPush, ') — auto-pull + merge before push');
+        try {
+          const cloudData = await _syncFromCloudInner(uid);
+          if (cloudData) {
+            const { mergeAppData } = await import('../sync/mergeEngine');
+            const { mergeLamportClock } = await import('../sync/lamportClock');
+            mergeLamportClock((cloudData as unknown as Record<string, unknown>).lamport as number ?? 0);
+            const merged = mergeAppData(data, cloudData);
+            // Replace data with merged version for the push below
+            data = merged;
+            log('[SYNC] Auto-merged local + cloud — pushing merged result');
+          }
+        } catch (pullErr) {
+          // If pull fails, proceed with local data (better than aborting entirely)
+          warn('[SYNC] Auto-pull failed during stale-write recovery (pushing local):', pullErr);
+        }
+      }
+    }
+  } catch (e: any) {
+    // Network or read error on the stale check itself — continue with push
+    warn('[AUTH] syncToCloud: stale-write check failed (non-critical):', e?.message);
+  }
 
   // Collect tutor sessions from localStorage
   const tutorSessions: Record<string, unknown> = {};
@@ -487,12 +416,17 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
     'nousai-pref-difficulty', 'nousai-pref-sound', 'nousai-pref-fontsize',
     'nousai-pref-compact', 'nousai-tts-prefs', 'nousai-stt-prefs',
     'nousai-palm-rejection',
+    // Annotations (Scribe OS sessions)
+    'nousai-scribe-sessions',
   ];
   const localData: Record<string, string> = {};
   for (const key of SYNC_KEYS) {
     const val = localStorage.getItem(key);
     if (val) localData[key] = val;
   }
+
+  // A5: Store localStorage key manifest for selective restore on pull
+  const _localStorageManifest = Object.keys(localData);
 
   // Strip sensitive credentials before syncing to cloud
   // IMPORTANT: filter runs LAST so explicit empty strings aren't overwritten by spread
@@ -514,14 +448,68 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
     },
     tutorSessions,
     localData,
+    _localStorageManifest,  // A5: key manifest for selective restore
   };
 
-  // Trim data to fit within Firestore 1MB document limit
-  const trimmed = trimForSync(safeData);
-  const json = JSON.stringify(trimmed);
+  // Include study guide HTML from dedicated IDB store (with safety guards)
+  try {
+    const { loadAllGuideHtml } = await import('../features/study-generator/studyGuideStore');
+    const allGuideHtml = await loadAllGuideHtml();
+    const MAX_SINGLE_GUIDE = 500_000; // 500KB per guide
+    const MAX_TOTAL_GUIDES = 5_000_000; // 5MB total
+    const STALE_DAYS = 90;
+    const now = Date.now();
+    const guideMeta: Record<string, { updatedAt?: string }> = {};
+    const guides = (safeData as Record<string, unknown>).pluginData as Record<string, unknown> | undefined;
+    if (guides?.studyGuides && Array.isArray(guides.studyGuides)) {
+      for (const g of guides.studyGuides as Array<{ id: string; updatedAt?: string }>) {
+        guideMeta[g.id] = g;
+      }
+    }
+    const filtered: Record<string, string> = {};
+    for (const [id, html] of Object.entries(allGuideHtml)) {
+      if (typeof html !== 'string') { warn('[Sync] Guide', id, '— non-string HTML, skipping'); continue; }
+      if (html.length > MAX_SINGLE_GUIDE) { warn('[Sync] Guide', id, '—', (html.length / 1024).toFixed(0) + 'KB exceeds 500KB limit, skipping'); continue; }
+      const meta = guideMeta[id];
+      if (meta?.updatedAt && (now - new Date(meta.updatedAt).getTime()) > STALE_DAYS * 86400000) {
+        log('[Sync] Excluding stale guide', id, '— not updated in', STALE_DAYS + '+ days');
+        continue;
+      }
+      filtered[id] = html;
+    }
+    // Total payload ceiling — drop largest guides if over limit
+    let totalSize = JSON.stringify(filtered).length;
+    if (totalSize > MAX_TOTAL_GUIDES) {
+      const entries = Object.entries(filtered).sort((a, b) => b[1].length - a[1].length);
+      const dropped: string[] = [];
+      while (totalSize > MAX_TOTAL_GUIDES && entries.length > 0) {
+        const [dropId, dropHtml] = entries.shift()!;
+        totalSize -= dropHtml.length;
+        delete filtered[dropId];
+        dropped.push(dropId);
+      }
+      if (dropped.length) warn('[Sync] Excluded', dropped.length, 'largest guides to stay under 5MB — still safe in local IDB');
+    }
+    if (totalSize > 2_000_000) warn('[Sync] Guide HTML total:', (totalSize / 1024).toFixed(0) + 'KB — approaching limit');
+    if (Object.keys(filtered).length > 0) {
+      (safeData as Record<string, unknown>)._studyGuideHtml = filtered;
+      log('[AUTH] syncToCloud: included', Object.keys(filtered).length, 'study guide HTML blobs (' + (totalSize / 1024).toFixed(0) + 'KB)');
+    }
+  } catch { /* ignore — sync still works without guide HTML */ }
+
+  const json = JSON.stringify(safeData);
+  console.log('[SYNC] Payload size:', (json.length / 1024).toFixed(1), 'KB');
   log('[AUTH] syncToCloud: raw JSON =', (json.length / 1024).toFixed(1), 'KB, compressing...');
   const compressed = await compressString(json);
   log('[AUTH] syncToCloud: compressed =', (compressed.length / 1024).toFixed(1), 'KB');
+
+  // A2: Compute checksum on compressed string for integrity verification
+  const totalBytes = compressed.length;
+  let checksum = 0;
+  for (let i = 0; i < Math.min(compressed.length, 256); i++) {
+    checksum = ((checksum << 5) - checksum + compressed.charCodeAt(i)) | 0;
+  }
+  log('[AUTH] syncToCloud: checksum =', checksum, 'totalBytes =', totalBytes);
 
   // Store compressed data as chunks in Firestore subcollection (avoids Cloud Storage CORS issues)
   const CHUNK_SIZE = 800_000; // ~800KB per chunk (well under 1MB Firestore limit)
@@ -541,6 +529,7 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
       const chunk = compressed.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
       const chunkRef = fb.doc(firebaseDb, 'users', uid, 'sync-chunks', `${chunkPrefix}${String(i).padStart(4, '0')}`);
       await fb.setDoc(chunkRef, { data: chunk, index: i });
+      console.log(`[SYNC] Uploading chunk ${i + 1} of ${totalChunks}`);
     }
     log('[AUTH] syncToCloud: wrote', totalChunks, 'new chunks (v' + syncVersion + ')');
 
@@ -554,13 +543,18 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
       chunkPrefix,           // tells reader which chunk set to load
       syncVersion,           // monotonic version counter
       updatedAt: now,
-      version: '2.1.0',     // bumped to indicate atomic sync format
+      version: '2.2.0',     // bumped for integrity verification
+      checksum,              // A2: integrity checksum
+      totalBytes,            // A2: expected compressed string length
+      appVersion: '2.2.0',
       // Clean up stale fields from old sync formats
       storageSync: fb.deleteField(),
       compressed: fb.deleteField(),
       data: fb.deleteField(),
     }, { merge: true });
     log('[AUTH] syncToCloud: metadata swapped to v' + syncVersion);
+    // Record last push time for D2 stale write prevention
+    localStorage.setItem('nousai-last-push', now);
 
     // Step 3: Clean up old chunks (best-effort — if this fails, stale chunks just waste space)
     try {
@@ -589,9 +583,26 @@ export async function syncToCloud(uid: string, data: NousAIData): Promise<void> 
     }
     throw new Error(`Sync failed: ${e?.message || 'Unknown error'}. Try again later.`);
   }
+
+  syncToast('Synced to cloud', 'success', 2000);
+  console.log('[SYNC] Push complete');
 }
 
 export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
+  // D1: Sync lock
+  if (_isSyncing) {
+    log('[AUTH] syncFromCloud: skipped — another sync is in progress');
+    return null;
+  }
+  _isSyncing = true;
+  try {
+    return await _syncFromCloudInner(uid);
+  } finally {
+    _isSyncing = false;
+  }
+}
+
+async function _syncFromCloudInner(uid: string): Promise<NousAIData | null> {
   log('[AUTH] syncFromCloud: loading firebase...');
   const loaded = await loadFirebase();
   log('[AUTH] syncFromCloud: firebase loaded =', loaded);
@@ -613,27 +624,70 @@ export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
           // V2/V2.1: Read compressed data from Firestore subcollection chunks
           // V2.1 (atomic sync) uses chunkPrefix to identify the correct chunk set
           const prefix = raw.chunkPrefix || 'chunk_'; // fallback for pre-atomic V2 format
-          log('[AUTH] syncFromCloud: reading', raw.totalChunks, 'chunks (prefix:', prefix + ')');
-          const chunksCol = fb.collection(firebaseDb, 'users', uid, 'sync-chunks');
-          const chunksSnap = await fb.getDocsFromServer(chunksCol);
-          // Only read chunks matching the current version prefix
-          const sorted = chunksSnap.docs
-            .filter((d: any) => d.id.startsWith(prefix))
-            .map((d: any) => ({ index: d.data().index, data: d.data().data }))
-            .sort((a: any, b: any) => a.index - b.index);
+          const expectedChunks = raw.totalChunks || 0;
+          log('[AUTH] syncFromCloud: reading', expectedChunks, 'chunks (prefix:', prefix + ')');
+
+          // A3: Force server source — read each chunk by exact doc ID (no query, no cache)
+          const chunkParts: { index: number; data: string }[] = [];
+          for (let i = 0; i < expectedChunks; i++) {
+            const chunkId = `${prefix}${String(i).padStart(4, '0')}`;
+            const chunkSnap = await fb.getDocFromServer(fb.doc(firebaseDb, 'users', uid, 'sync-chunks', chunkId));
+            if (!chunkSnap.exists()) {
+              console.warn(`[AUTH] syncFromCloud: chunk ${chunkId} missing`);
+              continue;
+            }
+            chunkParts.push({ index: chunkSnap.data().index, data: chunkSnap.data().data });
+            console.log(`[SYNC] Downloading chunk ${i + 1} of ${expectedChunks}`);
+          }
+
+          // Fallback: if no chunks found by exact ID, try collection query (pre-2.2 data)
+          if (chunkParts.length === 0) {
+            log('[AUTH] syncFromCloud: no chunks by exact ID — falling back to collection query');
+            const chunksCol = fb.collection(firebaseDb, 'users', uid, 'sync-chunks');
+            const chunksSnap = await fb.getDocsFromServer(chunksCol);
+            chunksSnap.docs
+              .filter((d: any) => d.id.startsWith(prefix))
+              .forEach((d: any) => chunkParts.push({ index: d.data().index, data: d.data().data }));
+          }
+
+          const sorted = chunkParts.sort((a, b) => a.index - b.index);
           if (sorted.length === 0) {
             console.warn('[AUTH] syncFromCloud: no chunks found with prefix', prefix, '— cloud data may be empty or corrupted');
-            // Don't throw — return null so the app can continue with local data
             return null;
           }
-          if (raw.totalChunks && sorted.length !== raw.totalChunks) {
-            console.warn(`[AUTH] syncFromCloud: expected ${raw.totalChunks} chunks, got ${sorted.length} — using available chunks`);
-            // Don't throw — try to reconstruct from whatever chunks exist
+
+          // A2: Integrity verification
+          if (expectedChunks && sorted.length !== expectedChunks) {
+            const msg = `[SYNC] Chunk count mismatch: expected ${expectedChunks}, got ${sorted.length}`;
+            console.error(msg);
+            throw new Error(msg);
           }
-          sorted.forEach((c: { index: unknown }, i: number) => {
+          sorted.forEach((c, i) => {
             if (typeof c.index !== 'number') throw new Error(`Cloud data error: chunk ${i} has invalid index`);
           });
-          const compressed = sorted.map((c: any) => c.data).join('');
+          const compressed = sorted.map(c => c.data).join('');
+
+          // A2: Verify totalBytes
+          if (raw.totalBytes && compressed.length !== raw.totalBytes) {
+            const msg = `[SYNC] Byte count mismatch: expected ${raw.totalBytes}, got ${compressed.length}`;
+            console.error(msg);
+            throw new Error(msg);
+          }
+
+          // A2: Verify checksum
+          if (typeof raw.checksum === 'number') {
+            let verifyChecksum = 0;
+            for (let i = 0; i < Math.min(compressed.length, 256); i++) {
+              verifyChecksum = ((verifyChecksum << 5) - verifyChecksum + compressed.charCodeAt(i)) | 0;
+            }
+            if (verifyChecksum !== raw.checksum) {
+              const msg = `[SYNC] Checksum mismatch: expected ${raw.checksum}, got ${verifyChecksum}`;
+              console.error(msg);
+              throw new Error(msg);
+            }
+            log('[AUTH] syncFromCloud: integrity verified (checksum OK)');
+          }
+
           log('[AUTH] syncFromCloud: reassembled', (compressed.length / 1024).toFixed(1), 'KB compressed');
           jsonStr = decompressString(compressed);
         } else if (raw.storageSync) {
@@ -667,23 +721,67 @@ export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
           jsonStr = raw.data;
         }
         log('[AUTH] syncFromCloud: parsed', (jsonStr.length / 1024).toFixed(1), 'KB');
-        const parsed = JSON.parse(jsonStr) as NousAIData & { tutorSessions?: Record<string, unknown>; localData?: Record<string, string> };
+        const parsed = JSON.parse(jsonStr) as NousAIData & {
+          tutorSessions?: Record<string, unknown>;
+          localData?: Record<string, string>;
+          _localStorageManifest?: string[];
+        };
 
-        // Restore tutor sessions to localStorage
+        // Restore tutor sessions to localStorage (B3: quota guard)
         if (parsed.tutorSessions) {
           for (const [key, value] of Object.entries(parsed.tutorSessions)) {
-            try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* skip if storage full */ }
+            try { localStorage.setItem(key, JSON.stringify(value)); }
+            catch (e) { warn('[Sync] localStorage quota exceeded for tutor session', key, e); }
           }
           delete parsed.tutorSessions;
         }
 
-        // Restore additional localStorage data (vocab, notes, preferences, etc.)
+        // A5: Restore localStorage data using manifest (only restore keys from manifest)
         if (parsed.localData) {
-          for (const [key, value] of Object.entries(parsed.localData)) {
-            try { localStorage.setItem(key, String(value)); } catch { /* skip */ }
+          const manifest = parsed._localStorageManifest;
+          const keysToRestore = manifest && Array.isArray(manifest)
+            ? Object.keys(parsed.localData).filter(k => manifest.includes(k))
+            : Object.keys(parsed.localData);
+          for (const key of keysToRestore) {
+            const value = parsed.localData[key];
+            // B3: Wrap in try/catch for QuotaExceededError
+            try { localStorage.setItem(key, String(value)); }
+            catch (e) { warn('[Sync] localStorage quota exceeded for key', key, e); }
           }
           delete parsed.localData;
         }
+        delete (parsed as Record<string, unknown>)._localStorageManifest;
+
+        // Restore study guide HTML to dedicated IDB store (with validation)
+        const guideHtml = (parsed as Record<string, unknown>)._studyGuideHtml;
+        if (guideHtml && typeof guideHtml === 'object') {
+          const MAX_IMPORT_GUIDE = 1_000_000; // 1MB per guide on import
+          const validated: Record<string, string> = {};
+          let skipped = 0;
+          for (const [id, html] of Object.entries(guideHtml as Record<string, unknown>)) {
+            if (typeof html !== 'string') { warn('[Sync] Import guide', id, '— non-string HTML, skipping'); skipped++; continue; }
+            if (html.length > MAX_IMPORT_GUIDE) { warn('[Sync] Import guide', id, '—', (html.length / 1024).toFixed(0) + 'KB too large, skipping'); skipped++; continue; }
+            // F3: Study guide HTML validation — must contain at least one HTML tag
+            if (!html.includes('<')) { warn('[Sync] Import guide', id, '— no HTML tags found, skipping'); skipped++; continue; }
+            validated[id] = html;
+          }
+          if (Object.keys(validated).length > 0) {
+            // F4: IDB write error handling — don't abort sync for guide failures
+            try {
+              const { saveAllGuideHtml } = await import('../features/study-generator/studyGuideStore');
+              await saveAllGuideHtml(validated);
+              log('[AUTH] syncFromCloud: restored', Object.keys(validated).length, 'study guide HTML blobs' + (skipped ? `, skipped ${skipped}` : ''));
+            } catch (idbErr) {
+              warn('[Sync] Failed to save study guides to IDB (non-fatal):', idbErr);
+            }
+          }
+          delete (parsed as Record<string, unknown>)._studyGuideHtml;
+        }
+
+        // Record pull time for C1 auto-pull timing
+        localStorage.setItem('nousai-last-pull', new Date().toISOString());
+        console.log('[SYNC] Pull complete');
+        syncToast('Loaded from cloud', 'success', 2000);
 
         return parsed;
       } catch (innerErr: any) {

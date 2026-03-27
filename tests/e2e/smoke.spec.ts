@@ -17,7 +17,7 @@ const ROUTES = [
   { path: '/#/timer', name: 'Timer' },
   { path: '/#/calendar', name: 'Calendar' },
   { path: '/#/settings', name: 'Settings' },
-  { path: '/#/micromacro', name: 'MicroMacro' },
+
   { path: '/#/study-gen', name: 'Study Generator' },
   { path: '/#/videos', name: 'Videos' },
 ];

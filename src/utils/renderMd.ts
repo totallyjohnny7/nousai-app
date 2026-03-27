@@ -127,6 +127,14 @@ export function renderMd(text: string): string {
   h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
   h = h.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px;font-size:0.92em">$1</code>');
 
+  // 8b. Markdown links [text](url) → clickable <a> tags
+  h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--accent-light,#F5A623);text-decoration:underline;word-break:break-all">$1</a>');
+
+  // 8c. Auto-link bare URLs (https://... not already in an href)
+  h = h.replace(/(?<!href="|">)(https?:\/\/[^\s<"]+)/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:var(--accent-light,#F5A623);text-decoration:underline;word-break:break-all;font-size:0.9em">link ↗</a>');
+
   // 9. Newlines to <br>
   h = h.replace(/\n/g, '<br>');
 

@@ -137,9 +137,27 @@ class AutoSyncScheduler {
 
   async flush() {
     if (!this.dirty) return;
-    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync.
-    // Clearing dirty flag prevents retries/heartbeats from re-entering.
+    const uid = localStorage.getItem('nousai-auth-uid');
+    const data = this.dataRef.current;
+    if (!uid || !data) { this.dirty = false; return; }
     this.dirty = false;
+    this.onFlushStart?.();
+    try {
+      this.lastPushedTimestamp = new Date().toISOString();
+      await syncToCloud(uid, data);
+      this.failCount = 0;
+      this.onFlushEnd?.(true);
+    } catch (e) {
+      console.warn('[AutoSync] flush failed:', e instanceof Error ? e.message : e);
+      this.failCount++;
+      this.onFlushEnd?.(false);
+      // Exponential backoff retry: 20s, 40s, 80s, max 5min
+      if (this.failCount < 5) {
+        const retryMs = Math.min(AUTO_SYNC_DEBOUNCE_MS * Math.pow(2, this.failCount), 300_000);
+        this.dirty = true;
+        this.timer = setTimeout(() => this.flush(), retryMs);
+      }
+    }
   }
 
   stop() {
@@ -367,6 +385,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       localStorage.removeItem('nousai-crash-recovery');
       localStorage.removeItem('nousai-crash-recovery-at');
+      // MicroMacro feature removed — clean up stale localStorage data
+      localStorage.removeItem('nous_micromacro_sets');
 
       if (d) {
         const migrated = runMigrations(d);
@@ -389,8 +409,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       loadedRef.current = true;
       setLoaded(true);
+
+      // B1: Auto-pull from cloud on empty state — if user is logged in but has no data
+      if (!d) {
+        const uid = localStorage.getItem('nousai-auth-uid');
+        if (uid) {
+          log('[STORE] Empty state + logged in — auto-pulling from cloud');
+          try {
+            const { syncFromCloud: pullFromCloud } = await import('./utils/auth');
+            const cloudData = await pullFromCloud(uid);
+            if (cloudData) {
+              const normalized = normalizeData(cloudData);
+              setDataRaw(normalized);
+              log('[STORE] Auto-pulled data from cloud:', normalized.pluginData?.coachData?.courses?.length ?? 0, 'courses');
+            }
+          } catch (e) {
+            warn('[STORE] Auto-pull failed (non-fatal):', e);
+          }
+        }
+      }
     })();
   }, []);
+
+  // D3: TODO — Defer pull during active edits. This requires threading an isEditing
+  // state through all editor components (TipTap, flashcard editor, quiz creation, etc.)
+  // and checking it before triggering auto-pulls. Skipped for now — too invasive.
 
   // Persist to IndexedDB on change — debounced to avoid redundant writes during rapid updates
   // LEADER ELECTION: Only the leader tab writes to IDB. Follower tabs send mutations to the leader.
@@ -634,6 +677,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     try {
       setSyncStatus('syncing');
+
+      // F1: Pre-pull backup — save current state before overwriting
+      if (dataRef.current) {
+        try {
+          localStorage.setItem('nousai-pre-pull-backup', JSON.stringify(dataRef.current));
+        } catch { /* quota exceeded — proceed anyway */ }
+      }
+
       const cloudData = await withExponentialBackoff(() => syncFromCloud(uid));
       if (cloudData) {
         const localSnapshot = dataRef.current;
@@ -647,30 +698,43 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const cloudTs = (safeCloud as unknown as Record<string, unknown>).updatedAt as string || '';
         const resolution: SyncResolution = detectConflict(localTs, cloudTs);
 
+        let finalData: NousAIData = safeCloud;
         if (resolution === 'local-wins') {
           console.warn('[Sync] Local wins — pushing local to cloud');
           if (localSnapshot) {
             await withExponentialBackoff(() => syncToCloud(uid, localSnapshot));
           }
-          setSyncStatus('synced');
-          setLastSyncAt(new Date().toISOString());
+          finalData = localSnapshot || safeCloud;
         } else if (resolution === 'cloud-wins') {
           console.warn('[Sync] Cloud wins — replacing local with cloud data');
-          setData(safeCloud);
-          setSyncStatus('synced');
-          setLastSyncAt(new Date().toISOString());
+          finalData = safeCloud;
         } else {
           // resolution === 'merge'
           console.warn('[Sync] Merging local + cloud data');
-          const merged = mergeAppData(localSnapshot, safeCloud);
-          setData(merged);
+          finalData = mergeAppData(localSnapshot, safeCloud);
           // Push merged result back to cloud so both sides converge
-          await withExponentialBackoff(() => syncToCloud(uid, merged)).catch(e => {
+          await withExponentialBackoff(() => syncToCloud(uid, finalData)).catch(e => {
             console.warn('[Sync] Merge push-back failed (non-critical):', e);
           });
-          setSyncStatus('synced');
-          setLastSyncAt(new Date().toISOString());
         }
+
+        // F2: Post-pull sanity check — if course count dropped to 0 from >10, auto-restore
+        const preCourseCount = localSnapshot?.pluginData?.coachData?.courses?.length ?? 0;
+        const postCourseCount = finalData?.pluginData?.coachData?.courses?.length ?? 0;
+        if (preCourseCount > 10 && postCourseCount === 0) {
+          console.error('[SYNC] Sanity check FAILED: courses dropped from', preCourseCount, 'to 0 — auto-restoring from backup');
+          try {
+            const backupStr = localStorage.getItem('nousai-pre-pull-backup');
+            if (backupStr) {
+              finalData = normalizeData(JSON.parse(backupStr));
+              window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message: 'Cloud data had 0 courses — restored from backup', type: 'warning', duration: 5000 } }));
+            }
+          } catch { /* backup parse failed */ }
+        }
+
+        setData(finalData);
+        setSyncStatus('synced');
+        setLastSyncAt(new Date().toISOString());
 
         // Notify UI of resolution
         window.dispatchEvent(new CustomEvent('nousai-sync-resolution', { detail: resolution }));
@@ -701,6 +765,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('nousai-remote-update-available', handler);
   }, [loadRemoteData]);
 
+  // C1: Auto-pull from cloud on visibility change (>5 min since last pull) and online reconnect (>1 min)
+  useEffect(() => {
+    const silentPull = (minAgeMs: number) => {
+      const uid = localStorage.getItem('nousai-auth-uid');
+      if (!uid || !navigator.onLine) return;
+      const lastPull = localStorage.getItem('nousai-last-pull');
+      if (lastPull && (Date.now() - new Date(lastPull).getTime()) < minAgeMs) return;
+      log('[SYNC] Auto-pulling from cloud (silent)');
+      triggerSyncFromCloud().catch(() => {});
+    };
+    const handleOnlineForPull = () => silentPull(60_000); // 1 min
+    window.addEventListener('online', handleOnlineForPull);
+    return () => window.removeEventListener('online', handleOnlineForPull);
+  }, [triggerSyncFromCloud]);
+
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
@@ -718,7 +797,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           } catch { /* quota exceeded */ }
         }
       } else if (document.visibilityState === 'visible') {
-        // Pull latest from cloud/IDB when tab becomes visible
+        // C1: Auto-pull when tab becomes visible (>5 min since last pull)
+        const uid = localStorage.getItem('nousai-auth-uid');
+        if (uid && navigator.onLine) {
+          const lastPull = localStorage.getItem('nousai-last-pull');
+          if (!lastPull || (Date.now() - new Date(lastPull).getTime()) > 5 * 60_000) {
+            log('[SYNC] Tab visible — auto-pulling from cloud');
+            triggerSyncFromCloud().catch(() => {});
+          }
+        }
+        // Also pull from IDB for cross-tab sync
         loadRemoteData();
       }
     };
@@ -740,7 +828,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       clearInterval(heartbeat);
       autoSyncRef.current.stop();
     };
-  }, [loadRemoteData]);
+  }, [loadRemoteData, triggerSyncFromCloud]);
 
   // Flush to IDB immediately on tab close so no data is lost
   // Leader: writes to IDB directly. Follower: writes crash-recovery key to localStorage.
@@ -803,6 +891,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         },
       };
       setData(normalizeData(raw));
+      // Restore study guide HTML from export if present
+      if (parsed._studyGuideHtml && typeof parsed._studyGuideHtml === 'object') {
+        import('./features/study-generator/studyGuideStore').then(({ saveAllGuideHtml }) => {
+          saveAllGuideHtml(parsed._studyGuideHtml).catch(() => {});
+        });
+      }
     } catch (e) {
       console.error('Failed to parse data:', e);
       alert('Invalid data file. Please ensure the file is valid JSON.');
@@ -835,7 +929,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const exportToFile = useCallback(async (filename?: string): Promise<boolean> => {
-    const json = exportData();
+    // Include study guide HTML from dedicated IDB store in the export
+    let json = exportData();
+    try {
+      const { loadAllGuideHtml } = await import('./features/study-generator/studyGuideStore');
+      const guideHtmlMap = await loadAllGuideHtml();
+      if (Object.keys(guideHtmlMap).length > 0) {
+        const parsed = JSON.parse(json);
+        parsed._studyGuideHtml = guideHtmlMap;
+        json = JSON.stringify(parsed, null, 2);
+      }
+    } catch { /* ignore — export still works without guide HTML */ }
     const r = await saveFilePicker(json, filename || 'nousai-export.json');
     return r.granted;
   }, [data]);
@@ -931,7 +1035,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!data) return false;
     const handle = await loadBackupHandle();
     if (!handle) return false;
-    const json = JSON.stringify(data, null, 2);
+    // Include study guide HTML in backup
+    let payload: Record<string, unknown> = { ...data };
+    try {
+      const { loadAllGuideHtml } = await import('./features/study-generator/studyGuideStore');
+      const guideHtml = await loadAllGuideHtml();
+      if (Object.keys(guideHtml).length > 0) payload._studyGuideHtml = guideHtml;
+    } catch { /* backup still works without guide HTML */ }
+    const json = JSON.stringify(payload, null, 2);
     return writeBackupFile(handle, json);
   }, [data]);
 

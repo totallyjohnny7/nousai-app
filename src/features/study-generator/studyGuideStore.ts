@@ -56,3 +56,38 @@ export async function deleteGuideHtml(id: string): Promise<void> {
     tx.onerror = () => reject(tx.error)
   })
 }
+
+/** Load ALL guide HTMLs as a Record<id, html>. Used by export/backup. */
+export async function loadAllGuideHtml(): Promise<Record<string, string>> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly')
+    const store = tx.objectStore(STORE_NAME)
+    const result: Record<string, string> = {}
+    const cursor = store.openCursor()
+    cursor.onsuccess = () => {
+      const c = cursor.result
+      if (c) {
+        result[c.key as string] = c.value as string
+        c.continue()
+      } else {
+        resolve(result)
+      }
+    }
+    cursor.onerror = () => reject(cursor.error)
+  })
+}
+
+/** Save multiple guide HTMLs at once. Used by import/restore. */
+export async function saveAllGuideHtml(guides: Record<string, string>): Promise<void> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    const store = tx.objectStore(STORE_NAME)
+    for (const [id, html] of Object.entries(guides)) {
+      store.put(html, id)
+    }
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}

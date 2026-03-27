@@ -12,7 +12,7 @@ import { useStore, saveBackupHandle, loadBackupHandle, clearBackupHandle } from 
 import { checkForUpdates, getAppVersion, getStoredUpdate, dismissUpdate, getPlatform } from '../utils/updater'
 import { signUp, signIn, logOut, onAuthChange, saveFirebaseConfig, getFirebaseConfig, signInWithGoogle, signInAsGuest, sendVerificationEmail, deleteAccount, saveOmiConfig, type AuthUser } from '../utils/auth'
 // testData is lazy-loaded only when user clicks "Load Test Data" button
-import { SHORTCUT_DEFS, getShortcutKey, setShortcutKey, resetAllShortcuts, formatKey } from '../utils/shortcuts'
+import { SHORTCUT_DEFS, SHORTCUT_CATEGORIES, FIXED_SHORTCUTS, getShortcutKey, setShortcutKey, resetAllShortcuts, formatKey } from '../utils/shortcuts'
 import { K20_KEYS, K20_ACTIONS, K20_ACTION_ICONS, K20_DEFAULT_BINDINGS, type K20ActionId } from '../utils/k20Types'
 import { useK20Bindings } from '../hooks/useK20Bindings'
 import { scanK20Conflicts } from '../utils/k20ConflictScanner'
@@ -456,7 +456,10 @@ function ShortcutRow({ shortcut }: { shortcut: (typeof SHORTCUT_DEFS)[number] })
       padding: '4px 8px', borderRadius: 4,
       background: listening ? 'var(--accent-glow)' : 'transparent',
     }}>
-      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{shortcut.label}</span>
+      <div>
+        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{shortcut.label}</span>
+        {shortcut.description && <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 1 }}>{shortcut.description}</div>}
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <button
           onClick={() => setListening(!listening)}
@@ -2518,18 +2521,54 @@ export default function SettingsPage() {
                   <RefreshCw size={11} /> Reset All
                 </button>
               </div>
-              {(['flashcards', 'quiz'] as const).map(cat => (
-                <div key={cat}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6 }}>
-                    {cat === 'flashcards' ? 'Flashcards' : 'Quizzes'}
+              {(Object.keys(SHORTCUT_CATEGORIES) as Array<keyof typeof SHORTCUT_CATEGORIES>).map(cat => {
+                const items = SHORTCUT_DEFS.filter(s => s.category === cat);
+                if (items.length === 0) return null;
+                return (
+                  <div key={cat}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6 }}>
+                      {SHORTCUT_CATEGORIES[cat]}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {items.map(s => (
+                        <ShortcutRow key={s.id} shortcut={s} />
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {SHORTCUT_DEFS.filter(s => s.category === cat).map(s => (
-                      <ShortcutRow key={s.id} shortcut={s} />
+                );
+              })}
+
+              {/* Fixed shortcuts reference (not rebindable) */}
+              <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>
+                  📋 Reference — Built-in Shortcuts (not rebindable)
+                </div>
+                {Object.entries(
+                  FIXED_SHORTCUTS.reduce((acc, s) => {
+                    (acc[s.category] = acc[s.category] || []).push(s);
+                    return acc;
+                  }, {} as Record<string, typeof FIXED_SHORTCUTS>)
+                ).map(([cat, items]) => (
+                  <div key={cat} style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>{cat}</div>
+                    {items.map((s, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 8px', fontSize: 11 }}>
+                        <div>
+                          <span style={{ color: 'var(--text-secondary)' }}>{s.label}</span>
+                          <span style={{ color: 'var(--text-dim)', marginLeft: 6, fontSize: 10 }}>{s.description}</span>
+                        </div>
+                        <span style={{
+                          fontFamily: 'monospace', fontSize: 10, fontWeight: 700,
+                          padding: '1px 6px', borderRadius: 3, background: 'var(--bg-primary)',
+                          border: '1px solid var(--border)', color: 'var(--text-muted)',
+                        }}>
+                          {s.key}
+                        </span>
+                      </div>
                     ))}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}

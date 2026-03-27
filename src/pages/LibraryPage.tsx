@@ -22,7 +22,6 @@ const StudyModesPage = lazyWithRetry(() => import('./StudyModesPage'));
 import { useStore } from '../store';
 import { useSessionStore } from '../store/sessionStore';
 import type { Course, StudyGuide } from '../types';
-import { loadGuideHtml, deleteGuideHtml } from '../features/study-generator/studyGuideStore';
 import { speak, stopSpeaking } from '../utils/speechTools';
 import { callAI, isAIConfigured } from '../utils/ai';
 import RichTextEditor, { markdownToHtml, htmlToMarkdown } from '../components/RichTextEditor';
@@ -49,7 +48,7 @@ type SortKey = 'name' | 'date' | 'size';
 type SortDir = 'asc' | 'desc';
 type FilterType = 'all' | 'note' | 'quiz' | 'flashcard' | 'ai-output' | 'match';
 type ViewMode = 'list' | 'viewer' | 'editor';
-type LibraryTab = 'courses' | 'notes' | 'drawings' | 'study' | 'annotations' | 'guides';
+type LibraryTab = 'courses' | 'notes' | 'drawings' | 'study' | 'study-guides' | 'annotations';
 
 /* ── Helpers ────────────────────────────────────────── */
 function generateId(): string {
@@ -112,7 +111,7 @@ export default function LibraryPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<LibraryTab>(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'notes' || tab === 'drawings' || tab === 'study' || tab === 'guides') return tab;
+    if (tab === 'notes' || tab === 'drawings' || tab === 'study' || tab === 'study-guides') return tab;
     return 'courses';
   });
 
@@ -580,6 +579,25 @@ export default function LibraryPage() {
           <Target size={14} /> Study
         </button>
         <button
+          className={`cx-chip${activeTab === 'study-guides' ? ' active' : ''}`}
+          onClick={() => setActiveTab('study-guides')}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', fontSize: 12, fontWeight: 700,
+            minHeight: 36,
+          }}
+        >
+          <Sparkles size={14} /> Study Guides
+          <span style={{
+            background: activeTab === 'study-guides' ? 'var(--text-primary)' : 'var(--border)',
+            color: activeTab === 'study-guides' ? 'var(--bg-primary)' : 'var(--text-muted)',
+            borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 800,
+            marginLeft: 2,
+          }}>
+            {(data?.pluginData as Record<string, unknown>)?.studyGuides ? ((data.pluginData as Record<string, unknown>).studyGuides as StudyGuide[]).length : 0}
+          </span>
+        </button>
+        <button
           className={`cx-chip${activeTab === 'annotations' ? ' active' : ''}`}
           onClick={() => setActiveTab('annotations')}
           style={{
@@ -596,25 +614,6 @@ export default function LibraryPage() {
             marginLeft: 2,
           }}>
             {annotationCount}
-          </span>
-        </button>
-        <button
-          className={`cx-chip${activeTab === 'guides' ? ' active' : ''}`}
-          onClick={() => setActiveTab('guides')}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '8px 16px', fontSize: 12, fontWeight: 700,
-            minHeight: 36,
-          }}
-        >
-          <Sparkles size={14} /> Study Guides
-          <span style={{
-            background: activeTab === 'guides' ? 'var(--text-primary)' : 'var(--border)',
-            color: activeTab === 'guides' ? 'var(--bg-primary)' : 'var(--text-muted)',
-            borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 800,
-            marginLeft: 2,
-          }}>
-            {(data?.pluginData?.studyGuides as unknown[])?.length || 0}
           </span>
         </button>
       </div>
@@ -1476,17 +1475,17 @@ export default function LibraryPage() {
       )}
 
       {/* ═════════════════════════════════════════════════════
-          TAB 5: ANNOTATIONS
+          TAB 5: STUDY GUIDES
           ═════════════════════════════════════════════════════ */}
-      {activeTab === 'annotations' && (
-        <AnnotationsTab />
+      {activeTab === 'study-guides' && (
+        <StudyGuidesTab />
       )}
 
       {/* ═════════════════════════════════════════════════════
-          TAB 6: STUDY GUIDES
+          TAB 6: ANNOTATIONS
           ═════════════════════════════════════════════════════ */}
-      {activeTab === 'guides' && (
-        <StudyGuidesTab />
+      {activeTab === 'annotations' && (
+        <AnnotationsTab />
       )}
     </div>
   );
@@ -3043,105 +3042,258 @@ function NoteEditor({ note, folders, courses, onSave, onCancel }: {
 }
 
 /* ── Study Guides Tab ────────────────────────────────── */
+import { saveGuideHtml, loadGuideHtml, deleteGuideHtml } from '../features/study-generator/studyGuideStore';
+
 function StudyGuidesTab() {
   const { data, updatePluginData } = useStore();
-  const guides: StudyGuide[] = (data?.pluginData?.studyGuides as StudyGuide[] | undefined) || [];
-  const [previewId, setPreviewId] = useState<string | null>(null);
-  const [previewHtml, setPreviewHtml] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const guides: StudyGuide[] = useMemo(
+    () => ((data?.pluginData as Record<string, unknown>)?.studyGuides as StudyGuide[] | undefined) ?? [],
+    [data],
+  );
 
-  const openGuide = async (g: StudyGuide) => {
-    setLoading(true);
-    const html = await loadGuideHtml(g.id) || g.html || '';
-    setLoading(false);
-    if (!html) {
-      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message: 'HTML not found — open in Study Gen to regenerate', type: 'error', duration: 3000 } }));
-      return;
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const [viewBlobUrl, setViewBlobUrl] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  // Cleanup blob URL on unmount or when closing viewer
+  useEffect(() => {
+    return () => { if (viewBlobUrl) URL.revokeObjectURL(viewBlobUrl); };
+  }, [viewBlobUrl]);
+
+  const handleView = useCallback(async (guide: StudyGuide) => {
+    setLoadingId(guide.id);
+    try {
+      let html = await loadGuideHtml(guide.id);
+      if (!html && guide.html) html = guide.html; // legacy fallback
+      if (!html) {
+        alert('Guide HTML not found — it may have been cleared from browser storage.');
+        return;
+      }
+      // Use Blob URL instead of srcDoc to avoid tab crashes on large HTML (300KB+)
+      if (viewBlobUrl) URL.revokeObjectURL(viewBlobUrl);
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      setViewBlobUrl(url);
+      setViewingId(guide.id);
+    } catch {
+      alert('Failed to load guide HTML.');
+    } finally {
+      setLoadingId(null);
     }
-    setPreviewId(g.id);
-    setPreviewHtml(html);
-  };
+  }, [viewBlobUrl]);
 
-  const downloadGuide = async (g: StudyGuide) => {
-    const html = await loadGuideHtml(g.id) || g.html || '';
-    if (!html) return;
-    const blob = new Blob([html], { type: 'text/html' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${g.title.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 500);
-  };
+  const handleDownload = useCallback(async (guide: StudyGuide) => {
+    setLoadingId(guide.id);
+    try {
+      let html = await loadGuideHtml(guide.id);
+      if (!html && guide.html) html = guide.html;
+      if (!html) {
+        alert('Guide HTML not found.');
+        return;
+      }
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${guide.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_study_guide.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Failed to download guide.');
+    } finally {
+      setLoadingId(null);
+    }
+  }, []);
 
-  const removeGuide = (id: string) => {
-    deleteGuideHtml(id).catch(() => {});
-    updatePluginData({ studyGuides: guides.filter(g => g.id !== id) });
-    if (previewId === id) { setPreviewId(null); setPreviewHtml(''); }
-  };
+  const handleDelete = useCallback(async (guide: StudyGuide) => {
+    if (!confirm(`Delete "${guide.title}"? This cannot be undone.`)) return;
+    try { await deleteGuideHtml(guide.id); } catch { /* ignore IDB errors */ }
+    const updated = guides.filter(g => g.id !== guide.id);
+    updatePluginData({ studyGuides: updated });
+  }, [guides, updatePluginData]);
 
-  if (previewId && previewHtml) {
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const handleImportHtml = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const html = await file.text();
+      if (!html.trim()) { alert('File is empty.'); return; }
+      // Extract title from <title> or <h1> or filename, decode HTML entities
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+        || html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+      const rawTitle = titleMatch?.[1]?.trim() || file.name.replace(/\.html?$/i, '').replace(/_/g, ' ');
+      const tmp = document.createElement('span');
+      tmp.innerHTML = rawTitle;
+      const title = tmp.textContent || rawTitle;
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      const sizeKb = Math.round(html.length / 1024);
+      // Save HTML to dedicated IDB store
+      await saveGuideHtml(id, html);
+      // Save metadata
+      const newGuide: StudyGuide = {
+        id, title, model: 'imported', sourcePreview: `Imported from ${file.name}`,
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), sizeKb,
+      };
+      updatePluginData({ studyGuides: [...guides, newGuide] });
+    } catch (err) {
+      alert('Failed to import: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+    // Reset input so same file can be re-imported
+    e.target.value = '';
+  }, [guides, updatePluginData]);
+
+  const closeViewer = useCallback(() => {
+    if (viewBlobUrl) URL.revokeObjectURL(viewBlobUrl);
+    setViewBlobUrl(null);
+    setViewingId(null);
+  }, [viewBlobUrl]);
+
+  // ── Viewing a guide ──
+  if (viewingId && viewBlobUrl) {
     return (
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => { setPreviewId(null); setPreviewHtml(''); }}>
-            <ChevronLeft size={14} /> Back
-          </button>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-            {guides.find(g => g.id === previewId)?.title || 'Study Guide'}
-          </span>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <button
+          onClick={closeViewer}
+          className="cx-chip"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 12, fontWeight: 700 }}
+        >
+          <ChevronLeft size={14} /> Back
+        </button>
+        <button
+          onClick={() => navigate(`/study-gen?load=${viewingId}`)}
+          className="cx-chip active"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 12, fontWeight: 700 }}
+        >
+          <Edit3 size={14} /> Edit in Study Gen
+        </button>
         </div>
-        <div style={{ borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)', background: 'white' }}>
+        <div style={{
+          border: '1px solid var(--border)',
+          borderRadius: 12,
+          overflow: 'hidden',
+          background: '#fff',
+        }}>
           <iframe
-            srcDoc={previewHtml}
-            title="Study Guide"
+            src={viewBlobUrl}
+            title="Study Guide Preview"
+            style={{ width: '100%', height: 'calc(100vh - 220px)', border: 'none' }}
             sandbox="allow-scripts allow-same-origin"
-            style={{ width: '100%', border: 'none', background: 'white', display: 'block', minHeight: 700 }}
           />
         </div>
       </div>
     );
   }
 
+  // ── Empty state ──
   if (guides.length === 0) {
     return (
-      <div style={{ padding: '60px 20px', textAlign: 'center' }}>
-        <Sparkles size={32} style={{ color: 'var(--text-dim)', marginBottom: 12 }} />
-        <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>No study guides yet</div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>Generate one from the Study Gen page</div>
-        <button className="btn btn-primary btn-sm" onClick={() => navigate('/study-gen')}>
-          <Sparkles size={14} /> Go to Study Gen
-        </button>
+      <div style={{
+        textAlign: 'center', padding: '60px 20px',
+        color: 'var(--text-muted)', fontSize: 14,
+      }}>
+        <Sparkles size={40} style={{ margin: '0 auto 12px', opacity: 0.4, display: 'block' }} />
+        <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 6, color: 'var(--text-secondary)' }}>
+          No study guides yet
+        </p>
+        <p style={{ marginBottom: 16, fontSize: 13 }}>
+          Generate AI-powered study guides from your notes, PDFs, or any text.
+        </p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <button
+            className="cx-chip active"
+            onClick={() => navigate('/study-gen')}
+            style={{ padding: '10px 20px', fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <Sparkles size={14} /> Go to Study Gen
+          </button>
+          <button
+            className="cx-chip"
+            onClick={() => importFileRef.current?.click()}
+            style={{ padding: '10px 20px', fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <Upload size={14} /> Import HTML
+          </button>
+        </div>
+        <input ref={importFileRef} type="file" accept=".html,.htm" style={{ display: 'none' }} onChange={handleImportHtml} />
       </div>
     );
   }
 
+  // ── Card grid ──
   return (
     <div>
-      {loading && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Loading guide...</div>}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <button
+          className="cx-chip"
+          onClick={() => importFileRef.current?.click()}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 12, fontWeight: 700 }}
+        >
+          <Upload size={14} /> Import HTML
+        </button>
+        <input ref={importFileRef} type="file" accept=".html,.htm" style={{ display: 'none' }} onChange={handleImportHtml} />
+      </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: 12,
+        marginTop: 8,
+      }}>
         {guides.map(g => (
-          <div key={g.id} className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {g.title}
+          <div key={g.id} style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            padding: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+              {g.title || 'Untitled Guide'}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              {g.model?.split('/')[1] || 'unknown'} · {formatDateShort(g.createdAt)}{g.sizeKb ? ` · ${g.sizeKb}kb` : ''}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 11, color: 'var(--text-muted)' }}>
+              <span style={{ background: 'var(--border)', borderRadius: 6, padding: '2px 8px' }}>
+                {g.model || 'Unknown model'}
+              </span>
+              <span>{formatDateShort(g.createdAt)}</span>
+              {g.sizeKb != null && <span>{g.sizeKb} KB</span>}
             </div>
             {g.sourcePreview && (
-              <div style={{ fontSize: 10, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <p style={{
+                fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.4,
+                overflow: 'hidden', textOverflow: 'ellipsis',
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+              }}>
                 {g.sourcePreview}
-              </div>
+              </p>
             )}
-            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-              <button className="btn btn-primary btn-sm" style={{ fontSize: 10, padding: '3px 10px' }} onClick={() => openGuide(g)}>
+            <div style={{ display: 'flex', gap: 6, marginTop: 'auto', paddingTop: 4 }}>
+              <button
+                onClick={() => handleView(g)}
+                disabled={loadingId === g.id}
+                className="cx-chip"
+                style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+              >
                 <Eye size={12} /> View
               </button>
-              <button className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: '3px 10px' }} onClick={() => downloadGuide(g)}>
+              <button
+                onClick={() => handleDownload(g)}
+                disabled={loadingId === g.id}
+                className="cx-chip"
+                style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+              >
                 <Download size={12} /> Download
               </button>
-              <button className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: '3px 10px', color: 'var(--red, #ef4444)' }} onClick={() => removeGuide(g.id)}>
+              <button
+                onClick={() => handleDelete(g)}
+                className="cx-chip"
+                style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, color: '#ef4444' }}
+              >
                 <Trash2 size={12} /> Delete
               </button>
             </div>

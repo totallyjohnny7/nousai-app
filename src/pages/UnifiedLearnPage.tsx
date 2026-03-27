@@ -12,7 +12,7 @@ import {
   GraduationCap, RefreshCw, Dumbbell, GitMerge, CalendarDays,
   Download, ScanSearch, Volume2, Sparkles, PenTool,
   Globe, Code2, FlaskConical, Box, MapPin, Trophy,
-  Eye, EyeOff, Settings2, Library, ClipboardList, ScanText, Wrench, Film,
+  Eye, EyeOff, Settings2, Library, ClipboardList, ScanText, Wrench, Film, Pencil,
 } from 'lucide-react';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { useStore } from '../store';
@@ -72,6 +72,7 @@ const ScreenLassoTool      = lazyWithRetry(() => import('../components/aitools/S
 const LeechManagerTool     = lazyWithRetry(() => import('../components/aitools/LeechManagerTool'));
 const PreTestMode          = lazyWithRetry(() => import('../components/learn/PreTestMode'));
 const OmniProtocol         = lazyWithRetry(() => import('../components/learn/OmniProtocol'));
+const HandwritingQuizTool  = lazyWithRetry(() => import('../components/aitools/HandwritingQuizTool'));
 
 // ── Lazy imports — ToolsPage (for embedded tools) ───────────────────────────
 const ToolsPage = lazyWithRetry(() => import('./ToolsPage'));
@@ -220,6 +221,7 @@ const TOOLS: ToolEntry[] = [
   { id: 'rsvp',        name: '⚡ Speed Preview', desc: 'Rapid flashcard preview — front-only, timed flip', icon: Zap, color: '#f59e0b', category: 'learn', render: () => <RSVPWrapper /> },
   { id: 'pretest',     name: '🎯 Pre-Test Mode', desc: 'Test before learning — hypercorrection effect improves retention 15-20%', icon: CheckCircle, color: '#ef4444', category: 'learn', render: () => <PreTestWrapper /> },
   { id: 'omni-protocol', name: '⚡ Omni Protocol V6', desc: '60min–3hr AI-personalized session: multi-cycle Bloom\'s escalation, arc phase tracking, Feynman gap targeting', icon: Zap, color: '#F5A623', category: 'learn', render: () => <Suspense fallback={<Loader />}><OmniProtocol onComplete={() => window.dispatchEvent(new CustomEvent('nousai-switch-tool', { detail: 'spaced' }))} /></Suspense> },
+  { id: 'handwriting-quiz', name: 'Handwriting Quiz', desc: 'Draw characters — AI grades your handwriting', icon: Pencil, color: '#e11d48', category: 'learn', render: () => <Suspense fallback={<Loader />}><HandwritingQuizTool /></Suspense> },
   // ── Generate ──────────────────────────────────────────────────────────────
   { id: 'course',     name: 'Course Gen',   desc: 'Build a full course outline',  icon: BookOpen,       color: '#6366f1', category: 'generate',  render: () => <Suspense fallback={<Loader />}><CourseGenTool /></Suspense> },
   { id: 'flashcardgen',name:'Flashcards',   desc: 'AI-generated flashcards',      icon: Layers,         color: '#3b82f6', category: 'generate',  render: () => <Suspense fallback={<Loader />}><FlashcardGenTool /></Suspense> },

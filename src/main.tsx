@@ -26,6 +26,24 @@ registerSW({
   },
 })
 
+// B4: Auto-reload when a new service worker takes control
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    console.log('[NousAI] New service worker activated — reloading');
+    window.location.reload();
+  });
+}
+
+// B2: Request persistent storage and log usage
+if ('storage' in navigator && 'persist' in navigator.storage) {
+  navigator.storage.persist().then(granted => {
+    console.log('[NousAI] Persistent storage:', granted ? 'granted' : 'denied');
+  }).catch(() => {});
+  navigator.storage.estimate().then(({ usage, quota }) => {
+    console.log('[NousAI] Storage usage:', ((usage || 0) / 1024 / 1024).toFixed(1), 'MB /', ((quota || 0) / 1024 / 1024).toFixed(0), 'MB');
+  }).catch(() => {});
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>

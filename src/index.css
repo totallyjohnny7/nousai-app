@@ -211,8 +211,8 @@ html, body {
   max-width: 720px;
   width: 100%;
   margin: 0 auto;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 @media (min-width: 768px) {
@@ -738,7 +738,7 @@ html[data-reduced-motion] *, html[data-reduced-motion] *::before, html[data-redu
 }
 
 /* ── 1. Floating particle background ─────────────────── */
-.app-shell { position: relative; overflow: hidden; }
+.app-shell { position: relative; overflow: clip; }
 .app-shell::before,
 .app-shell::after {
   content: '';

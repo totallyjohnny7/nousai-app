@@ -14,7 +14,7 @@
  */
 import type { RxDatabase } from 'rxdb';
 import type { NousAIData, Course, CoachData, PluginData } from '../types';
-import { getDb } from './index';
+import { getDb, isRxDbAvailable } from './index';
 import { migrateFromBlob, isMigrated, scheduleOldDbCleanup } from './migrateFromBlob';
 
 /** Strip RxDB internal fields and deep-clone to plain object.
@@ -32,8 +32,11 @@ function stripRxMeta(doc: any): any {
   }
 }
 
-/** Initialize RxDB + run migration if needed. Returns the database instance. */
-export async function initRxStore(): Promise<RxDatabase> {
+/** Initialize RxDB + run migration if needed. Returns the database instance.
+ *  Returns null if RxDB is unavailable (DB9 poisoned). */
+export async function initRxStore(): Promise<RxDatabase | null> {
+  if (!isRxDbAvailable()) return null;
+
   const db = await getDb();
 
   // Run migration from old blob if not yet done
@@ -48,6 +51,7 @@ export async function initRxStore(): Promise<RxDatabase> {
 
 /** Read all RxDB collections and assemble into a NousAIData blob. */
 export async function loadFromRxDB(): Promise<NousAIData | null> {
+  if (!isRxDbAvailable()) return null;
   const db = await getDb();
 
   // Read all collections in parallel
@@ -184,6 +188,7 @@ function quickHash(obj: unknown): string {
 }
 
 export async function saveToRxDB(data: NousAIData): Promise<void> {
+  if (!isRxDbAvailable()) return;
   const db = await getDb();
   const pd = data.pluginData;
   const now = new Date().toISOString();
@@ -332,6 +337,9 @@ export async function saveToRxDB(data: NousAIData): Promise<void> {
  * Returns an unsubscribe function.
  */
 export function subscribeToRxChanges(callback: (data: NousAIData) => void): () => void {
+  // If RxDB is unavailable, return a no-op unsubscribe
+  if (!isRxDbAvailable()) return () => {};
+
   let cancelled = false;
   const subs: Array<{ unsubscribe: () => void }> = [];
 
@@ -356,7 +364,7 @@ export function subscribeToRxChanges(callback: (data: NousAIData) => void): () =
       });
       subs.push(sub);
     }
-  });
+  }).catch(() => { /* RxDB unavailable — no subscriptions */ });
 
   return () => {
     cancelled = true;

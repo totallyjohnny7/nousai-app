@@ -1,7 +1,7 @@
 import { Routes, Route, NavLink, useLocation, useParams, Navigate, useNavigate } from 'react-router-dom'
 import type { CourseSpace } from './types'
 import { Suspense, Component, useEffect, useMemo, useRef, useState, type ReactNode, type ErrorInfo } from 'react'
-import { Home, Trophy, BookOpen, Clock, Calendar, Settings, Upload, Brain, Sparkles, Library, Mic, RefreshCw, AlertTriangle, Search, PanelLeftClose, PanelLeftOpen, Keyboard, X, MoreHorizontal, Menu, Film, Telescope, FileOutput } from 'lucide-react'
+import { Home, Trophy, BookOpen, Clock, Calendar, Settings, Upload, Brain, Sparkles, Library, Mic, RefreshCw, AlertTriangle, Search, PanelLeftClose, PanelLeftOpen, Keyboard, X, MoreHorizontal, Menu, Film, FileOutput } from 'lucide-react'
 import { lazyWithRetry, markAppLoaded, isChunkLoadError, clearCachesAndReload } from './utils/lazyWithRetry'
 import { useStore } from './store'
 import { resetDailyIfNeeded, getLevel, getLevelProgress, getTitle } from './utils/gamification'
@@ -18,6 +18,7 @@ import {
 } from './utils/transcribeStore'
 import { getDueCount } from './utils/getDueCount'
 import { initFsrsCache } from './utils/fsrsStorage'
+import { getShortcutKey } from './utils/shortcuts'
 import { detectDeviceProfile } from './utils/deviceDetection'
 import { useAuthUser } from './hooks/useAuthUser'
 import { streamDeckService, StreamDeckService } from './utils/streamDeckService'
@@ -122,7 +123,6 @@ const SharedContentPage = lazyWithRetry(() => import('./pages/SharedContentPage'
 const LibraryPage = lazyWithRetry(() => import('./pages/LibraryPage'))
 const CoursePage = lazyWithRetry(() => import('./pages/CoursePage'))
 const VideosPage = lazyWithRetry(() => import('./pages/VideosPage'))
-const MicroMacroPage = lazyWithRetry(() => import('./features/micromacro/MicroMacro'))
 const StudyGeneratorPage = lazyWithRetry(() => import('./features/study-generator/NousaiStudyGenerator'))
 
 
@@ -137,7 +137,6 @@ const NAV = [
 ]
 const MORE_NAV = [
   { to: '/videos', icon: Film, label: 'VIDEOS' },
-  { to: '/micromacro', icon: Telescope, label: 'MICROMACRO' },
   { to: '/study-gen', icon: FileOutput, label: 'STUDY GEN' },
   { to: '/timer', icon: Clock, label: 'TIMER' },
   { to: '/calendar', icon: Calendar, label: 'CALENDAR' },
@@ -154,7 +153,6 @@ const SIDEBAR_NAV = [
   { to: '/videos', icon: Film, label: 'VIDEOS' },
   { to: '/timer', icon: Clock, label: 'TIMER' },
   { to: '/calendar', icon: Calendar, label: 'CALENDAR' },
-  { to: '/micromacro', icon: Telescope, label: 'MICROMACRO' },
   { to: '/study-gen', icon: FileOutput, label: 'STUDY GEN' },
   { to: '/settings', icon: Settings, label: 'SETTINGS' },
 ]
@@ -169,7 +167,7 @@ const PRELOAD_MAP: Record<string, () => Promise<unknown>> = {
   '/timer': () => import('./pages/Timer'),
   '/calendar': () => import('./pages/CalendarPage'),
   '/settings': () => import('./pages/SettingsPage'),
-  '/micromacro': () => import('./features/micromacro/MicroMacro'),
+
   '/study-gen': () => import('./features/study-generator/NousaiStudyGenerator'),
 }
 function preloadRoute(to: string) {
@@ -474,9 +472,12 @@ export default function App() {
   // Global toast listener for sync feedback
   useEffect(() => {
     const handler = (e: Event) => {
-      const msg = (e as CustomEvent).detail as string
+      const detail = (e as CustomEvent).detail
+      // Support both string detail and { message, type, duration } object formats
+      const msg = typeof detail === 'string' ? detail : detail?.message ?? String(detail)
+      const duration = typeof detail === 'object' && detail?.duration ? detail.duration : 2500
       setSyncToast(msg)
-      setTimeout(() => setSyncToast(null), 2500)
+      setTimeout(() => setSyncToast(null), duration)
     }
     window.addEventListener('nousai-toast', handler)
     return () => window.removeEventListener('nousai-toast', handler)
@@ -537,21 +538,33 @@ export default function App() {
     }
   }, [navigate])
 
+  // Global keyboard shortcuts — always active, uses configurable keys from Settings
   useEffect(() => {
-    if (!betaMode) return
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
-      if (e.key === 'F11') { e.preventDefault(); setFocusMode(m => !m); return }
+
+      // Focus mode (always available)
+      const focusKey = getShortcutKey('nav_focus')
+      if (e.key === focusKey) { e.preventDefault(); setFocusMode(m => !m); return }
+
+      // Skip if modifier keys are held (except for mapped modifier shortcuts)
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (e.key === '?') { e.preventDefault(); setShortcutOverlayOpen(o => !o) }
-      else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); navigate('/library?tab=notes') }
-      else if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); navigate('/quiz') }
-      else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); navigate('/flashcards') }
+
+      const key = e.key.toLowerCase()
+      const helpKey = getShortcutKey('nav_help').toLowerCase()
+      const notesKey = getShortcutKey('nav_notes').toLowerCase()
+      const quizKey = getShortcutKey('nav_quiz').toLowerCase()
+      const cardsKey = getShortcutKey('nav_flashcards').toLowerCase()
+
+      if (key === helpKey) { e.preventDefault(); setShortcutOverlayOpen(o => !o) }
+      else if (key === notesKey) { e.preventDefault(); navigate('/library?tab=notes') }
+      else if (key === quizKey) { e.preventDefault(); navigate('/quiz') }
+      else if (key === cardsKey) { e.preventDefault(); navigate('/flashcards') }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [betaMode, navigate])
+  }, [navigate])
 
   // Auto dark mode scheduling — check every minute
   useEffect(() => {
@@ -791,7 +804,7 @@ export default function App() {
             <Route path="/course" element={<CoursePage />} />
             <Route path="/course/:id" element={<CourseRedirect />} />
             <Route path="/videos" element={<VideosPage />} />
-            <Route path="/micromacro" element={<MicroMacroPage />} />
+
             <Route path="/study-gen" element={<StudyGeneratorPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

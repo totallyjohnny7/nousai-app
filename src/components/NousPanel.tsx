@@ -102,7 +102,13 @@ Current context:
 - Flashcards Total: ${total} | Mastered: ${mastered} | Learning: ${learning}
 - Active Provider: ${provider} (${model})
 
-Answer questions about the user's notes, vocab, quizzes, and study progress. Keep answers concise and formatted in Markdown. You can suggest actions like starting a quiz, reviewing flashcards, or using AI tools.`
+Answer questions about the user's notes, vocab, quizzes, and study progress. Keep answers concise and formatted in Markdown. You can suggest actions like starting a quiz, reviewing flashcards, or using AI tools.
+
+IMPORTANT formatting rules:
+- NEVER include raw URLs or long encoded URLs in your responses
+- If you want to reference a website, use short markdown links: [site name](url) — but keep it brief
+- Prefer giving the information directly rather than linking to external sites
+- Use bullet points, bold, and tables for clarity`
 }
 
 /* ── Action detection ──────────────────────────────────── */

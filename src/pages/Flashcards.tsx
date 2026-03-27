@@ -455,7 +455,7 @@ function ManageFlashcards({ courses, data, setData }: {
       if (newCards[cardIndex]) {
         newCards[cardIndex] = { ...newCards[cardIndex], front: editFront.trim(), back: editBack.trim() }
       }
-      return { ...c, flashcards: newCards }
+      return { ...c, flashcards: newCards, updatedAt: new Date().toISOString() }
     })
     updatePluginData({ coachData: { ...data.pluginData.coachData, courses: updatedCourses } })
     setEditKey(null)
@@ -468,7 +468,9 @@ function ManageFlashcards({ courses, data, setData }: {
       if (c.id !== courseId) return c
       const newCards = [...(c.flashcards || [])]
       newCards.splice(cardIndex, 1)
-      return { ...c, flashcards: newCards }
+      // Stamp updatedAt so this version wins merge conflicts — prevents
+      // deleted cards from being restored by cloud data with older timestamps.
+      return { ...c, flashcards: newCards, updatedAt: new Date().toISOString() }
     })
     updatePluginData({ coachData: { ...data.pluginData.coachData, courses: updatedCourses } })
     if (editKey === `${courseId}:${cardIndex}`) setEditKey(null)
@@ -506,7 +508,7 @@ function ManageFlashcards({ courses, data, setData }: {
       const indices = deletions[c.id].sort((a, b) => b - a) // descending
       const newCards = [...(c.flashcards || [])]
       indices.forEach(idx => newCards.splice(idx, 1))
-      return { ...c, flashcards: newCards }
+      return { ...c, flashcards: newCards, updatedAt: new Date().toISOString() }
     })
     updatePluginData({ coachData: { ...data.pluginData.coachData, courses: updatedCourses } })
     setSelected(new Set())

@@ -297,7 +297,11 @@ export default function Quizzes() {
   // ── Session helper: save final attempt to quizHistory + proficiency ──
   const saveFinalAttempt = useCallback((attempt: QuizAttempt) => {
     if (!data) return
+    // Dedup guard: skip if an attempt with the same ID is already saved
+    if (data.pluginData.quizHistory.some(q => q.id === attempt.id)) return
     setData(prev => {
+      // Double-check inside updater (prev may differ from data closure)
+      if (prev.pluginData.quizHistory.some(q => q.id === attempt.id)) return prev
       // Use prev (always current state) to avoid stale closure overwriting streak/XP
       const currentGam = prev.pluginData.gamificationData
       const updatedGam = awardQuizXp(currentGam, attempt.correct, attempt.questionCount)
@@ -2004,9 +2008,21 @@ function BankTab({ onPlay, folders, folderMap, folderActions, activeSession, onS
               <div key={topic} style={{ marginBottom: 8 }}>
                 <div style={{
                   fontSize: 12, fontWeight: 600, color: 'var(--text-muted)',
-                  padding: '6px 0', borderBottom: '1px solid var(--border)', marginBottom: 6
+                  padding: '6px 0', borderBottom: '1px solid var(--border)', marginBottom: 6,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                 }}>
-                  {topic} ({questions.length})
+                  <span>{topic} ({questions.length})</span>
+                  <button className="btn btn-sm" style={{ fontSize: 10, padding: '3px 8px', background: 'var(--accent)', color: '#fff', borderRadius: 6 }} onClick={() => {
+                    const shuffled = [...questions].sort(() => Math.random() - 0.5)
+                    onPlay({
+                      questions: shuffled.map(q => ({ question: q.question, correctAnswer: q.correctAnswer, options: q.options, type: q.type, explanation: q.explanation })),
+                      name: `${topic}`,
+                      subject: friendlySubject(subject),
+                      subtopic: topic,
+                    })
+                  }}>
+                    <Play size={10} /> Play
+                  </button>
                 </div>
                 {questions.map(q => (
                   <div key={q.id} className="card" style={{ padding: 10, marginBottom: 6, cursor: 'pointer' }}
