@@ -2,6 +2,7 @@
  * Drawing Studio — powered by Excalidraw
  */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Excalidraw, exportToBlob } from '@excalidraw/excalidraw';
 import '@excalidraw/excalidraw/index.css';
 import {
@@ -678,7 +679,7 @@ function ExcalidrawEditor({
     setIsRenaming(false);
   }
 
-  return (
+  return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-primary, #111)' }}>
       {/* Header bar */}
       <div style={{
@@ -770,7 +771,8 @@ function ExcalidrawEditor({
           excalidrawAPI={(api) => { excalidrawAPIRef.current = api; }}
         />
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
