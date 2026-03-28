@@ -115,7 +115,7 @@ const Quizzes = lazyWithRetry(() => import('./pages/Quizzes'))
 const Flashcards = lazyWithRetry(() => import('./pages/Flashcards'))
 const Timer = lazyWithRetry(() => import('./pages/Timer'))
 const CalendarPage = lazyWithRetry(() => import('./pages/CalendarPage'))
-const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage'))
+const SettingsPage = lazyWithRetry(() => import('./pages/settings/SettingsPage'))
 const ToolsPage = lazyWithRetry(() => import('./pages/ToolsPage'))
 const LearnPage = lazyWithRetry(() => import('./pages/LearnPage'))
 const UnifiedLearnPage = lazyWithRetry(() => import('./pages/UnifiedLearnPage'))
@@ -166,7 +166,7 @@ const PRELOAD_MAP: Record<string, () => Promise<unknown>> = {
   '/flashcards': () => import('./pages/Flashcards'),
   '/timer': () => import('./pages/Timer'),
   '/calendar': () => import('./pages/CalendarPage'),
-  '/settings': () => import('./pages/SettingsPage'),
+  '/settings': () => import('./pages/settings/SettingsPage'),
 
   '/study-gen': () => import('./features/study-generator/NousaiStudyGenerator'),
 }
