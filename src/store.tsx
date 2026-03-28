@@ -527,7 +527,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           // A follower tab sent us its updated state — merge it
           const followerData = msg.payload as NousAIData;
           if (followerData) {
-            const merged = mergeAppData(dataRef.current, normalizeData(followerData));
+            // Cross-tab merge: no lastPushedAt needed (same device, no deletion ambiguity)
+            const merged = mergeAppData(dataRef.current, normalizeData(followerData), undefined);
             fromSyncRef.current = false; // this IS a real change, broadcast after saving
             setDataRaw(merged);
           }
@@ -712,7 +713,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         } else {
           // resolution === 'merge'
           console.warn('[Sync] Merging local + cloud data');
-          finalData = mergeAppData(localSnapshot, safeCloud);
+          // Pass lastPushedAt so merge engine knows which cloud-only items were deleted locally
+          const lastPush = localStorage.getItem('nousai-last-push') || undefined;
+          finalData = mergeAppData(localSnapshot, safeCloud, lastPush);
           // Push merged result back to cloud so both sides converge
           await withExponentialBackoff(() => syncToCloud(uid, finalData)).catch(e => {
             console.warn('[Sync] Merge push-back failed (non-critical):', e);

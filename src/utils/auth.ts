@@ -398,7 +398,8 @@ async function _syncToCloudInner(uid: string, dataArg: NousAIData): Promise<void
             const { mergeAppData } = await import('../sync/mergeEngine');
             const { mergeLamportClock } = await import('../sync/lamportClock');
             mergeLamportClock((cloudData as unknown as Record<string, unknown>).lamport as number ?? 0);
-            const merged = mergeAppData(data, cloudData);
+            // Pass lastPush so merge knows which cloud-only items were deleted locally
+            const merged = mergeAppData(data, cloudData, lastPush ?? undefined);
             // Replace data with merged version for the push below
             data = merged;
             log('[SYNC] Auto-merged local + cloud — pushing merged result');
