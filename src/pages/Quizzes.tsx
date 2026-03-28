@@ -2193,7 +2193,7 @@ function HistoryTab({ onSelectAttempt, onPlay, folders, folderMap, folderActions
     const toSave = data.pluginData.quizHistory.filter(q => q.id === quizId && !bankIds.has(q.id))
     const updatedBank = toSave.length ? { ...existingBank, quizzes: [...(existingBank.quizzes ?? []), ...toSave] } : existingBank
     updatePluginData({
-      quizHistory: data.pluginData.quizHistory.filter(q => q.id !== quizId),
+      quizHistory: data.pluginData.quizHistory.map(q => q.id === quizId ? { ...q, deleted: true, deletedAt: Date.now() } : q),
       ...(toSave.length ? { quizBank: updatedBank } : {}),
     })
   }

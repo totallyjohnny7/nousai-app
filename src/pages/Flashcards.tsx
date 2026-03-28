@@ -376,6 +376,7 @@ function ManageFlashcards({ courses, data, setData }: {
     const cards: { front: string; back: string; topic: string; courseName: string; courseId: string; courseColor: string; cardIndex: number }[] = []
     courses.forEach(c => {
       (c.flashcards || []).forEach((fc, idx) => {
+        if (fc.deleted) return
         cards.push({
           front: fc.front,
           back: fc.back,
@@ -466,10 +467,9 @@ function ManageFlashcards({ courses, data, setData }: {
     const currentCourses = data.pluginData?.coachData?.courses || []
     const updatedCourses = currentCourses.map(c => {
       if (c.id !== courseId) return c
-      const newCards = [...(c.flashcards || [])]
-      newCards.splice(cardIndex, 1)
-      // Stamp updatedAt so this version wins merge conflicts — prevents
-      // deleted cards from being restored by cloud data with older timestamps.
+      const newCards = (c.flashcards || []).map((card, i) =>
+        i === cardIndex ? { ...card, deleted: true, deletedAt: Date.now() } : card
+      )
       return { ...c, flashcards: newCards, updatedAt: new Date().toISOString() }
     })
     updatePluginData({ coachData: { ...data.pluginData.coachData, courses: updatedCourses } })

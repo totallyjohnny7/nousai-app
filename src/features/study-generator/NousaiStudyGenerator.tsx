@@ -71,7 +71,7 @@ export default function NousaiStudyGenerator() {
 
   // Store for auto-save + previous sessions
   const { data, updatePluginData } = useStore()
-  const savedGuides: StudyGuide[] = (data?.pluginData?.studyGuides as StudyGuide[] | undefined) || []
+  const savedGuides: StudyGuide[] = ((data?.pluginData?.studyGuides as StudyGuide[] | undefined) || []).filter(g => !g.deleted)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -378,10 +378,10 @@ export default function NousaiStudyGenerator() {
     }
   }, [searchParams, savedGuides])
 
-  // Delete a saved study guide
+  // Delete a saved study guide (soft-delete)
   const deleteGuide = (id: string) => {
     deleteGuideHtml(id).catch(() => {})
-    updatePluginData({ studyGuides: savedGuides.filter(g => g.id !== id) })
+    updatePluginData({ studyGuides: savedGuides.map(g => g.id === id ? { ...g, deleted: true, deletedAt: Date.now(), updatedAt: new Date().toISOString() } : g) })
   }
 
   // Sync iframe edits back to genHTML state (call before any save)
