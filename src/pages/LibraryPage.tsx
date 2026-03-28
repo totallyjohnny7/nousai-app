@@ -178,7 +178,7 @@ export default function LibraryPage() {
     if (data?.pluginData) {
       const stored = (data.pluginData as Record<string, unknown>).notes as Note[] | undefined;
       if (stored && Array.isArray(stored)) {
-        setNotes(stored);
+        setNotes(stored.filter(n => !n.deleted));
       }
     }
   }, [data]);
@@ -308,8 +308,12 @@ export default function LibraryPage() {
 
   function deleteNote(id: string) {
     if (!confirm('Delete this note?')) return;
-    const updated = notes.filter(n => n.id !== id);
-    persistNotes(updated);
+    const updated = notes.map(n => n.id === id ? { ...n, deleted: true, deletedAt: Date.now(), updatedAt: new Date().toISOString() } : n);
+    setNotes(updated);
+    updatePluginData({
+      notes: updated,
+      deletionLog: [...(data?.pluginData.deletionLog || []), { id, entityType: 'note', deletedAt: Date.now() }]
+    });
     if (selectedId === id) {
       setSelectedId(null);
       setView('list');
@@ -594,7 +598,7 @@ export default function LibraryPage() {
             borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 800,
             marginLeft: 2,
           }}>
-            {(data?.pluginData as Record<string, unknown>)?.studyGuides ? ((data.pluginData as Record<string, unknown>).studyGuides as StudyGuide[]).length : 0}
+            {(data?.pluginData as Record<string, unknown>)?.studyGuides ? ((data.pluginData as Record<string, unknown>).studyGuides as StudyGuide[]).filter(g => !g.deleted).length : 0}
           </span>
         </button>
         <button
@@ -3048,7 +3052,7 @@ function StudyGuidesTab() {
   const { data, updatePluginData } = useStore();
   const navigate = useNavigate();
   const guides: StudyGuide[] = useMemo(
-    () => ((data?.pluginData as Record<string, unknown>)?.studyGuides as StudyGuide[] | undefined) ?? [],
+    () => (((data?.pluginData as Record<string, unknown>)?.studyGuides as StudyGuide[] | undefined) ?? []).filter(g => !g.deleted),
     [data],
   );
 
@@ -3111,9 +3115,12 @@ function StudyGuidesTab() {
   const handleDelete = useCallback(async (guide: StudyGuide) => {
     if (!confirm(`Delete "${guide.title}"? This cannot be undone.`)) return;
     try { await deleteGuideHtml(guide.id); } catch { /* ignore IDB errors */ }
-    const updated = guides.filter(g => g.id !== guide.id);
-    updatePluginData({ studyGuides: updated });
-  }, [guides, updatePluginData]);
+    const updated = guides.map(g => g.id === guide.id ? { ...g, deleted: true, deletedAt: Date.now(), updatedAt: new Date().toISOString() } : g);
+    updatePluginData({
+      studyGuides: updated,
+      deletionLog: [...(data?.pluginData.deletionLog || []), { id: guide.id, entityType: 'studyGuide', deletedAt: Date.now() }]
+    });
+  }, [guides, updatePluginData, data]);
 
   const importFileRef = useRef<HTMLInputElement>(null);
   const handleImportHtml = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {

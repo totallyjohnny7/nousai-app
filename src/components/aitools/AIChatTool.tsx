@@ -22,7 +22,7 @@ const SYSTEM_PROMPT = `You are a study assistant inside Nous AI. Help the studen
 
 function AIChatTool() {
   const { data, setData } = useStore();
-  const sessions: ChatSession[] = (data?.pluginData as any)?.aiChatSessions || [];
+  const sessions: ChatSession[] = ((data?.pluginData as any)?.aiChatSessions || []).filter((s: any) => !s.deleted);
   const [activeId, setActiveId] = useState<string | null>(sessions[0]?.id || null);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -59,9 +59,17 @@ function AIChatTool() {
   }
 
   function deleteSession(id: string) {
-    updateSessions(prev => prev.filter(s => s.id !== id));
+    const now = Date.now();
+    setData(prev => ({
+      ...prev,
+      pluginData: {
+        ...prev.pluginData,
+        aiChatSessions: ((prev.pluginData as any).aiChatSessions || []).map((s: any) => s.id === id ? { ...s, deleted: true, deletedAt: now, updatedAt: new Date().toISOString() } : s),
+        deletionLog: [...(prev.pluginData.deletionLog || []), { id, entityType: 'chatSession', deletedAt: now }],
+      },
+    }));
     if (activeId === id) {
-      const remaining = sessions.filter(s => s.id !== id);
+      const remaining = sessions.filter(s => s.id !== id && !s.deleted);
       setActiveId(remaining[0]?.id || null);
     }
   }

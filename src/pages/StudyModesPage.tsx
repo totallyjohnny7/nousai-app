@@ -1215,10 +1215,13 @@ function CornellNotesMode() {
     const newNotes = savedNotes.filter(n => n.id !== id)
     setSavedNotes(newNotes)
     lsSet('cornell-notes', newNotes)
-    // Also remove from Library
+    // Also soft-delete from Library
     if (data) {
-      const libNotes = (data.pluginData.notes || []).filter((n) => n.id !== `cornell-${id}`)
-      updatePluginData({ notes: libNotes })
+      const libNotes = (data.pluginData.notes || []).map((n) => n.id === `cornell-${id}` ? { ...n, deleted: true, deletedAt: Date.now(), updatedAt: new Date().toISOString() } : n)
+      updatePluginData({
+        notes: libNotes,
+        deletionLog: [...(data.pluginData.deletionLog || []), { id: `cornell-${id}`, entityType: 'note', deletedAt: Date.now() }]
+      })
     }
   }
 

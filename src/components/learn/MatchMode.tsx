@@ -286,7 +286,7 @@ export default function MatchMode() {
   function deleteCustomSet(id: string) {
     if (!data) return;
     const existing = (data.pluginData as Record<string, unknown>).matchSets as typeof storedMatchSets || [];
-    const updated = existing.filter(m => m.id !== id);
+    const updated = existing.map(m => m.id === id ? { ...m, deleted: true, deletedAt: Date.now() } : m);
     updatePluginData({ matchSets: updated });
   }
 

@@ -99,6 +99,7 @@ function QuizletImportTool() {
 
     const tag = topicTag.trim() || 'Quizlet Import';
     const flashcards: FlashcardItem[] = parsedCards.map((c) => ({
+      id: crypto.randomUUID(),
       front: c.front,
       back: c.back,
       topic: tag,

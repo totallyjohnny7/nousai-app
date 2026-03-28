@@ -1,0 +1,542 @@
+[
+  {
+    "id": "evol-q001",
+    "topic": "evo-devo",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "You mutate an enhancer that drives limb-specific expression of gene X in mice. Gene X is also expressed in the eye and brain via separate enhancers. What happens to gene X expression in the eye and brain?",
+    "expectedAnswer": "Gene X expression in the eye and brain remains unchanged. The mutated enhancer is tissue-specific to limb. Each enhancer drives expression in its own tissue independently — this is the hallmark of modular CREs.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q002",
+    "topic": "evo-devo",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Which statement about cis-regulatory elements (CREs) is TRUE?",
+    "options": [
+      "CREs code for transcription factor proteins that bind the promoter",
+      "CREs are always located immediately upstream of the gene they regulate",
+      "CREs are DNA sequences that regulate transcription but do not encode proteins",
+      "CREs function only in prokaryotes, not eukaryotes"
+    ],
+    "correctIndex": 2,
+    "expectedAnswer": "CREs are DNA sequences that regulate transcription but do not encode proteins. They are non-coding regulatory elements that can be located at great distances from the gene and work in any orientation.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q003",
+    "topic": "evo-devo",
+    "heading": "apply-it",
+    "questionType": "free-response",
+    "questionText": "Crystallins in the vertebrate eye lens were recruited from metabolic enzymes (e.g., lactate dehydrogenase). Is this an example of neofunctionalization or gene recruitment/co-option? Explain the key distinction.",
+    "expectedAnswer": "This is gene recruitment (co-option). The enzyme retained its metabolic function while also gaining a lens structural role. In true neofunctionalization after duplication, one copy loses the original function and gains a new one. Gene promiscuity/co-option means an existing gene is expressed in a new context and gains an additional function without necessarily losing the original.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q004",
+    "topic": "evo-devo",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "After whole genome duplication (WGD), gene A and gene B arise from the same ancestral gene and are found in the same species. What is the relationship between gene A and gene B?",
+    "options": [
+      "Orthologs — they are separated by a speciation event",
+      "Paralogs — they are separated by a duplication event within the same species",
+      "Alleles — they are alternative forms at the same locus",
+      "Homologs — they are identical in sequence and function"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "Paralogs — they arise from gene duplication within a species. Orthologs arise from speciation. The key distinction: duplication → paralogs; speciation → orthologs.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q005",
+    "topic": "evo-devo",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "Axolotls (a salamander species) retain aquatic larval features including external gills throughout their adult life, while remaining sexually mature. What type of heterochrony is this? Is it paedomorphosis or peramorphosis?",
+    "expectedAnswer": "This is paedomorphosis, specifically neoteny. Neoteny = adult somatic development slowed while sexual maturity proceeds on schedule → adult retains juvenile body features. Paedomorphosis is the general term; neoteny is one specific mechanism (slowed somatic development rate).",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q006",
+    "topic": "evo-devo",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Both Drosophila and vertebrates use the Pax6 gene to initiate eye development, but their eyes are structurally very different (compound vs. camera-type). What does this BEST illustrate?",
+    "options": [
+      "Structural homology — the eyes share the same evolutionary origin",
+      "Deep homology — the same gene network is deployed in structurally non-homologous structures",
+      "Convergent evolution — the eyes evolved independently using completely different genetic mechanisms",
+      "Parallel evolution — the eyes evolved independently using the same genes for identical functions"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "Deep homology. The same genetic toolkit (Pax6) is used in both, but the structures themselves are not structurally homologous — they evolved independently. Deep homology ≠ structural homology.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q007",
+    "topic": "evo-devo",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "Ichthyosaurs (extinct marine reptiles) and dolphins (mammals) both evolved streamlined, fishlike body forms independently. Is this an example of convergent or parallel evolution? What is the key criterion?",
+    "expectedAnswer": "Convergent evolution. The key criterion: convergent = independent origins via DIFFERENT genetic mechanisms/pathways. Parallel = independent origins via the SAME genes/mechanisms. Ichthyosaurs and dolphins are distantly related and almost certainly used different developmental pathways to achieve similar body forms.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q008",
+    "topic": "evo-devo",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "The panda's \"thumb\" is actually an enlarged radial sesamoid bone, not a true digit. This structure is a functional but suboptimal adaptation for grasping bamboo. What does this BEST illustrate?",
+    "options": [
+      "Vestigial structure — the thumb is non-functional",
+      "Convergent evolution — pandas independently evolved the same solution as primates",
+      "Evolutionary constraint + imperfect adaptation — history limits what selection can produce",
+      "Evidence against natural selection — selection would have produced a better thumb"
+    ],
+    "correctIndex": 2,
+    "expectedAnswer": "Evolutionary constraint + imperfect adaptation. The panda could not evolve a true opposable thumb because its carpals were already committed to other functions. Selection worked with available material → functional but suboptimal result. Imperfect adaptations are evidence FOR evolution (historical contingency), not against selection.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q009",
+    "topic": "evolution-of-sex",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "In New Zealand lakes, the freshwater snail Potamopyrgus antipodarum reproduces sexually more frequently in lakes with high trematode parasite loads than in lakes with low parasite loads. Which hypothesis for the evolution of sex does this experiment BEST support, and why?",
+    "expectedAnswer": "The Red Queen hypothesis. High parasite loads create selection for rare host genotypes (parasites adapt to common genotypes). Sexual reproduction generates rare genotype combinations via recombination → rare genotype advantage → sex maintained. This is exactly the prediction of the Red Queen: parasites drive the evolution and maintenance of sex.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q010",
+    "topic": "evolution-of-sex",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Muller's Ratchet explains the evolution of sex by reference to which process?",
+    "options": [
+      "The accumulation of BENEFICIAL mutations that become fixed in asexual populations",
+      "The irreversible accumulation of DELETERIOUS mutations in asexual populations",
+      "The arms race between hosts and parasites favoring rare host genotypes",
+      "The recombination load that reduces fitness in sexual populations"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "Muller's Ratchet: asexual populations irreversibly accumulate deleterious mutations because without recombination, there is no mechanism to purge them. The \"ratchet\" can only click in one direction (more mutations). It is specifically about DELETERIOUS mutations, not beneficial ones.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q011",
+    "topic": "evolution-of-sex",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "In pipefish, males carry fertilized eggs in a brood pouch. Females compete intensely for access to males, and females are more colorful/ornamented than males. How does Operational Sex Ratio (OSR) theory explain this sex-role reversal?",
+    "expectedAnswer": "Because males carry eggs, they are temporarily unavailable for mating (they are the \"caring\" sex). The OSR becomes female-biased — more females are available for mating than males. This means males are the limiting resource. Females compete for the limiting sex → intrasexual selection on females → females are showier. OSR determines which sex competes, regardless of which sex is \"male\" or \"female.\"",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q012",
+    "topic": "evolution-of-sex",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Bateman's principle states that males benefit more from multiple matings than females. Which of the following BEST describes what this principle is about?",
+    "options": [
+      "Males always invest less energy per gamete than females",
+      "The variance in reproductive success is greater in males than females in most species, due to anisogamy",
+      "Males are always more ornamented than females in any given species",
+      "Females are the choosy sex in all species regardless of parental investment"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "Bateman's principle is about VARIANCE in reproductive success — male RS varies more with number of mates than female RS does. This arises from anisogamy (sperm cheap, eggs costly), meaning female RS is limited by resources, not mates. The key is variance, not just number of matings.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q013",
+    "topic": "evolution-of-sex",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "A male bird species has males with bright red beaks. Males with brighter red beaks are more attractive to females, but they are also more susceptible to blood parasites. Does this evidence better support Fisher's runaway selection or the Zahavian handicap (honest signal) hypothesis? Explain.",
+    "expectedAnswer": "The Zahavian handicap (honest signal) hypothesis. If males with red beaks suffer higher parasite loads, then only parasite-resistant males can afford to maintain bright red beaks. The susceptibility creates a cost that is condition-dependent — only high-quality males can pay it. In Fisher's runaway, the preference is arbitrary and the trait doesn't have to correlate with survival quality. Here, the correlation with parasite resistance suggests the trait is an honest indicator of genetic quality.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q014",
+    "topic": "evolution-of-sex",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Which statement about Fisher's runaway selection is TRUE?",
+    "options": [
+      "The male trait must be genuinely beneficial for survival for Fisher's runaway to operate",
+      "Fisher's runaway requires that females can assess male genetic quality through the ornament",
+      "Fisher's runaway involves a positive feedback between female preference and male ornament genes that can produce arbitrary, maladaptive traits",
+      "Fisher's runaway predicts the male ornament will stabilize at the level where it maximizes male survival"
+    ],
+    "correctIndex": 2,
+    "expectedAnswer": "Fisher's runaway is based on positive genetic feedback: preference gene and trait gene become genetically correlated. The ornament does NOT have to be a good indicator of survival quality — it is arbitrary. The runaway can produce maladaptive extremes until viability selection halts it.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q015",
+    "topic": "evolution-of-sex",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "Chimpanzees (promiscuous mating) and gorillas (harem-based polygyny) have very different relative testes sizes. Chimpanzees have much larger testes relative to body size than gorillas. What does this difference in testes size tell us about sperm competition in each species?",
+    "expectedAnswer": "Chimps: large testes → high sperm competition → multiple males' sperm competing in the same female simultaneously → promiscuous mating system confirmed. Gorillas: small testes → low sperm competition → dominant male monopolizes females in harem → little need for sperm to compete. Testes size is a proxy for the intensity of post-copulatory sperm competition.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q016",
+    "topic": "evolution-of-sex",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Cryptic female choice refers to which post-mating phenomenon?",
+    "options": [
+      "Females physically hiding from males they prefer not to mate with",
+      "Females choosing mates based on hidden genetic markers not visible to researchers",
+      "Females biasing fertilization toward preferred male sperm through internal mechanisms after copulation",
+      "Females storing sperm from multiple males and then releasing it to fertilize all eggs simultaneously"
+    ],
+    "correctIndex": 2,
+    "expectedAnswer": "Cryptic female choice = females control fertilization AFTER copulation through internal mechanisms (selective sperm storage, uterine environment, selective use of stored sperm). It is \"cryptic\" because it happens internally, post-mating, making it hard to study. It is not about pre-mating choice or simply storing sperm.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q017",
+    "topic": "evolution-of-sex",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "In Drosophila melanogaster, males transfer seminal fluid proteins (Sfps) during mating that increase female egg-laying rate but also reduce female lifespan. Female Drosophila have evolved resistance alleles that reduce the effect of Sfps. What evolutionary dynamic does this describe?",
+    "expectedAnswer": "This is interlocus sexual conflict / antagonistic coevolution between the sexes. Male seminal proteins increase male fitness (more eggs) but decrease female fitness (shorter life). Females evolve resistance → males evolve more potent Sfps → females evolve more resistance → arms race within species. This is interlocus conflict: different loci in each sex are at evolutionary odds.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q018",
+    "topic": "evolution-of-sex",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Which statement about intralocus sexual conflict is CORRECT?",
+    "options": [
+      "Intralocus conflict occurs when different alleles at different loci have opposing fitness effects in each sex",
+      "Intralocus conflict occurs when the same allele has different fitness optima in males vs. females, making it impossible for selection to fully resolve the conflict at that locus",
+      "Intralocus conflict is easily resolved by natural selection because one sex will always win",
+      "Intralocus conflict only occurs in species with sexual dimorphism"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "Intralocus conflict: same allele at same locus is beneficial in one sex, deleterious in the other. Selection cannot fully optimize for both sexes simultaneously at that locus. Partially resolved by sex-limited expression, genomic imprinting, or sex chromosomes. It is NOT easily resolved.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q019",
+    "topic": "life-history",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "In Stearns' opossum experiment, opossums on a predator-free island evolved slower reproduction and longer lifespans over ~5,000 years compared to mainland opossums facing high predation. What does this tell us about the relationship between extrinsic mortality and life history evolution?",
+    "expectedAnswer": "High extrinsic mortality (predation on mainland) selects for fast life history — reproduce quickly before dying. Low extrinsic mortality (island) means animals can expect to survive longer → selection favors investing more in somatic maintenance (repair, immune function) because the animal is likely to survive to use those investments → slower, later reproduction and longer lifespan. Extrinsic mortality is the key driver of life history pace.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q020",
+    "topic": "life-history",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "The r vs. K selection framework is often used to describe life history variation. Which statement is most accurate?",
+    "options": [
+      "r-selected species always live in stable environments and invest heavily in each offspring",
+      "K-selected species always have high extrinsic mortality and produce many small offspring",
+      "r vs. K is a useful simplification but oversimplifies life history — extrinsic mortality rate is the more fundamental predictor of life history pace",
+      "r vs. K selection perfectly predicts all life history variation in natural populations"
+    ],
+    "correctIndex": 2,
+    "expectedAnswer": "r vs. K selection is an oversimplification. The more fundamental variable is extrinsic mortality rate — high extrinsic mortality favors fast life history (many offspring, short life), low extrinsic mortality favors slow life history. r/K labels can be misleading because environment, density, and age-structure interact.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q021",
+    "topic": "life-history",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "According to the Trivers-Willard hypothesis, a female red deer (hind) in excellent body condition is predicted to produce a higher proportion of male calves than a hind in poor condition. Why?",
+    "expectedAnswer": "Male red deer reproductive success has high variance — a high-quality male can sire many offspring while a low-quality male sires few. Female RS has lower variance — a female always achieves some reproductive success regardless of condition. A high-quality mother produces high-quality sons who can achieve very high RS. A mother in poor condition cannot give sons the quality boost needed to succeed; daughters will at least achieve moderate RS. So condition-dependent investment in sons = Trivers-Willard.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q022",
+    "topic": "life-history",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Parental investment theory (Trivers 1972) predicts that the sex providing more parental investment per offspring will become the choosy sex. What is parental investment defined as?",
+    "options": [
+      "The total time a parent spends with offspring",
+      "The number of offspring produced per breeding season",
+      "Any investment by the parent that increases offspring fitness at a cost to the parent's ability to invest in other offspring",
+      "The energetic cost of producing gametes (eggs vs. sperm)"
+    ],
+    "correctIndex": 2,
+    "expectedAnswer": "Parental investment = ANY investment that increases offspring fitness at a cost to the parent's other offspring (future or current). This includes energy, time, risk, and resources. It is NOT just time spent, and it is broader than gamete cost alone (though anisogamy is the starting point).",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q023",
+    "topic": "life-history",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "The mouse Igf2 gene is paternally expressed (maternal copy is silenced) and promotes fetal growth. The Igf2r gene is maternally expressed (paternal copy is silenced) and degrades the IGF2 signal. Using kinship theory, explain why this pattern of imprinting makes evolutionary sense.",
+    "expectedAnswer": "Kinship theory: paternal genome benefits from maximizing this offspring's growth because the father's genes may not be present in the mother's future offspring (polyandry or multiple partners). So paternal genes are selected to extract maximum resources from the mother NOW. Maternal genome benefits from moderating current offspring demands to preserve resources for future offspring (all of whom share her genes equally). Igf2 (paternal) promotes growth = maximize current offspring. Igf2r (maternal) suppresses growth = moderate extraction for maternal fitness.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q024",
+    "topic": "life-history",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Genomic imprinting results in parent-of-origin-specific gene expression. Which statement about imprinted genes is CORRECT?",
+    "options": [
+      "Imprinting deletes the silenced copy of the gene from the genome",
+      "The silenced allele is present in the genome but epigenetically silenced (e.g., by DNA methylation)",
+      "Imprinting only affects the sex chromosomes, not autosomes",
+      "Imprinting is a random process with no consistent parent-of-origin pattern"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "The silenced allele is present but epigenetically silenced — typically through DNA methylation and histone modification. Imprinting does NOT delete genes. It is a reversible epigenetic modification with consistent parent-of-origin patterns. Many imprinted genes are on autosomes.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q025",
+    "topic": "life-history",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "A gene increases testosterone levels, which improves reproductive success in men aged 20-35 but increases prostate cancer risk at age 65+. Would natural selection favor or disfavor this gene, and which evolutionary theory of aging does this illustrate?",
+    "expectedAnswer": "Natural selection would favor this gene (or at least not strongly disfavor it). This illustrates antagonistic pleiotropy (Williams): the gene is beneficial early in life (high testosterone → better RS at age 20-35) when selection is strong, and harmful late in life (cancer at 65+) when selection is weak (most reproduction already done). The late cost is not enough to outweigh the early benefit under natural selection.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q026",
+    "topic": "life-history",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Which statement correctly distinguishes mutation accumulation theory from antagonistic pleiotropy theory of senescence?",
+    "options": [
+      "Mutation accumulation predicts that late-acting deleterious genes are ACTIVELY SELECTED FOR because they are beneficial early; antagonistic pleiotropy predicts they are passively tolerated",
+      "Mutation accumulation predicts late-acting deleterious mutations ACCUMULATE PASSIVELY because selection is weak at old ages; antagonistic pleiotropy predicts genes BENEFICIAL EARLY but harmful late are actively favored",
+      "Both theories predict the same mechanism — accumulation of late-acting deleterious mutations",
+      "Antagonistic pleiotropy applies only to mammals; mutation accumulation applies only to insects"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "Mutation accumulation (Medawar): late-acting deleterious mutations accumulate because purifying selection is weak at old ages — passive process. Antagonistic pleiotropy (Williams): genes that are BENEFICIAL EARLY but harmful late are ACTIVELY FAVORED by selection — active process. The distinction is passive accumulation vs. active selection for early-benefit genes.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q027",
+    "topic": "coevolution",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "Garter snake populations that live near rough-skinned newts (which produce tetrodotoxin/TTX) have much higher TTX resistance than garter snake populations that live far from newts. Newt populations near high-resistance snakes produce more TTX than newt populations far from resistant snakes. What coevolutionary concept best explains this geographic pattern?",
+    "expectedAnswer": "Geographic mosaic of coevolution (Thompson). Near newts = coevolutionary hotspot: reciprocal selection is strong, both species have evolved. Far from newts = coevolutionary coldspot: no selection pressure from TTX, so no resistance evolved in snakes, and newts have no need for high TTX. The coevolutionary dynamic is not uniform across the landscape — it occurs only where the species actually interact and selection pressures overlap.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q028",
+    "topic": "coevolution",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Which statement about coevolution is CORRECT?",
+    "options": [
+      "Coevolution requires that both interacting species benefit from the interaction",
+      "Coevolution refers to any case where two species share a similar evolutionary history, even without reciprocal selection",
+      "Coevolution involves reciprocal evolutionary change driven by selection pressures between two interacting species",
+      "Coevolution only occurs between parasites and their hosts, not between mutualists"
+    ],
+    "correctIndex": 2,
+    "expectedAnswer": "Coevolution = reciprocal evolutionary change between interacting species, driven by selection. It does NOT require mutual benefit — antagonistic coevolution (host-parasite arms races) is coevolution. It is NOT just shared evolutionary history (that is correlated evolution). Both mutualistic and antagonistic interactions can coevolve.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q029",
+    "topic": "coevolution",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "A harmless hoverfly has evolved yellow-and-black stripes resembling those of yellowjacket wasps. Predators that have learned to avoid yellowjackets also avoid the hoverfly. If the hoverfly population grows much larger than the yellowjacket population, what would you predict would happen to the effectiveness of the mimicry?",
+    "expectedAnswer": "The mimicry would break down. Predators would increasingly encounter the hoverfly (harmless mimic) and, upon eating it without consequence, learn that the yellow-and-black pattern is not always a reliable warning. As the mimic frequency increases relative to the model (yellowjacket), the predator's training signal is diluted — the pattern becomes associated with safety rather than danger. Selection would then disfavor the mimicry in hoverflies (predators no longer avoid them as much).",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q030",
+    "topic": "coevolution",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "The monarch butterfly and the viceroy butterfly are a classic example taught as Batesian mimicry. What has more recent research revealed?",
+    "options": [
+      "Viceroys are more toxic than monarchs, confirming Batesian mimicry",
+      "Viceroys are also unpalatable to predators, suggesting the system is better described as Müllerian mimicry",
+      "Neither butterfly is unpalatable — both rely on learned avoidance through repeated encounters",
+      "The resemblance between monarchs and viceroys is due to common ancestry, not mimicry at all"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "More recent research found that viceroy butterflies are also unpalatable to predators (contain their own defensive chemicals). This means both species benefit from the shared warning pattern → Müllerian mimicry, not Batesian. The classic textbook example of Batesian mimicry is now considered incorrect.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q031",
+    "topic": "coevolution",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "When myxoma virus was introduced to Australia in 1950 to control rabbit populations, it initially had near 100% lethality. Over subsequent years, both the virus virulence and rabbit resistance evolved. The virus evolved toward intermediate virulence. What evolutionary principle explains why the virus became less virulent over time?",
+    "expectedAnswer": "Virulence-transmission trade-off. Very high virulence = kills rabbits too fast → virus cannot spread to new hosts → low transmission success. Low virulence = rabbits survive but virus persists and can spread. Intermediate virulence = optimal trade-off where the virus maximizes transmission before killing the host. Selection favored virus strains that could replicate and transmit before the host died.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q032",
+    "topic": "coevolution",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "What evidence supports the endosymbiotic origin of mitochondria?",
+    "options": [
+      "Mitochondria have their own linear DNA similar to eukaryotic chromosomes and divide by mitosis",
+      "Mitochondria have circular DNA, 70S ribosomes, double membranes, and sequence similarity to α-proteobacteria",
+      "Mitochondria are found only in animal cells, suggesting they evolved after the divergence of plants and animals",
+      "Mitochondria's genome is identical to the host cell nucleus, confirming they are derived from nuclear genes"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "Evidence for endosymbiotic origin: (1) circular DNA (like prokaryotes), (2) 70S ribosomes (not 80S eukaryotic), (3) double membrane (from engulfment), (4) binary fission (not mitosis), (5) sequence similarity to α-proteobacteria specifically. Mitochondrial DNA is NOT identical to nuclear DNA — it is a reduced prokaryotic genome.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q033",
+    "topic": "behavior",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "A male stickleback fish attacks a red-colored decoy placed in his territory. His testosterone levels are elevated during breeding season and activate aggressive neural circuits. (a) Is 'elevated testosterone activates aggression circuits' a proximate or ultimate explanation? (b) Why do male sticklebacks attack red objects at all — provide an ultimate explanation.",
+    "expectedAnswer": "(a) Proximate explanation — it describes the physiological mechanism (hormones → neural circuits → behavior). (b) Ultimate explanation: male sticklebacks with red bellies are rival males competing for territory and mates. Attacking red objects has fitness consequences — defending territory → exclusive access to females → higher reproductive success. Natural selection has favored males that respond aggressively to red (honest signal of rival male presence).",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q034",
+    "topic": "behavior",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Which statement about Tinbergen's four questions is CORRECT?",
+    "options": [
+      "A proximate explanation replaces the need for an ultimate explanation for the same behavior",
+      "Ultimate explanations (function and evolution) are more important than proximate explanations (mechanism and development)",
+      "Proximate and ultimate explanations are complementary — both are needed for a complete understanding of any behavior",
+      "Tinbergen's framework applies only to vertebrate behavior, not to invertebrates or plants"
+    ],
+    "correctIndex": 2,
+    "expectedAnswer": "Proximate and ultimate explanations are complementary — they answer different questions about the same behavior. Proximate = how does it work mechanistically? Ultimate = why did it evolve? Neither replaces the other. Tinbergen's framework applies to all behavioral phenotypes, including invertebrates and even non-neural organisms.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q035",
+    "topic": "behavior",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "In a Hawk-Dove population where Hawks are initially rare, Hawks always win fights against Doves (gaining the resource) and Doves retreat without cost. As Hawks become more common, what happens to the fitness of Hawks relative to Doves? Where does the population reach an ESS?",
+    "expectedAnswer": "When Hawks are rare, they mostly fight Doves and always win → high payoff. As Hawks become common, Hawks increasingly fight other Hawks → both pay the cost of injury (losing fights). Average Hawk payoff decreases as Hawk frequency rises. Dove payoff is constant (sometimes get resource when no Hawk is around). ESS is reached at the frequency where average Hawk payoff = average Dove payoff — a mixed strategy equilibrium (or mixed polymorphism). Neither pure Hawk nor pure Dove is an ESS.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q036",
+    "topic": "behavior",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Which statement about group selection is most accurate?",
+    "options": [
+      "Group selection is completely invalid and has been fully replaced by kin selection as an explanation for all altruistic behaviors",
+      "Group selection can operate under specific conditions (e.g., high between-group variation, low within-group selection), but is not the primary explanation for most social behaviors",
+      "Group selection is the primary mechanism explaining all cooperative behaviors in social species",
+      "Group selection and individual selection are mutually exclusive — a trait cannot be explained by both"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "Group selection is not universally rejected — it can operate under specific conditions: (1) sufficient variation between groups, (2) group-level selection stronger than within-group individual selection. These conditions are met rarely. Most altruistic behaviors are better explained by kin selection or reciprocal altruism. Group and individual selection are not mutually exclusive — multilevel selection theory allows both to operate simultaneously.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q037",
+    "topic": "behavior",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "A Belding's ground squirrel emits an alarm call when it spots a predator. The call attracts predator attention (C = 0.25 reduction in caller's own survival probability). The call warns 4 full siblings (r = 0.5 each), increasing each sibling's survival by 0.10. Does Hamilton's rule predict the alarm call should evolve? Show your calculation.",
+    "expectedAnswer": "Hamilton's rule: rB > C. B = total benefit = 4 × 0.10 = 0.40. r = 0.5 (full sibling relatedness). rB = 0.5 × 0.40 = 0.20. C = 0.25. rB (0.20) < C (0.25) → Hamilton's rule does NOT predict the call evolves with these values. However, if the squirrel warns more relatives, or if relatedness is higher (e.g., more full sibs), the call could evolve. This illustrates that kin selection depends on the actual values of r, B, and C.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q038",
+    "topic": "behavior",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "Which statement about Hamilton's rule (rB > C) is CORRECT?",
+    "options": [
+      "Hamilton's rule predicts that altruistic behavior WILL evolve whenever the conditions are met",
+      "Hamilton's rule predicts the conditions under which altruism CAN spread by natural selection, not that it will certainly evolve in all cases",
+      "Hamilton's rule requires that the actor must be able to consciously recognize and identify kin",
+      "Inclusive fitness equals direct fitness only — indirect effects through relatives are not included"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "Hamilton's rule predicts the conditions under which an altruistic allele can spread — when rB > C, the allele increases in frequency. It does not guarantee altruism will evolve (other factors: genetic drift, mutation, etc.). Kin recognition can be based on familiarity or spatial cues — it does not require conscious recognition. Inclusive fitness = direct + indirect fitness from relatives.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q039",
+    "topic": "behavior",
+    "heading": "apply-it",
+    "questionType": "scenario",
+    "questionText": "Termites are diploid yet are eusocial, with sterile worker castes. Haplodiploidy is often cited as promoting eusociality in Hymenoptera (ants, bees, wasps). Does the existence of eusocial termites disprove the haplodiploidy hypothesis for eusociality? Explain.",
+    "expectedAnswer": "No — termites do not disprove haplodiploidy's role in Hymenoptera; they show haplodiploidy is not the ONLY route to eusociality. Termites likely evolved eusociality via other mechanisms: fortress defense (the colony is a defended resource worth maintaining), assured fitness returns, or inbreeding increasing relatedness. The existence of diploid eusocial species shows haplodiploidy is neither necessary nor sufficient — it merely lowers the rB > C threshold for Hymenoptera by raising r to 0.75.",
+    "difficulty": 3,
+    "examTag": "exam2"
+  },
+  {
+    "id": "evol-q040",
+    "topic": "behavior",
+    "heading": "exam-traps",
+    "questionType": "mcq",
+    "questionText": "In Hymenoptera (ants, bees, wasps), worker females are more closely related to their sisters (r = 0.75) than to their own offspring (r = 0.5). Which statement CORRECTLY explains why r = 0.75 for sisters in haplodiploid species?",
+    "options": [
+      "Because workers share 75% of their genes on average with all individuals in the colony",
+      "Because the father is haploid, all daughters receive IDENTICAL copies of all paternal genes (r = 1.0 for paternal alleles), and on average r = 0.5 for maternal alleles, giving r = 0.75 overall to full sisters",
+      "Because eusocial insects have 3 sets of chromosomes (triploid), increasing overall relatedness",
+      "Because workers sacrifice their own reproduction entirely, transferring all genetic value to sisters"
+    ],
+    "correctIndex": 1,
+    "expectedAnswer": "Haplodiploidy: father is haploid → all daughters get IDENTICAL paternal genome (r_paternal = 1.0 for full sisters from same father). From diploid mother, daughters share r = 0.5. Overall r to full sisters = (1.0 + 0.5)/2 = 0.75. Compare to r = 0.5 to own offspring. Since 0.75 > 0.5, Hamilton's rule more easily satisfied by helping raise sisters than raising own offspring.",
+    "difficulty": 4,
+    "examTag": "exam2"
+  }
+]

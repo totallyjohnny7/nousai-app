@@ -133,9 +133,12 @@ export interface QuizAttempt {
   questions: unknown[];
   answers: QuizAnswer[];
   folder?: string;
+  deleted?: boolean;
+  deletedAt?: number;
 }
 
 export interface FlashcardItem {
+  id?: string;  // Stable ID for merge — generated on creation, backfilled on first load
   front: string;
   back: string;
   topic?: string;
@@ -152,6 +155,8 @@ export interface FlashcardItem {
   testFormat?: CardTestFormat;       // for transfer-appropriate processing
   priority?: 'high' | 'normal';     // 'high' = show first (Pre-Test hypercorrection)
   occlusionData?: OcclusionCardData; // for occlusion card type
+  deleted?: boolean;
+  deletedAt?: number;
 }
 
 export interface CourseTopic {
@@ -182,6 +187,8 @@ export interface Course {
   flashcards: FlashcardItem[];
   modules?: CourseModule[];
   updatedAt?: string; // ISO timestamp for per-course merge conflict resolution (Lamport 1978)
+  deleted?: boolean;
+  deletedAt?: number;
 }
 
 export interface CoachData {
@@ -293,6 +300,8 @@ export interface Note {
   type: 'note' | 'quiz' | 'flashcard' | 'ai-output' | 'match';
   labHtml?: string;
   pinned?: boolean;
+  deleted?: boolean;
+  deletedAt?: number;
 }
 
 export interface Drawing {
@@ -306,6 +315,8 @@ export interface Drawing {
   height: number;
   folder?: string;
   template?: string;
+  deleted?: boolean;
+  deletedAt?: number;
 }
 
 export interface StudySession {
@@ -383,6 +394,8 @@ export interface AIChatSession {
   messages: { role: 'user' | 'assistant'; content: string }[];
   createdAt: string;
   updatedAt: string;
+  deleted?: boolean;
+  deletedAt?: number;
 }
 
 // ── Tool Session History ──────────────────────────────────────────────────────
@@ -518,6 +531,8 @@ export interface SavedVideo {
   mimeType: string;          // 'video/mp4' | 'video/webm'
   notes?: VideoNote[];             // timestamped playback notes (synced — text only)
   noteTemplates?: VideoNoteTemplate[]; // custom note categories/templates for this video
+  deleted?: boolean;
+  deletedAt?: number;
 }
 
 export interface PluginData {
@@ -533,7 +548,7 @@ export interface PluginData {
   studySessions?: StudySession[];
   weeklyPlan?: WeeklyPlan;
   assignments?: Assignment[];
-  matchSets?: { id: string; name: string; subject: string; pairs: { term: string; definition: string }[]; createdAt: string }[];
+  matchSets?: { id: string; name: string; subject: string; pairs: { term: string; definition: string }[]; createdAt: string; deleted?: boolean; deletedAt?: number }[];
   knowledgeWeb?: { id: string; from: string; to: string; relation: string }[];
   studySchedules?: StudySchedule[];
   annotations?: QuizAnnotation[];
@@ -555,6 +570,8 @@ export interface PluginData {
   studyGuides?: StudyGuide[];
   // Card quality cache — keyed by cardKey; stripped from trimForSync (ephemeral)
   cardQualityCache?: Record<string, CardQualityScore>;
+  // Deletion log for tombstone-aware sync
+  deletionLog?: Array<{ id: string; entityType: string; deletedAt: number }>;
   // Omni Protocol V6 — session history, Feynman gaps, arc phase per course
   omniProtocol?: OmniProtocolData;
   // Mind map user edits — keyed by map id ('phys'|'biol'|'evol'|'jp')
@@ -938,6 +955,8 @@ export interface StudyGuide {
   createdAt: string
   updatedAt: string
   sizeKb?: number
+  deleted?: boolean
+  deletedAt?: number
 }
 
 /** Inline card type for suspended session serialization (avoids circular import with OmniProtocol) */

@@ -94,7 +94,7 @@ export default function DrawPage({ embedded = false }: { embedded?: boolean } = 
     if (data?.pluginData) {
       const stored = data.pluginData.drawings as Drawing[] | undefined;
       if (stored && Array.isArray(stored)) {
-        setDrawings(stored);
+        setDrawings(stored.filter(d => !d.deleted));
       }
     }
   }, [data]);
@@ -157,7 +157,12 @@ export default function DrawPage({ embedded = false }: { embedded?: boolean } = 
 
   function deleteDrawing(id: string) {
     if (!confirm('Delete this drawing?')) return;
-    persistDrawings(drawings.filter(d => d.id !== id));
+    const updated = drawings.map(d => d.id === id ? { ...d, deleted: true, deletedAt: Date.now(), updatedAt: new Date().toISOString() } : d);
+    setDrawings(updated);
+    updatePluginData({
+      drawings: updated,
+      deletionLog: [...(data?.pluginData.deletionLog || []), { id, entityType: 'drawing', deletedAt: Date.now() }]
+    });
     if (activeDrawingId === id) {
       setActiveDrawingId(null);
       setView('browser');
