@@ -1,0 +1,1250 @@
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
+import type { NousAIData, CanvasEvent, QuizAttempt, Course, GamificationData, ProficiencyData, SRData, TimerState, PageContext, SavedVideo, VideoCaption, VideoNote, VideoNoteCategory, VideoNoteTemplate, DeviceSettings } from './types';
+import { writeClipboard, saveFilePicker, openFilePicker, getPermPref } from './utils/permissions';
+import { syncToCloud, syncFromCloud, subscribeToMetadataChanges } from './utils/auth';
+import { runMigrations } from './utils/migrations';
+import { validateBeforeWrite, countCards, logWrite } from './utils/writeGuard';
+import { saveSnapshot } from './utils/snapshotManager';
+import { dataHealthCheck, type HealthReport } from './utils/dataHealthCheck';
+import { saveGoldenCopy } from './utils/goldenCopy';
+import { initLeaderElection, destroyLeaderElection, broadcast, isLeader, getRole, TAB_ID, type TabRole } from './utils/tabLeader';
+import { initRxStore, loadFromRxDB, saveToRxDB, subscribeToRxChanges } from './db/useRxStore';
+import { log, warn } from './utils/logger';
+import { mergeAppData } from './sync/mergeEngine';
+import { detectConflict, type SyncResolution } from './utils/conflictDetection';
+import { mergeLamportClock } from './sync/lamportClock';
+import { withExponentialBackoff } from './sync/retrySync';
+
+/* ── Default empty state ──────────────────────────────── */
+const emptyGamification: GamificationData = {
+  xp: 0, level: 1, totalQuizzes: 0, totalCorrect: 0, totalAnswered: 0,
+  totalMinutes: 0, streak: 0, bestStreak: 0, streakFreezes: 0,
+  lastStudyDate: null, perfectScores: 0,
+  badges: [], dailyGoal: { todayXp: 0, todayMinutes: 0, todayQuestions: 0, targetXp: 100 }
+};
+
+const emptyTimer: TimerState = {
+  swRunning: false, swAccumulatedMs: 0, swResumedAt: null, swCourseId: '', swType: 'review',
+  pomoRunning: false, pomoEndTime: null, pomoWorkMin: 20, pomoBreakMin: 10,
+  pomoLongBreakMin: 15, pomoPhase: 'idle', pomoSession: 0, pomoTotalSessions: 0,
+  pomoRemainingMs: 0, savedAt: Date.now()
+};
+
+/* ── Merge logic moved to src/sync/mergeEngine.ts ── */
+
+/* ── Data normalization — fills in missing optional fields ── */
+export function normalizeData(d: NousAIData): NousAIData {
+  // IDB data may be from older app versions missing newer fields, so cast to partial
+  const s = d.settings as Partial<NousAIData['settings']> | undefined;
+  const p = d.pluginData as Partial<NousAIData['pluginData']> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const safeArray = <T,>(v: any): T[] => {
+    if (Array.isArray(v)) return v as T[];
+    // Firestore can deserialize JS arrays as plain objects {0: ..., 1: ...}
+    // Detect and recover these instead of silently wiping the data
+    if (v && typeof v === 'object') {
+      const keys = Object.keys(v);
+      if (keys.length > 0 && keys.every(k => /^\d+$/.test(k)))
+        return keys.sort((a, b) => parseInt(a) - parseInt(b)).map(k => v[k]) as T[];
+    }
+    return [];
+  };
+  return {
+    settings: {
+      aiProvider: s?.aiProvider ?? '',
+      canvasUrl: s?.canvasUrl ?? '',
+      canvasToken: s?.canvasToken ?? '',
+      canvasIcalUrl: s?.canvasIcalUrl ?? '',
+      ...s,
+      // Array fields AFTER spread — guards against Firestore object deserialization
+      canvasEvents: safeArray(s?.canvasEvents),
+    },
+    pluginData: {
+      coachData: p?.coachData ?? { courses: [], sessions: [], streak: 0, totalStudyMinutes: 0, weeklyPlan: null },
+      proficiencyData: p?.proficiencyData ?? { settings: { proficiencyThreshold: 85, minAttempts: 3, recentWeight: 0.7 }, subjects: {} },
+      srData: p?.srData ?? { cards: [] },
+      timerState: p?.timerState ?? emptyTimer,
+      gamificationData: p?.gamificationData ?? emptyGamification,
+      quizBank: p?.quizBank ?? {},
+      ...p,
+      // Array fields AFTER spread — guards against Firestore object deserialization
+      // (non-array truthy objects bypass || [] so we must use Array.isArray)
+      quizHistory: safeArray(p?.quizHistory),
+      notes: safeArray(p?.notes),
+      drawings: safeArray(p?.drawings),
+      matchSets: safeArray(p?.matchSets),
+      aiChatSessions: safeArray(p?.aiChatSessions),
+      toolSessions: safeArray(p?.toolSessions),
+      savedVideos: safeArray(p?.savedVideos),
+      omniProtocol: p?.omniProtocol ?? undefined,
+    } as NousAIData['pluginData'],
+  };
+}
+
+/* ── Cross-tab sync via leader election ──────────────── */
+// Leader tab owns all IDB writes. Follower tabs proxy mutations through
+// the BroadcastChannel → leader applies → broadcasts updated state back.
+// Re-export TAB_ID from tabLeader (was previously defined here)
+export { TAB_ID };
+
+function broadcastDataChanged() {
+  broadcast({ type: 'data-changed' });
+}
+
+// Follower tabs send their state updates to the leader via this message type
+function sendMutationToLeader(data: NousAIData) {
+  broadcast({ type: 'follower-mutation', payload: data });
+}
+
+/* ── Sync status type ────────────────────────────────── */
+export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'offline';
+
+/* ── Auto-sync scheduler ─────────────────────────────── */
+const AUTO_SYNC_DEBOUNCE_MS = 10 * 1000; // 10 seconds (was 30s — reduced for faster cross-device sync)
+
+class AutoSyncScheduler {
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  dirty = false;
+  private failCount = 0;           // consecutive failure count for retry backoff
+  private dataRef: React.RefObject<NousAIData | null>;
+  lastPushedTimestamp: string | null = null;  // tracks our last sync timestamp for self-trigger guard
+  onFlushStart?: () => void;
+  onFlushEnd?: (success: boolean) => void;
+
+  constructor(dataRef: React.RefObject<NousAIData | null>) {
+    this.dataRef = dataRef;
+  }
+
+  markDirty() {
+    this.dirty = true;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.flush(), AUTO_SYNC_DEBOUNCE_MS);
+  }
+
+  /** Urgent sync — 3s debounce for critical state changes (card ratings, imports, course create/delete) */
+  markDirtyUrgent() {
+    this.dirty = true;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.flush(), 3_000);
+  }
+
+  /** Immediate sync — no debounce, for create/delete/import operations */
+  markDirtyImmediate() {
+    this.dirty = true;
+    if (this.timer) clearTimeout(this.timer);
+    this.flush();
+  }
+
+  async flush() {
+    if (!this.dirty) return;
+    const uid = localStorage.getItem('nousai-auth-uid');
+    const data = this.dataRef.current;
+    if (!uid || !data) { this.dirty = false; return; }
+    this.dirty = false;
+    this.onFlushStart?.();
+    try {
+      this.lastPushedTimestamp = new Date().toISOString();
+      await syncToCloud(uid, data);
+      this.failCount = 0;
+      this.onFlushEnd?.(true);
+    } catch (e) {
+      console.warn('[AutoSync] flush failed:', e instanceof Error ? e.message : e);
+      this.failCount++;
+      this.onFlushEnd?.(false);
+      // Exponential backoff retry: 20s, 40s, 80s, max 5min
+      if (this.failCount < 5) {
+        const retryMs = Math.min(AUTO_SYNC_DEBOUNCE_MS * Math.pow(2, this.failCount), 300_000);
+        this.dirty = true;
+        this.timer = setTimeout(() => this.flush(), retryMs);
+      }
+    }
+  }
+
+  stop() {
+    if (this.timer) clearTimeout(this.timer);
+  }
+}
+
+export interface MatchSet {
+  id: string;
+  name: string;
+  subject: string;
+  folder?: string;
+  pairs: { term: string; definition: string }[];
+  createdAt: string;
+  bestScore?: number;
+}
+
+interface StoreCtx {
+  data: NousAIData | null;
+  setData: (d: NousAIData | ((prev: NousAIData) => NousAIData)) => void;
+  updatePluginData: (partial: Partial<NousAIData['pluginData']>) => void;
+  loaded: boolean;
+  importData: (json: string) => void;
+  exportData: () => string;
+  copyToClipboard: (text: string) => Promise<boolean>;
+  exportToFile: (filename?: string) => Promise<boolean>;
+  importFromFile: () => Promise<boolean>;
+  matchSets: MatchSet[];
+  saveMatchSet: (ms: MatchSet) => void;
+  events: CanvasEvent[];
+  quizHistory: QuizAttempt[];
+  courses: Course[];
+  gamification: GamificationData;
+  proficiency: ProficiencyData | null;
+  srData: SRData | null;
+  timerState: TimerState;
+  setTimerState: (ts: TimerState) => void;
+  einkMode: boolean;
+  setEinkMode: (v: boolean) => void;
+  betaMode: boolean;
+  setBetaMode: (v: boolean) => void;
+  backupNow: () => Promise<boolean>;
+  triggerSyncToCloud: () => Promise<void>;
+  triggerSyncFromCloud: () => Promise<void>;
+  // Data health
+  healthReport: HealthReport | null;
+  // Sync status
+  syncStatus: SyncStatus;
+  lastSyncAt: string | null;
+  remoteUpdateAvailable: boolean;
+  startRemoteWatch: (uid: string) => void;
+  stopRemoteWatch: () => void;
+  loadRemoteData: () => Promise<void>;
+  dismissRemoteBanner: () => void;
+  // Page context for Nous AI Panel
+  activePageContext: PageContext | null
+  setPageContext: (ctx: PageContext | null) => void
+  // Tool visibility (Learn page customization)
+  hiddenToolIds: string[]
+  setHiddenToolIds: (ids: string[]) => void
+  // Video Studio
+  savedVideos: SavedVideo[]
+  addVideo: (video: SavedVideo) => void
+  deleteVideo: (videoId: string) => void
+  updateVideoMeta: (videoId: string, updates: Partial<Pick<SavedVideo, 'title' | 'captions' | 'defaultSpeed' | 'courseId' | 'downloadUrl' | 'thumbnailBase64' | 'notes' | 'noteTemplates' | 'duration'>>) => void
+  // Device settings (Input Devices — K20, Stream Deck, Gamepad, etc.)
+  deviceSettings: DeviceSettings
+  setDeviceSettings: (settings: DeviceSettings) => void
+  // UI state flags for K20 hotkey system
+  isReviewActive: boolean
+  setIsReviewActive: (v: boolean) => void
+  modalOpen: boolean
+  setModalOpen: (v: boolean) => void
+  annotationPanelOpen: boolean
+  setAnnotationPanelOpen: (v: boolean) => void
+}
+
+const Ctx = createContext<StoreCtx>({} as StoreCtx);
+
+export function StoreProvider({ children }: { children: ReactNode }) {
+  const [data, setDataRaw] = useState<NousAIData | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [healthReport, setHealthReport] = useState<HealthReport | null>(null);
+  const [einkMode, setEinkModeState] = useState(() => localStorage.getItem('nousai-eink') === 'true');
+  const [betaMode, setBetaModeState] = useState(() => localStorage.getItem('nousai-beta') === 'true');
+  const dataRef = useRef<NousAIData | null>(null);
+  const fromSyncRef = useRef(false); // true when data was loaded from cross-tab sync (skip broadcast)
+  const localDirtyRef = useRef(false); // true when local changes haven't been saved to IDB yet
+  const loadedRef = useRef(false); // true after initial IDB load completes (guards against pre-load saves)
+
+  // ── Sync status state ───────────────────────────────────
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(() =>
+    navigator.onLine ? 'idle' : 'offline'
+  );
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(() =>
+    localStorage.getItem('nousai-last-sync')
+  );
+  const [remoteUpdateAvailable, setRemoteUpdateAvailable] = useState(false);
+  const [activePageContext, setPageContext] = useState<PageContext | null>(null);
+  const [hiddenToolIds, setHiddenToolIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('nousai-hidden-tools') ?? '[]') } catch { return [] }
+  });
+  const snapshotUnsubRef = useRef<(() => void) | null>(null);
+
+  // ── Device settings (K20, Stream Deck, Gamepad, etc.) ──
+  const [deviceSettings, setDeviceSettingsRaw] = useState<DeviceSettings>(() => {
+    try {
+      const raw = localStorage.getItem('nousai_device_settings');
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<DeviceSettings>;
+        return { k20: true, streamDeck: false, gamepad: false, midi: false, otherHID: false, ...parsed, keyboard: true } as DeviceSettings;
+      }
+    } catch { /* corrupt */ }
+    return { keyboard: true, k20: true, streamDeck: false, gamepad: false, midi: false, otherHID: false };
+  });
+  const setDeviceSettings = useCallback((s: DeviceSettings) => {
+    const safe = { ...s, keyboard: true as const };
+    setDeviceSettingsRaw(safe);
+    try { localStorage.setItem('nousai_device_settings', JSON.stringify(safe)); } catch { /* full */ }
+  }, []);
+
+  // ── UI state flags for K20 hotkey system ──
+  const [isReviewActive, setIsReviewActive] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
+
+  // Keep ref in sync so functional updaters always read latest
+  useEffect(() => { dataRef.current = data; }, [data]);
+
+  // setData supports both direct values and functional updaters to prevent race conditions
+  const setData = useCallback((valOrFn: NousAIData | ((prev: NousAIData) => NousAIData)) => {
+    localDirtyRef.current = true;
+    if (typeof valOrFn === 'function') {
+      setDataRaw(prev => prev ? valOrFn(prev) : prev);
+    } else {
+      setDataRaw(valOrFn);
+      // Write-through: when setting data for the first time (onboarding/import),
+      // persist immediately — don't rely on the debounced save effect,
+      // which can lose data due to leader election race conditions.
+      if (!dataRef.current && valOrFn) {
+        log('[STORE] First data write (onboarding/import) — persisting immediately');
+        saveToIDB(valOrFn);
+        saveToRxDB(valOrFn).catch(() => {});
+      }
+    }
+  }, []);
+
+  // Safe helper: merges partial pluginData using functional updater (prevents stale data overwrites)
+  const updatePluginData = useCallback((partial: Partial<NousAIData['pluginData']>) => {
+    localDirtyRef.current = true;
+    setDataRaw(prev => prev ? { ...prev, pluginData: { ...prev.pluginData, ...partial } } : prev);
+  }, []);
+
+  // Load from RxDB on mount — runs migration from old blob on first load.
+  // Falls back to legacy IDB if RxDB fails (safety net during transition).
+  useEffect(() => {
+    (async () => {
+      let d: NousAIData | null = null;
+      let source = 'legacy-idb';
+
+      // PRIMARY: Load from legacy IDB (reliable, always works)
+      // RxDB is disabled due to persistent DB9 schema errors that delete user data.
+      // Legacy IDB is the single source of truth until RxDB migration is fixed.
+      try {
+        d = await loadFromIDB();
+        if (d) {
+          log('[STORE] Loaded from legacy IDB');
+        }
+      } catch (idbErr) {
+        console.error('[STORE] Legacy IDB load failed:', idbErr);
+      }
+
+      // FALLBACK: Try RxDB only if legacy IDB is empty
+      if (!d) {
+        try {
+          await initRxStore();
+          d = await loadFromRxDB();
+          if (d) {
+            source = 'rxdb-fallback';
+            log('[STORE] Legacy IDB empty, loaded from RxDB');
+          }
+        } catch (rxErr) {
+          console.error('[STORE] RxDB also failed:', rxErr);
+        }
+      }
+
+      // LAST RESORT: Try cloud sync if signed in
+      if (!d) {
+        try {
+          const uid = localStorage.getItem('nousai-auth-uid');
+          if (uid) {
+            const { syncFromCloud } = await import('./utils/auth');
+            d = await syncFromCloud(uid);
+            if (d) {
+              source = 'cloud-recovery';
+              console.warn('[STORE] Recovered data from cloud after local storage failure');
+            }
+          }
+        } catch { /* cloud also unavailable */ }
+      }
+
+      // Check crash-recovery data from a follower tab that closed
+      // Only use crash recovery if it has MORE content than what we loaded (prevents stale overwrites)
+      const crashRecovery = localStorage.getItem('nousai-crash-recovery');
+      if (crashRecovery) {
+        try {
+          const recovered = JSON.parse(crashRecovery) as NousAIData;
+          if (recovered?.pluginData?.coachData) {
+            // Compare content richness: use crash recovery only if it has more data
+            const currentCourses = d?.pluginData?.coachData?.courses?.length ?? 0;
+            const currentCards = d?.pluginData?.srData?.cards?.length ?? 0;
+            const recoveredCourses = recovered.pluginData?.coachData?.courses?.length ?? 0;
+            const recoveredCards = recovered.pluginData?.srData?.cards?.length ?? 0;
+            const currentScore = currentCourses * 100 + currentCards;
+            const recoveredScore = recoveredCourses * 100 + recoveredCards;
+            if (recoveredScore > currentScore) {
+              d = recovered;
+              source = 'crash-recovery';
+              log('[STORE] Restored from crash-recovery — had more data than IDB/RxDB');
+            } else {
+              log('[STORE] Skipped crash-recovery — IDB/RxDB data is richer or equal');
+            }
+          }
+        } catch { /* corrupt crash recovery data — ignore */ }
+      }
+      localStorage.removeItem('nousai-crash-recovery');
+      localStorage.removeItem('nousai-crash-recovery-at');
+      // MicroMacro feature removed — clean up stale localStorage data
+      localStorage.removeItem('nous_micromacro_sets');
+
+      if (d) {
+        const migrated = runMigrations(d);
+        const normalized = normalizeData(migrated);
+        const { report, repairedData } = dataHealthCheck(normalized);
+        const final = report.autoRepaired.length > 0 ? repairedData : normalized;
+        if (!report.healthy) {
+          warn('[HEALTH CHECK]', report.score + '/100 —', report.issues.length, 'issues:', report.issues.map((i: { severity: string; code: string; message: string }) => `[${i.severity}] ${i.code}: ${i.message}`).join('; '));
+        } else {
+          log('[HEALTH CHECK] Score:', report.score + '/100 — healthy');
+        }
+        if (report.autoRepaired.length > 0) {
+          log('[HEALTH CHECK] Auto-repaired:', report.autoRepaired.join('; '));
+        }
+        setHealthReport(report);
+        log(`[STORE] Loaded from ${source}:`, final.pluginData?.coachData?.courses?.length ?? 0, 'courses,', final.pluginData?.quizHistory?.length ?? 0, 'quiz entries');
+        lastSavedData = final;
+        saveSnapshot(final, 'boot').catch(() => {});
+        setDataRaw(final);
+      }
+      loadedRef.current = true;
+      setLoaded(true);
+
+      // B1: Auto-pull from cloud on empty state — if user is logged in but has no data
+      if (!d) {
+        const uid = localStorage.getItem('nousai-auth-uid');
+        if (uid) {
+          log('[STORE] Empty state + logged in — auto-pulling from cloud');
+          try {
+            const { syncFromCloud: pullFromCloud } = await import('./utils/auth');
+            const cloudData = await pullFromCloud(uid);
+            if (cloudData) {
+              const normalized = normalizeData(cloudData);
+              setDataRaw(normalized);
+              log('[STORE] Auto-pulled data from cloud:', normalized.pluginData?.coachData?.courses?.length ?? 0, 'courses');
+            }
+          } catch (e) {
+            warn('[STORE] Auto-pull failed (non-fatal):', e);
+          }
+        }
+      }
+    })();
+  }, []);
+
+  // D3: TODO — Defer pull during active edits. This requires threading an isEditing
+  // state through all editor components (TipTap, flashcard editor, quiz creation, etc.)
+  // and checking it before triggering auto-pulls. Skipped for now — too invasive.
+
+  // Persist to IndexedDB on change — debounced to avoid redundant writes during rapid updates
+  // LEADER ELECTION: Only the leader tab writes to IDB. Follower tabs send mutations to the leader.
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!data) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      // Safety: don't save to IDB before the initial load has completed (prevents race condition
+      // where a pre-load state transition could wipe persisted data). After loadedRef is true, any
+      // state (including 0 courses) represents an intentional user action and must be persisted.
+      if (!loadedRef.current) {
+        warn('[STORE] Blocked save: initial IDB load not yet complete');
+        return;
+      }
+
+      // Follower tabs: send mutation to leader instead of writing IDB directly.
+      // IMPORTANT: 'undecided' tabs (leader election pending) save directly —
+      // otherwise data from onboarding/import is lost because sendMutationToLeader
+      // broadcasts to a leader that doesn't exist yet.
+      if (getRole() === 'follower') {
+        if (!fromSyncRef.current) {
+          sendMutationToLeader(data);
+        } else {
+          fromSyncRef.current = false;
+        }
+        localDirtyRef.current = false;
+        return;
+      }
+
+      // Leader tab: save to legacy IDB (primary, reliable)
+      const MAX_QUIZ_HISTORY = 500;
+      const qh = data.pluginData?.quizHistory;
+      const dataToSave = (qh && qh.length > MAX_QUIZ_HISTORY)
+        ? { ...data, pluginData: { ...data.pluginData, quizHistory: qh.slice(-MAX_QUIZ_HISTORY) } }
+        : data;
+      // PRIMARY: Legacy IDB — always works, never corrupts
+      saveToIDB(dataToSave);
+      // SECONDARY: Try RxDB in background (non-blocking, best-effort)
+      saveToRxDB(dataToSave).catch(() => {});
+      localDirtyRef.current = false;
+      localStorage.setItem('nousai-data-modified-at', new Date().toISOString());
+      // Only broadcast if this was a local change, not a cross-tab sync echo
+      if (fromSyncRef.current) {
+        fromSyncRef.current = false;
+      } else {
+        broadcastDataChanged();
+      }
+    }, 500);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [data]);
+
+  // Cross-tab sync via leader election
+  // Leader: handles follower-mutation messages by merging into its own state → writes IDB → broadcasts
+  // Follower: handles data-changed messages by reloading from IDB
+  const tabRoleRef = useRef<TabRole>('undecided');
+
+  useEffect(() => {
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+
+    initLeaderElection({
+      onBecomeLeader: () => {
+        tabRoleRef.current = 'leader';
+        log('[STORE] Became leader — owning RxDB writes');
+        // Force-write current state to RxDB to establish baseline
+        if (dataRef.current && loaded) {
+          saveToRxDB(dataRef.current).catch(() => saveToIDB(dataRef.current!));
+        }
+      },
+      onLoseLeadership: () => {
+        tabRoleRef.current = 'follower';
+        log('[STORE] Lost leadership — switching to read-only');
+      },
+      onMessage: (msg: any) => {
+        if (msg?.type === 'data-changed') {
+          // Another tab (leader) updated RxDB — reload
+          if (debounce) clearTimeout(debounce);
+          debounce = setTimeout(async () => {
+            try {
+              const fresh = await loadFromRxDB() || await loadFromIDB();
+              if (fresh) {
+                fromSyncRef.current = true;
+                setDataRaw(normalizeData(fresh));
+              }
+            } catch (err) {
+              console.error('[STORE] Cross-tab sync failed:', err);
+              fromSyncRef.current = false;
+            }
+          }, 300);
+        } else if (msg?.type === 'follower-mutation' && isLeader()) {
+          // A follower tab sent us its updated state — merge it
+          const followerData = msg.payload as NousAIData;
+          if (followerData) {
+            // Cross-tab merge: no lastPushedAt needed (same device, no deletion ambiguity)
+            const merged = mergeAppData(dataRef.current, normalizeData(followerData), undefined);
+            fromSyncRef.current = false; // this IS a real change, broadcast after saving
+            setDataRaw(merged);
+          }
+        }
+      },
+    });
+
+    return () => {
+      if (debounce) clearTimeout(debounce);
+      destroyLeaderElection();
+    };
+  }, [loaded]);
+
+  // Auto-sync to cloud (debounced 2min) when data changes + flush on tab hidden
+  const autoSyncRef = useRef(new AutoSyncScheduler(dataRef));
+
+  // Wire AutoSyncScheduler callbacks to syncStatus
+  useEffect(() => {
+    autoSyncRef.current.onFlushStart = () => setSyncStatus('syncing');
+    autoSyncRef.current.onFlushEnd = (success) => setSyncStatus(success ? 'synced' : 'error');
+  }, []);
+
+  // Show sync delay toast via CustomEvent — emitted by AutoSyncScheduler on retry
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ attempt: number; error: string }>).detail;
+      // Dispatch a global toast event that any component can listen to
+      window.dispatchEvent(new CustomEvent('nousai-toast', {
+        detail: {
+          message: detail.attempt === 1
+            ? '⚠ Sync delayed — retrying…'
+            : `⚠ Sync failed (attempt ${detail.attempt}) — retrying in ${Math.min(30 * Math.pow(2, detail.attempt - 1), 300)}s`,
+          type: 'warning',
+          duration: 5000,
+        }
+      }));
+    };
+    window.addEventListener('nousai-sync-delayed', handler);
+    return () => window.removeEventListener('nousai-sync-delayed', handler);
+  }, []);
+
+  // Listen to nousai-synced event (fired by AutoSyncScheduler on success)
+  useEffect(() => {
+    const handler = () => {
+      const now = localStorage.getItem('nousai-last-sync');
+      setLastSyncAt(now);
+      setSyncStatus('synced');
+    };
+    window.addEventListener('nousai-synced', handler);
+    return () => window.removeEventListener('nousai-synced', handler);
+  }, []);
+
+  // Track online/offline status
+  useEffect(() => {
+    const goOnline = () => {
+      setSyncStatus(prev => prev === 'offline' ? 'idle' : prev);
+      // Flush any pending changes accumulated while offline
+      if (autoSyncRef.current.dirty) {
+        log('[STORE] Back online — flushing pending changes');
+        autoSyncRef.current.flush();
+      }
+    };
+    const goOffline = () => setSyncStatus('offline');
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
+  const startRemoteWatch = useCallback((_uid: string) => {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles remote changes
+    return;
+    snapshotUnsubRef.current?.();
+    subscribeToMetadataChanges(_uid, (remoteUpdatedAt: string) => {
+      const localLastSync = localStorage.getItem('nousai-last-sync');
+      if (!localLastSync || remoteUpdatedAt > localLastSync) {
+        // Skip if WE caused this update (sync-ID comparison, not time-based)
+        if (autoSyncRef.current.lastPushedTimestamp === remoteUpdatedAt) return;
+        // If local has unsynced changes, flush first then load remote (was: silently defer = deadlock)
+        const localModified = localStorage.getItem('nousai-data-modified-at');
+        const lastSync = localStorage.getItem('nousai-last-sync');
+        if (localModified && lastSync && localModified > lastSync) {
+          log('[STORE] Remote update + local unsynced — flushing local first');
+          autoSyncRef.current.flush().then(() => {
+            window.dispatchEvent(new CustomEvent('nousai-remote-update-available'));
+          });
+          return;
+        }
+        // Skip if local data has changes not yet uploaded to cloud.
+        // This prevents remote load from overwriting local deletions (e.g. deleting all cards
+        // from a course) before the 30s auto-sync debounce has had a chance to upload them.
+        const localModifiedAt = localStorage.getItem('nousai-data-modified-at');
+        if (localLastSync && localModifiedAt && localModifiedAt > localLastSync) {
+          log('[STORE] Remote update available but local has unsynced changes — deferring remote load to protect local deletions');
+          return;
+        }
+        // Auto-load silently — no banner click required
+        const autoSync = localStorage.getItem('nousai-auto-sync') !== 'false';
+        if (autoSync) {
+          window.dispatchEvent(new CustomEvent('nousai-remote-update-available'));
+        } else {
+          setRemoteUpdateAvailable(true);
+        }
+      }
+    }).then(unsub => { snapshotUnsubRef.current = unsub; });
+  }, []);
+
+  const stopRemoteWatch = useCallback(() => {
+    snapshotUnsubRef.current?.();
+    snapshotUnsubRef.current = null;
+  }, []);
+
+  const loadRemoteData = useCallback(async () => {
+    // OLD BLOB SYNC DISABLED — RxDB replication handles cloud sync
+  }, [setData]);
+
+  const dismissRemoteBanner = useCallback(() => {
+    setRemoteUpdateAvailable(false);
+  }, []);
+
+  // ── Global sync triggers (for Ctrl+S / Ctrl+Shift+S hotkeys) ────
+  const triggerSyncToCloud = useCallback(async () => {
+    const uid = localStorage.getItem('nousai-auth-uid');
+    if (!uid || !data) {
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sign in first to sync' }));
+      return;
+    }
+    try {
+      setSyncStatus('syncing');
+      await syncToCloud(uid, data);
+      setSyncStatus('synced');
+      setLastSyncAt(new Date().toISOString());
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Synced to cloud!' }));
+    } catch (e: unknown) {
+      setSyncStatus('error');
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: `Sync failed: ${e instanceof Error ? e.message : 'Unknown error'}` }));
+    }
+  }, [data]);
+
+  const triggerSyncFromCloud = useCallback(async () => {
+    const uid = localStorage.getItem('nousai-auth-uid');
+    if (!uid) {
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Sign in first to sync' }));
+      return;
+    }
+    try {
+      setSyncStatus('syncing');
+
+      // SYNC FIX #11: Pre-pull backup via IDB snapshot (not localStorage — quota safe)
+      if (dataRef.current) {
+        try {
+          const { saveSnapshot } = await import('./utils/snapshotManager');
+          await saveSnapshot(dataRef.current, 'pre-pull');
+        } catch { /* snapshot failed — proceed anyway, better than blocking sync */ }
+      }
+
+      const cloudData = await withExponentialBackoff(() => syncFromCloud(uid));
+      if (cloudData) {
+        const localSnapshot = dataRef.current;
+        const safeCloud = normalizeData(cloudData);
+
+        // Sync Lamport clocks
+        mergeLamportClock((safeCloud as unknown as Record<string, unknown>).lamport as number ?? 0);
+
+        // Detect conflict resolution strategy
+        const localTs = localStorage.getItem('nousai-data-modified-at') || '';
+        const cloudTs = (safeCloud as unknown as Record<string, unknown>).updatedAt as string || '';
+        const resolution: SyncResolution = detectConflict(localTs, cloudTs);
+
+        let finalData: NousAIData = safeCloud;
+        if (resolution === 'local-wins') {
+          console.warn('[Sync] Local wins — pushing local to cloud');
+          if (localSnapshot) {
+            await withExponentialBackoff(() => syncToCloud(uid, localSnapshot));
+          }
+          finalData = localSnapshot || safeCloud;
+        } else if (resolution === 'cloud-wins') {
+          console.warn('[Sync] Cloud wins — replacing local with cloud data');
+          finalData = safeCloud;
+        } else {
+          // resolution === 'merge'
+          console.warn('[Sync] Merging local + cloud data');
+          // Pass lastPushedAt so merge engine knows which cloud-only items were deleted locally
+          const lastPush = localStorage.getItem('nousai-last-push') || undefined;
+          finalData = mergeAppData(localSnapshot, safeCloud, lastPush);
+          // Push merged result back to cloud so both sides converge
+          await withExponentialBackoff(() => syncToCloud(uid, finalData)).catch(e => {
+            console.warn('[Sync] Merge push-back failed (non-critical):', e);
+          });
+        }
+
+        // F2: Post-pull sanity check — if course count dropped to 0 from >10, auto-restore
+        const preCourseCount = localSnapshot?.pluginData?.coachData?.courses?.length ?? 0;
+        const postCourseCount = finalData?.pluginData?.coachData?.courses?.length ?? 0;
+        if (preCourseCount > 10 && postCourseCount === 0) {
+          console.error('[SYNC] Sanity check FAILED: courses dropped from', preCourseCount, 'to 0 — auto-restoring from backup');
+          try {
+            const backupStr = localStorage.getItem('nousai-pre-pull-backup');
+            if (backupStr) {
+              finalData = normalizeData(JSON.parse(backupStr));
+              window.dispatchEvent(new CustomEvent('nousai-toast', { detail: { message: 'Cloud data had 0 courses — restored from backup', type: 'warning', duration: 5000 } }));
+            }
+          } catch { /* backup parse failed */ }
+        }
+
+        setData(finalData);
+        setSyncStatus('synced');
+        setLastSyncAt(new Date().toISOString());
+
+        // Notify UI of resolution
+        window.dispatchEvent(new CustomEvent('nousai-sync-resolution', { detail: resolution }));
+      } else {
+        setSyncStatus('idle');
+        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'No cloud data found' }));
+      }
+    } catch (e: unknown) {
+      setSyncStatus('error');
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: `Cloud load failed: ${e instanceof Error ? e.message : 'Unknown error'}` }));
+    }
+  }, [setData]);
+
+  // Debounce markDirty to avoid excessive sync scheduling during rapid updates (e.g. AI streaming)
+  const markDirtyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!data) return;
+    if (markDirtyTimerRef.current) clearTimeout(markDirtyTimerRef.current);
+    markDirtyTimerRef.current = setTimeout(() => {
+      autoSyncRef.current.markDirty();
+    }, 500);
+  }, [data]);
+
+  // Auto-load remote changes silently — no banner needed when auto-sync is on
+  useEffect(() => {
+    const handler = () => { loadRemoteData(); };
+    window.addEventListener('nousai-remote-update-available', handler);
+    return () => window.removeEventListener('nousai-remote-update-available', handler);
+  }, [loadRemoteData]);
+
+  // C1: Auto-pull from cloud on visibility change (>5 min since last pull) and online reconnect (>1 min)
+  useEffect(() => {
+    const silentPull = (minAgeMs: number) => {
+      const uid = localStorage.getItem('nousai-auth-uid');
+      if (!uid || !navigator.onLine) return;
+      const lastPull = localStorage.getItem('nousai-last-pull');
+      if (lastPull && (Date.now() - new Date(lastPull).getTime()) < minAgeMs) return;
+      log('[SYNC] Auto-pulling from cloud (silent)');
+      triggerSyncFromCloud().catch(() => {});
+    };
+    const handleOnlineForPull = () => silentPull(60_000); // 1 min
+    window.addEventListener('online', handleOnlineForPull);
+    return () => window.removeEventListener('online', handleOnlineForPull);
+  }, [triggerSyncFromCloud]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        // Leader: force-flush to IDB immediately (no debounce) + cloud sync
+        if (isLeader()) {
+          if (dataRef.current) {
+            saveToRxDB(dataRef.current).catch(() => saveToIDB(dataRef.current!));
+          }
+          autoSyncRef.current.flush();
+        } else if (dataRef.current && localDirtyRef.current) {
+          // Follower: stash unsaved state to localStorage before tab goes hidden
+          try {
+            localStorage.setItem('nousai-crash-recovery', JSON.stringify(dataRef.current));
+            localStorage.setItem('nousai-crash-recovery-at', new Date().toISOString());
+          } catch { /* quota exceeded */ }
+        }
+      } else if (document.visibilityState === 'visible') {
+        // C1: Auto-pull when tab becomes visible (>5 min since last pull)
+        const uid = localStorage.getItem('nousai-auth-uid');
+        if (uid && navigator.onLine) {
+          const lastPull = localStorage.getItem('nousai-last-pull');
+          if (!lastPull || (Date.now() - new Date(lastPull).getTime()) > 5 * 60_000) {
+            log('[SYNC] Tab visible — auto-pulling from cloud');
+            triggerSyncFromCloud().catch(() => {});
+          }
+        }
+        // Also pull from IDB for cross-tab sync
+        loadRemoteData();
+      }
+    };
+    // pagehide: iOS Safari fires this but not always beforeunload
+    const handlePageHide = () => {
+      if (isLeader()) autoSyncRef.current.flush();
+    };
+    // 30s heartbeat: catch edge cases where debounce timer was cleared (leader only)
+    const heartbeat = setInterval(() => {
+      if (isLeader() && autoSyncRef.current.dirty && navigator.onLine) {
+        autoSyncRef.current.flush();
+      }
+    }, 30_000);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('pagehide', handlePageHide);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pagehide', handlePageHide);
+      clearInterval(heartbeat);
+      autoSyncRef.current.stop();
+    };
+  }, [loadRemoteData, triggerSyncFromCloud]);
+
+  // Flush to IDB immediately on tab close so no data is lost
+  // Leader: writes to IDB directly. Follower: writes crash-recovery key to localStorage.
+  useEffect(() => {
+    const flush = (e: BeforeUnloadEvent) => {
+      if (dataRef.current) {
+        if (isLeader()) {
+          // Leader: best-effort write (RxDB with IDB fallback)
+          saveToRxDB(dataRef.current).catch(() => saveToIDB(dataRef.current!));
+        } else {
+          // Follower: stash to localStorage as crash-recovery backup
+          // (localStorage is synchronous — guaranteed to complete before tab closes)
+          try {
+            const compressed = JSON.stringify(dataRef.current);
+            localStorage.setItem('nousai-crash-recovery', compressed);
+            localStorage.setItem('nousai-crash-recovery-at', new Date().toISOString());
+          } catch { /* localStorage quota exceeded — can't save, data was in IDB anyway */ }
+        }
+      }
+
+      // If auto-sync is dirty (pending cloud write), warn the user
+      if (autoSyncRef.current.dirty) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes that haven\'t synced to the cloud yet. Leave anyway?';
+      }
+
+      // Best-effort cloud sync on page hide (no guarantee it completes)
+      if (isLeader()) autoSyncRef.current.flush();
+    };
+    window.addEventListener('beforeunload', flush);
+    return () => window.removeEventListener('beforeunload', flush);
+  }, []);
+
+  function importData(json: string) {
+    try {
+      // Pre-import snapshot — save current state before overwriting
+      if (data) saveSnapshot(data, 'pre-import').catch(() => {});
+      const parsed = JSON.parse(json);
+      // Validate basic structure
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        alert('Invalid data file. Expected a JSON object.');
+        return;
+      }
+      // Handle the nested structure: support both flat and nested pluginData formats
+      const raw: NousAIData = {
+        settings: {
+          ...(typeof parsed.settings === 'object' && parsed.settings ? parsed.settings : {}),
+          canvasEvents: Array.isArray(parsed.settings?.canvasEvents) ? parsed.settings.canvasEvents : [],
+        },
+        pluginData: {
+          ...(typeof parsed.pluginData === 'object' && parsed.pluginData ? parsed.pluginData : {}),
+          // Support flat format (legacy): pull from top-level if not in pluginData
+          quizHistory: parsed.pluginData?.quizHistory || parsed.quizHistory || [],
+          coachData: parsed.pluginData?.coachData || parsed.coachData || undefined,
+          proficiencyData: parsed.pluginData?.proficiencyData || parsed.proficiencyData || undefined,
+          srData: parsed.pluginData?.srData || parsed.srData || undefined,
+          timerState: parsed.pluginData?.timerState || parsed.timerState || undefined,
+          gamificationData: parsed.pluginData?.gamificationData || parsed.gamificationData || undefined,
+          quizBank: parsed.pluginData?.quizBank || parsed.quizBank || undefined,
+        },
+      };
+      setData(normalizeData(raw));
+      // Restore study guide HTML from export if present
+      if (parsed._studyGuideHtml && typeof parsed._studyGuideHtml === 'object') {
+        import('./features/study-generator/studyGuideStore').then(({ saveAllGuideHtml }) => {
+          saveAllGuideHtml(parsed._studyGuideHtml).catch(() => {});
+        });
+      }
+    } catch (e) {
+      console.error('Failed to parse data:', e);
+      alert('Invalid data file. Please ensure the file is valid JSON.');
+    }
+  }
+
+  function exportData(): string {
+    if (!data) return '{}';
+    // Strip sensitive credentials from export (same logic as syncToCloud)
+    const safe = {
+      ...data,
+      settings: {
+        ...Object.fromEntries(
+          Object.entries(data.settings).filter(([k]) =>
+            !k.toLowerCase().includes('token') && !k.toLowerCase().includes('apikey') && !k.toLowerCase().includes('api_key')
+          )
+        ),
+        canvasToken: '',
+        canvasUrl: data.settings.canvasUrl,
+        aiProvider: data.settings.aiProvider,
+      },
+    };
+    return JSON.stringify(safe, null, 2);
+  }
+
+  const copyToClipboard = useCallback(async (text: string): Promise<boolean> => {
+    if (!getPermPref('clipboard', true)) return false;
+    const r = await writeClipboard(text);
+    return r.granted;
+  }, []);
+
+  const exportToFile = useCallback(async (filename?: string): Promise<boolean> => {
+    // Include study guide HTML from dedicated IDB store in the export
+    let json = exportData();
+    try {
+      const { loadAllGuideHtml } = await import('./features/study-generator/studyGuideStore');
+      const guideHtmlMap = await loadAllGuideHtml();
+      if (Object.keys(guideHtmlMap).length > 0) {
+        const parsed = JSON.parse(json);
+        parsed._studyGuideHtml = guideHtmlMap;
+        json = JSON.stringify(parsed, null, 2);
+      }
+    } catch { /* ignore — export still works without guide HTML */ }
+    const r = await saveFilePicker(json, filename || 'nousai-export.json');
+    return r.granted;
+  }, [data]);
+
+  const importFromFile = useCallback(async (): Promise<boolean> => {
+    const r = await openFilePicker([{ description: 'JSON', accept: { 'application/json': ['.json'] } }]);
+    if (!r.granted || !r.file) return false;
+    try {
+      const text = await r.file.text();
+      importData(text);
+      return true;
+    } catch { return false; }
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const events = useMemo(() => { const v = data?.settings?.canvasEvents; return Array.isArray(v) ? v : []; }, [data?.settings?.canvasEvents]);
+  const quizHistory = useMemo(() => { const v = data?.pluginData?.quizHistory; return Array.isArray(v) ? v : []; }, [data?.pluginData?.quizHistory]);
+  const courses = useMemo(() => { const v = data?.pluginData?.coachData?.courses; return Array.isArray(v) ? v : []; }, [data?.pluginData?.coachData?.courses]);
+  const gamification = useMemo(() => data?.pluginData?.gamificationData || emptyGamification, [data?.pluginData?.gamificationData]);
+  const proficiency = useMemo(() => data?.pluginData?.proficiencyData || null, [data?.pluginData?.proficiencyData]);
+  const srData = useMemo(() => data?.pluginData?.srData || null, [data?.pluginData?.srData]);
+  const timerState = useMemo(() => data?.pluginData?.timerState || emptyTimer, [data?.pluginData?.timerState]);
+  const matchSets: MatchSet[] = useMemo(() => { const v = data?.pluginData?.matchSets; return Array.isArray(v) ? v as MatchSet[] : []; }, [data?.pluginData?.matchSets]);
+
+  function saveMatchSet(ms: MatchSet) {
+    if (!data) return;
+    setData(prev => {
+      const existing = (prev.pluginData.matchSets as MatchSet[] | undefined) || [];
+      const idx = existing.findIndex(e => e.id === ms.id);
+      const updated = idx >= 0
+        ? existing.map((e, i) => i === idx ? ms : e)
+        : [...existing, ms];
+      return { ...prev, pluginData: { ...prev.pluginData, matchSets: updated } };
+    });
+  }
+
+  // ── Video Studio mutators ─────────────────────────────
+  const savedVideos: SavedVideo[] = useMemo(() => {
+    const v = data?.pluginData?.savedVideos;
+    return Array.isArray(v) ? (v as SavedVideo[]) : [];
+  }, [data?.pluginData?.savedVideos]);
+
+  function addVideo(video: SavedVideo) {
+    updatePluginData({ savedVideos: [...savedVideos, video] });
+  }
+
+  function deleteVideo(videoId: string) {
+    updatePluginData({ savedVideos: savedVideos.filter(v => v.id !== videoId) });
+  }
+
+  function updateVideoMeta(videoId: string, updates: Partial<Pick<SavedVideo, 'title' | 'captions' | 'defaultSpeed' | 'courseId' | 'downloadUrl' | 'thumbnailBase64' | 'notes' | 'noteTemplates' | 'duration'>>) {
+    updatePluginData({
+      savedVideos: savedVideos.map(v => v.id === videoId ? { ...v, ...updates } : v),
+    });
+  }
+
+  function setTimerState(ts: TimerState) {
+    if (!data) return;
+    setData(prev => ({
+      ...prev,
+      pluginData: { ...prev.pluginData, timerState: ts }
+    }));
+  }
+
+  function setEinkMode(v: boolean) {
+    setEinkModeState(v);
+    localStorage.setItem('nousai-eink', String(v));
+    document.documentElement.classList.toggle('eink', v);
+  }
+
+  function setBetaMode(v: boolean) {
+    setBetaModeState(v);
+    localStorage.setItem('nousai-beta', String(v));
+    document.documentElement.classList.toggle('beta', v);
+  }
+
+  // Apply eink/beta classes on mount
+  useEffect(() => {
+    if (einkMode) document.documentElement.classList.add('eink');
+    if (betaMode) document.documentElement.classList.add('beta');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Apply theme class whenever settings.theme changes
+  useEffect(() => {
+    const theme = data?.settings?.theme ?? 'dark';
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const useDark = theme === 'dark' || (theme === 'system' && prefersDark);
+    document.documentElement.classList.toggle('theme-light', !useDark);
+  }, [data?.settings?.theme]);
+
+  // ── Auto-backup interval ──────────────────────────────
+  const backupNow = useCallback(async (): Promise<boolean> => {
+    if (!data) return false;
+    const handle = await loadBackupHandle();
+    if (!handle) return false;
+    // Include study guide HTML in backup
+    let payload: Record<string, unknown> = { ...data };
+    try {
+      const { loadAllGuideHtml } = await import('./features/study-generator/studyGuideStore');
+      const guideHtml = await loadAllGuideHtml();
+      if (Object.keys(guideHtml).length > 0) payload._studyGuideHtml = guideHtml;
+    } catch { /* backup still works without guide HTML */ }
+    const json = JSON.stringify(payload, null, 2);
+    return writeBackupFile(handle, json);
+  }, [data]);
+
+  useEffect(() => {
+    const enabled = localStorage.getItem('nousai-auto-backup') === 'true';
+    if (!enabled || !data) return;
+    const BACKUP_INTERVAL = 60 * 60 * 1000; // 1 hour
+    const id = setInterval(() => { backupNow(); }, BACKUP_INTERVAL);
+    return () => clearInterval(id);
+  }, [data, backupNow]);
+
+  const ctxValue = useMemo(() => ({
+    data, setData, updatePluginData, loaded, importData, exportData, copyToClipboard, exportToFile, importFromFile,
+    matchSets, saveMatchSet, events, quizHistory, courses, gamification, proficiency, srData,
+    timerState, setTimerState, einkMode, setEinkMode, betaMode, setBetaMode, backupNow,
+    triggerSyncToCloud, triggerSyncFromCloud,
+    healthReport,
+    syncStatus, lastSyncAt, remoteUpdateAvailable,
+    startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
+    activePageContext, setPageContext,
+    hiddenToolIds,
+    setHiddenToolIds: (ids: string[]) => {
+      setHiddenToolIds(ids);
+      localStorage.setItem('nousai-hidden-tools', JSON.stringify(ids));
+    },
+    savedVideos, addVideo, deleteVideo, updateVideoMeta,
+    deviceSettings, setDeviceSettings,
+    isReviewActive, setIsReviewActive,
+    modalOpen, setModalOpen,
+    annotationPanelOpen, setAnnotationPanelOpen,
+  }), [data, loaded, matchSets, savedVideos, events, quizHistory, courses, gamification, proficiency, srData, timerState, einkMode, betaMode, // eslint-disable-line react-hooks/exhaustive-deps
+    setData, updatePluginData, copyToClipboard, exportToFile, backupNow, triggerSyncToCloud, triggerSyncFromCloud,
+    syncStatus, lastSyncAt, remoteUpdateAvailable,
+    startRemoteWatch, stopRemoteWatch, loadRemoteData, dismissRemoteBanner,
+    activePageContext, hiddenToolIds, healthReport,
+    deviceSettings, setDeviceSettings,
+    isReviewActive, setIsReviewActive, modalOpen, setModalOpen, annotationPanelOpen, setAnnotationPanelOpen]);
+
+  return (
+    <Ctx.Provider value={ctxValue}>
+      {children}
+    </Ctx.Provider>
+  );
+}
+
+export const useStore = () => useContext(Ctx);
+
+/* ── IDB timeout wrapper ─────────────────────────────────── */
+function withTimeout<T>(promise: Promise<T>, ms = 15000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`IDB operation timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
+/* ── IndexedDB helpers ──────────────────────────────────── */
+const DB_NAME = 'nousai-companion';
+const STORE_NAME = 'appdata';
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(STORE_NAME); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// Track last successfully saved data for write guard comparison
+let lastSavedData: NousAIData | null = null;
+
+async function saveToIDB(data: NousAIData) {
+  // Write guard: validate before committing to IDB
+  const validation = validateBeforeWrite(data, lastSavedData);
+  if (!validation.valid) {
+    console.error('[WRITE-GUARD] IDB write BLOCKED:', validation.reason);
+    window.dispatchEvent(new CustomEvent('nousai-write-blocked', {
+      detail: { reason: validation.reason, source: 'saveToIDB' }
+    }));
+    return;
+  }
+  try {
+    const db = await withTimeout(openDB());
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(data, 'main');
+    lastSavedData = data;
+    // Update card count checkpoint
+    const cardCount = countCards(data);
+    localStorage.setItem('nous_card_count_checkpoint', String(cardCount));
+    logWrite('nousai-data', JSON.stringify(data).length, 'saveToIDB', cardCount);
+  } catch (e) {
+    console.error('[IDB] Failed to save:', e);
+  }
+}
+
+// Exported so sync can force-write immediately (bypass debounce)
+export { saveToIDB as forceWriteToIDB };
+
+// Clear PWA service worker + caches so stale code doesn't block sync
+export async function clearPWACache(): Promise<boolean> {
+  let cleared = false;
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) { await r.unregister(); cleared = true; }
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      for (const k of keys) { await caches.delete(k); cleared = true; }
+    }
+    if (cleared) log('[PWA] Cleared service worker + caches');
+  } catch (e) {
+    warn('[PWA] Cache clear failed:', e);
+  }
+  return cleared;
+}
+
+/* ── Auto-backup to local folder ──────────────────────── */
+const BACKUP_HANDLE_KEY = 'backup-dir-handle';
+const MAX_BACKUPS = 24;
+
+async function saveBackupHandle(handle: FileSystemDirectoryHandle) {
+  const db = await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  tx.objectStore(STORE_NAME).put(handle, BACKUP_HANDLE_KEY);
+}
+
+async function loadBackupHandle(): Promise<FileSystemDirectoryHandle | null> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const req = tx.objectStore(STORE_NAME).get(BACKUP_HANDLE_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch { return null; }
+}
+
+async function clearBackupHandle() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(BACKUP_HANDLE_KEY);
+  } catch { /* ignore */ }
+}
+
+async function writeBackupFile(handle: FileSystemDirectoryHandle, json: string): Promise<boolean> {
+  try {
+    // Check/request permission
+    const perm = await (handle as any).requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') { warn('[BACKUP] Permission denied'); return false; }
+
+    // Write timestamped file
+    const now = new Date();
+    const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 16); // 2026-03-12T15-30
+    const filename = `nousai-backup-${ts}.json`;
+    const file = await handle.getFileHandle(filename, { create: true });
+    const writable = await file.createWritable();
+    await writable.write(json);
+    await writable.close();
+    log('[BACKUP] Wrote', filename);
+
+    // Prune old backups beyond MAX_BACKUPS
+    const backups: string[] = [];
+    for await (const [name] of (handle as any).entries()) {
+      if (name.startsWith('nousai-backup-') && name.endsWith('.json')) backups.push(name);
+    }
+    backups.sort();
+    if (backups.length > MAX_BACKUPS) {
+      for (const old of backups.slice(0, backups.length - MAX_BACKUPS)) {
+        try { await handle.removeEntry(old); log('[BACKUP] Pruned', old); } catch { /* skip */ }
+      }
+    }
+
+    localStorage.setItem('nousai-last-backup', now.toISOString());
+    return true;
+  } catch (e) {
+    console.error('[BACKUP] Write failed:', e);
+    return false;
+  }
+}
+
+export { saveBackupHandle, loadBackupHandle, clearBackupHandle, writeBackupFile };
+
+async function loadFromIDB(): Promise<NousAIData | null> {
+  try {
+    const db = await withTimeout(openDB());
+    return await withTimeout(new Promise<NousAIData | null>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const req = tx.objectStore(STORE_NAME).get('main');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    }));
+  } catch (e) {
+    console.error('[IDB] Failed to load:', e);
+    return null;
+  }
+}
