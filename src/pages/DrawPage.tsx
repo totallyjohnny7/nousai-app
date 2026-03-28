@@ -611,15 +611,50 @@ function ExcalidrawEditor({
     }
   }, [drawing.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-save: debounced persist on every canvas change (fixes drawings lost on reload)
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirtyRef = useRef(false);
+
+  const doAutoSave = useCallback(() => {
+    if (!elementsRef.current?.length) return;
+    const snapshot = JSON.stringify({
+      elements: Array.from(elementsRef.current),
+      appState: { viewBackgroundColor: appStateRef.current?.viewBackgroundColor ?? '#ffffff' },
+      files: filesRef.current ?? {},
+    });
+    onSave(snapshot, undefined); // thumbnail skipped for auto-save (perf)
+    dirtyRef.current = false;
+  }, [onSave]);
+
   const handleChange = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (elements: readonly any[], appState: any, files: any) => {
       elementsRef.current = elements;
       appStateRef.current = appState;
       filesRef.current = files;
+      dirtyRef.current = true;
+      // Debounced auto-save: 2 seconds after last change
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = setTimeout(doAutoSave, 2000);
     },
-    []
+    [doAutoSave]
   );
+
+  // Save on unmount (back navigation, page close) if dirty
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      if (dirtyRef.current && elementsRef.current?.length) {
+        // Sync save on unmount — must be synchronous-ish
+        const snapshot = JSON.stringify({
+          elements: Array.from(elementsRef.current),
+          appState: { viewBackgroundColor: appStateRef.current?.viewBackgroundColor ?? '#ffffff' },
+          files: filesRef.current ?? {},
+        });
+        onSave(snapshot, undefined);
+      }
+    };
+  }, [onSave]);
 
   async function handleSave() {
     setIsSaving(true);
