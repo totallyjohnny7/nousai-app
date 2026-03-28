@@ -633,10 +633,12 @@ function ExcalidrawEditor({
       });
 
       // Generate thumbnail for browser card preview
+      // Filter out erased/deleted elements so thumbnail matches what the user sees
+      const thumbElements = elementsRef.current.filter((el: { isDeleted?: boolean }) => !el.isDeleted);
       let thumbnail: string | undefined;
       try {
         const blob = await exportToBlob({
-          elements: elementsRef.current,
+          elements: thumbElements,
           appState: { ...appStateRef.current, exportWithDarkMode: false },
           files: filesRef.current,
           mimeType: 'image/png',
@@ -656,8 +658,10 @@ function ExcalidrawEditor({
 
   async function handleExportPng() {
     try {
+      // Filter out erased/deleted elements so export matches what the user sees
+      const visibleElements = elementsRef.current.filter((el: { isDeleted?: boolean }) => !el.isDeleted);
       const blob = await exportToBlob({
-        elements: elementsRef.current,
+        elements: visibleElements,
         appState: appStateRef.current,
         files: filesRef.current,
         mimeType: 'image/png',
