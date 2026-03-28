@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import {
   TrendingUp, AlertTriangle, Calendar, Clock,
-  BarChart3, GraduationCap
+  BarChart3, GraduationCap, Flame
 } from 'lucide-react'
 import { useStore } from '../../store'
 import type { ProficiencyEntry } from '../../types'

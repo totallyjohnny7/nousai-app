@@ -468,3 +468,6 @@ export class SyncScheduler {
     }
   }
 }
+
+// ── Test-only exports ─────────────────────────────────────
+export const __test__ = { mergeWithTombstones, cleanTombstones };
