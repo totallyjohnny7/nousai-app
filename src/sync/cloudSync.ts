@@ -46,9 +46,18 @@ function decompress(bytes: Uint8Array): NousAIData {
 }
 
 // ── Chunking ───────────────────────────────────────────────
+function uint8ToBase64(bytes: Uint8Array): string {
+  // Process in 8KB batches to avoid stack overflow from spread operator
+  const parts: string[] = [];
+  const BATCH = 8192;
+  for (let i = 0; i < bytes.length; i += BATCH) {
+    parts.push(String.fromCharCode.apply(null, bytes.subarray(i, i + BATCH) as unknown as number[]));
+  }
+  return btoa(parts.join(''));
+}
+
 function chunkData(compressed: Uint8Array): string[] {
-  const binary = String.fromCharCode(...compressed);
-  const base64 = btoa(binary);
+  const base64 = uint8ToBase64(compressed);
   const chunks: string[] = [];
   for (let i = 0; i < base64.length; i += CHUNK_SIZE) {
     chunks.push(base64.slice(i, i + CHUNK_SIZE));
@@ -85,8 +94,15 @@ async function getFirebaseFns() {
   const storeMod = await import('firebase/firestore');
   const { getFirestore, doc, setDoc, getDoc, getDocFromServer, collection, getDocs, writeBatch, deleteDoc } = storeMod;
   const appMod = await import('firebase/app');
-  // Get the existing Firebase app (already initialized by auth.ts)
-  const app = appMod.getApps()[0];
+  // Wait up to 3s for Firebase to initialize (auth.ts may still be loading)
+  let app = appMod.getApps()[0];
+  if (!app) {
+    for (let i = 0; i < 6; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      app = appMod.getApps()[0];
+      if (app) break;
+    }
+  }
   if (!app) throw new Error('Firebase not initialized');
   const db = getFirestore(app);
   return { db, doc, setDoc, getDoc, getDocFromServer, collection, getDocs, writeBatch, deleteDoc };
@@ -411,10 +427,10 @@ export class SyncScheduler {
     this.pushDebounce = setTimeout(() => this.doPush(data), debounceMs);
   }
 
-  triggerNow(data: NousAIData) {
+  async triggerNow(data: NousAIData): Promise<void> {
     this.dirty = true;
     if (this.pushDebounce) clearTimeout(this.pushDebounce);
-    this.doPush(data);
+    await this.doPush(data);
   }
 
   async pullOnLogin(localData: NousAIData | null): Promise<NousAIData | null> {
@@ -424,9 +440,9 @@ export class SyncScheduler {
       this.onStatusChange?.(result ? 'synced' : 'idle');
       return result;
     } catch (e: unknown) {
-      console.error('[sync] Pull on login failed:', e);
+      const msg = e instanceof Error ? e.message : (e as { message?: string })?.message || (e as { code?: string })?.code || JSON.stringify(e);
+      console.error('[sync] Pull on login failed:', msg, e);
       this.onStatusChange?.('error');
-      const msg = e instanceof Error ? e.message : 'Unknown error';
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('nousai-toast', { detail: `Sync pull failed: ${msg}` }));
       }
@@ -459,9 +475,9 @@ export class SyncScheduler {
       this.dirty = false;
       this.onStatusChange?.('synced');
     } catch (e: unknown) {
-      console.error('[sync] Push failed:', e);
+      const msg = e instanceof Error ? e.message : (e as { message?: string })?.message || (e as { code?: string })?.code || JSON.stringify(e);
+      console.error('[sync] Push failed:', msg, e);
       this.onStatusChange?.('error');
-      const msg = e instanceof Error ? e.message : 'Unknown error';
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('nousai-toast', { detail: `Sync push failed: ${msg}` }));
       }

@@ -488,15 +488,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSyncStatus('syncing');
     try {
       if (syncSchedulerRef.current) {
-        syncSchedulerRef.current.triggerNow(data);
+        await syncSchedulerRef.current.triggerNow(data);
       }
       setSyncStatus('synced');
       setLastSyncAt(new Date().toISOString());
       window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Synced to cloud!' }));
     } catch (e: unknown) {
-      console.error('[STORE] Sync to cloud failed:', e);
+      const msg = e instanceof Error ? e.message : (e as { message?: string })?.message || (e as { code?: string })?.code || JSON.stringify(e);
+      console.error('[STORE] Sync to cloud failed:', msg, e);
       setSyncStatus('error');
-      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: `Sync failed: ${e instanceof Error ? e.message : 'Unknown error'}` }));
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: `Sync failed: ${msg}` }));
     }
   }, [data]);
 
