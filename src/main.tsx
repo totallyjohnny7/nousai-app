@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom'
 import { StoreProvider } from './store'
 import App from './App'
 import './index.css'
+import './utils/syncLogger' // Initialize sync diagnostics (window.__SYNC_LOGS__, __SYNC_HEALTH__)
 
 const SyncConflictToast = lazy(() => import('./components/SyncConflictToast'))
 import { requestPersistentStorage } from './utils/permissions'
