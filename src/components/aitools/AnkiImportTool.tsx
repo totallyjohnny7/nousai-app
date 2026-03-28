@@ -156,6 +156,7 @@ function AnkiImportTool() {
     if (!data) return;
 
     const flashcards: FlashcardItem[] = parsedCards.map((c) => ({
+      id: crypto.randomUUID(),
       front: c.front,
       back: c.back,
       topic: c.tags.split(' ').filter(Boolean)[0] || 'Imported',

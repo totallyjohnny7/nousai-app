@@ -115,6 +115,7 @@ function CreateFlashcardForm({ courses, data, setData, onDone }: {
     if (!front.trim() || !back.trim() || !data) return
 
     const newCard: FlashcardItem = {
+      id: crypto.randomUUID(),
       front: front.trim(),
       back: back.trim(),
       ...(topic.trim() ? { topic: topic.trim() } : {}),
@@ -465,14 +466,23 @@ function ManageFlashcards({ courses, data, setData }: {
   function deleteCard(courseId: string, cardIndex: number) {
     if (!data) return
     const currentCourses = data.pluginData?.coachData?.courses || []
+    let cardId = ''
     const updatedCourses = currentCourses.map(c => {
       if (c.id !== courseId) return c
-      const newCards = (c.flashcards || []).map((card, i) =>
-        i === cardIndex ? { ...card, deleted: true, deletedAt: Date.now() } : card
-      )
+      const newCards = (c.flashcards || []).map((card, i) => {
+        if (i === cardIndex) {
+          cardId = card.id || `${c.id}::${i}`
+          return { ...card, deleted: true, deletedAt: Date.now() }
+        }
+        return card
+      })
       return { ...c, flashcards: newCards, updatedAt: new Date().toISOString() }
     })
-    updatePluginData({ coachData: { ...data.pluginData.coachData, courses: updatedCourses } })
+    const existingLog = data.pluginData.deletionLog || []
+    updatePluginData({
+      coachData: { ...data.pluginData.coachData, courses: updatedCourses },
+      deletionLog: [...existingLog, { id: cardId, entityType: 'card', deletedAt: Date.now() }]
+    })
     if (editKey === `${courseId}:${cardIndex}`) setEditKey(null)
     selected.delete(`${courseId}:${cardIndex}`)
     setSelected(new Set(selected))
@@ -495,7 +505,6 @@ function ManageFlashcards({ courses, data, setData }: {
   function bulkDelete() {
     if (!data || selected.size === 0) return
     if (!confirm(`Delete ${selected.size} selected card${selected.size > 1 ? 's' : ''}? This cannot be undone.`)) return
-    // Group deletions by course, sort indices descending to splice safely
     const deletions: Record<string, number[]> = {}
     selected.forEach(key => {
       const [courseId, idxStr] = key.split(':')
@@ -503,14 +512,25 @@ function ManageFlashcards({ courses, data, setData }: {
       deletions[courseId].push(parseInt(idxStr, 10))
     })
     const currentCourses = data.pluginData?.coachData?.courses || []
+    const newLogEntries: Array<{ id: string; entityType: string; deletedAt: number }> = []
+    const now = Date.now()
     const updatedCourses = currentCourses.map(c => {
       if (!deletions[c.id]) return c
-      const indices = deletions[c.id].sort((a, b) => b - a) // descending
-      const newCards = [...(c.flashcards || [])]
-      indices.forEach(idx => newCards.splice(idx, 1))
+      const indices = new Set(deletions[c.id])
+      const newCards = (c.flashcards || []).map((card, i) => {
+        if (indices.has(i)) {
+          const cardId = card.id || `${c.id}::${i}`
+          newLogEntries.push({ id: cardId, entityType: 'card', deletedAt: now })
+          return { ...card, deleted: true, deletedAt: now, updatedAt: new Date().toISOString() }
+        }
+        return card
+      })
       return { ...c, flashcards: newCards, updatedAt: new Date().toISOString() }
     })
-    updatePluginData({ coachData: { ...data.pluginData.coachData, courses: updatedCourses } })
+    updatePluginData({
+      coachData: { ...data.pluginData.coachData, courses: updatedCourses },
+      deletionLog: [...(data.pluginData.deletionLog || []), ...newLogEntries]
+    })
     setSelected(new Set())
     setEditKey(null)
   }
@@ -939,7 +959,7 @@ function BulkImport({ courses, data, setData }: {
         if (!Array.isArray(parsed)) { setResult({ count: 0, withMedia: 0, invalidMedia: 0, error: 'JSON must be an array.' }); return }
         for (const item of parsed) {
           if (typeof item.front === 'string' && typeof item.back === 'string' && item.front.trim() && item.back.trim()) {
-            const card: FlashcardItem = { front: item.front.trim(), back: item.back.trim(), ...(topicTag ? { topic: topicTag } : {}) }
+            const card: FlashcardItem = { id: crypto.randomUUID(), front: item.front.trim(), back: item.back.trim(), ...(topicTag ? { topic: topicTag } : {}) }
             // Handle shorthand youtube field
             const rawMedia = item.media ?? (item.youtube ? { type: 'youtube', src: item.youtube, side: 'back' } : undefined)
             if (rawMedia !== undefined) {
@@ -970,7 +990,7 @@ function BulkImport({ courses, data, setData }: {
         if (sep > 0) {
           const front = line.substring(0, sep).trim()
           const back = line.substring(sep + 2).trim()
-          if (front && back) cards.push({ front, back, ...(topicTag ? { topic: topicTag } : {}) })
+          if (front && back) cards.push({ id: crypto.randomUUID(), front, back, ...(topicTag ? { topic: topicTag } : {}) })
         }
       }
       if (cards.length === 0) {

@@ -23,13 +23,14 @@ const MAX_DISPLAY_CARDS = 10
 /** Convert a PdfCard to a FlashcardItem that works in all existing study modes. */
 function pdfCardToFlashcard(card: PdfCard): FlashcardItem {
   if (card.type === 'vocab') {
-    return { front: card.question, back: card.answer, topic: 'PDF Import' }
+    return { id: crypto.randomUUID(), front: card.question, back: card.answer, topic: 'PDF Import' }
   }
   // MCQ: embed choices in the front so they render in study modes
   const choicesBlock = card.choices?.length
     ? '\n\n' + card.choices.join('\n')
     : ''
   return {
+    id: crypto.randomUUID(),
     front: card.question + choicesBlock,
     back: card.answer,
     topic: 'PDF Import',

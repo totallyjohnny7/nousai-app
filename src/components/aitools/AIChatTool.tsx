@@ -59,7 +59,15 @@ function AIChatTool() {
   }
 
   function deleteSession(id: string) {
-    updateSessions(prev => prev.map(s => s.id === id ? { ...s, deleted: true, deletedAt: Date.now(), updatedAt: new Date().toISOString() } : s));
+    const now = Date.now();
+    setData(prev => ({
+      ...prev,
+      pluginData: {
+        ...prev.pluginData,
+        aiChatSessions: ((prev.pluginData as any).aiChatSessions || []).map((s: any) => s.id === id ? { ...s, deleted: true, deletedAt: now, updatedAt: new Date().toISOString() } : s),
+        deletionLog: [...(prev.pluginData.deletionLog || []), { id, entityType: 'chatSession', deletedAt: now }],
+      },
+    }));
     if (activeId === id) {
       const remaining = sessions.filter(s => s.id !== id && !s.deleted);
       setActiveId(remaining[0]?.id || null);

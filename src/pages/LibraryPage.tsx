@@ -309,7 +309,11 @@ export default function LibraryPage() {
   function deleteNote(id: string) {
     if (!confirm('Delete this note?')) return;
     const updated = notes.map(n => n.id === id ? { ...n, deleted: true, deletedAt: Date.now(), updatedAt: new Date().toISOString() } : n);
-    persistNotes(updated);
+    setNotes(updated);
+    updatePluginData({
+      notes: updated,
+      deletionLog: [...(data?.pluginData.deletionLog || []), { id, entityType: 'note', deletedAt: Date.now() }]
+    });
     if (selectedId === id) {
       setSelectedId(null);
       setView('list');
@@ -3112,8 +3116,11 @@ function StudyGuidesTab() {
     if (!confirm(`Delete "${guide.title}"? This cannot be undone.`)) return;
     try { await deleteGuideHtml(guide.id); } catch { /* ignore IDB errors */ }
     const updated = guides.map(g => g.id === guide.id ? { ...g, deleted: true, deletedAt: Date.now(), updatedAt: new Date().toISOString() } : g);
-    updatePluginData({ studyGuides: updated });
-  }, [guides, updatePluginData]);
+    updatePluginData({
+      studyGuides: updated,
+      deletionLog: [...(data?.pluginData.deletionLog || []), { id: guide.id, entityType: 'studyGuide', deletedAt: Date.now() }]
+    });
+  }, [guides, updatePluginData, data]);
 
   const importFileRef = useRef<HTMLInputElement>(null);
   const handleImportHtml = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {

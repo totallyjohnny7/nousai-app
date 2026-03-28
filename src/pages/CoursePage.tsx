@@ -1023,7 +1023,10 @@ const ExamsTab = React.memo(function ExamsTab({
   }
   function deleteQuiz(quizId: string) {
     if (!data) return
-    updatePluginData({ quizHistory: safeArr<QuizAttempt>(data.pluginData.quizHistory).map(q => q.id === quizId ? { ...q, deleted: true, deletedAt: Date.now() } : q) })
+    updatePluginData({
+      quizHistory: safeArr<QuizAttempt>(data.pluginData.quizHistory).map(q => q.id === quizId ? { ...q, deleted: true, deletedAt: Date.now() } : q),
+      deletionLog: [...(data.pluginData.deletionLog || []), { id: quizId, entityType: 'quiz', deletedAt: Date.now() }]
+    })
     // Also clean up folder map
     const nm = { ...folderMap }; delete nm[quizId]; setFolderMap(nm); saveExamFolderMap(nm)
     setMenuOpenId(null)
@@ -1896,7 +1899,10 @@ function MatchesTab({ course, accentColor }: { course: Course; accentColor: stri
 
   const deleteSet = (id: string) => {
     const updated = allMatchSets.map(m => m.id === id ? { ...m, deleted: true, deletedAt: Date.now() } : m);
-    updatePluginData({ matchSets: updated });
+    updatePluginData({
+      matchSets: updated,
+      deletionLog: [...(data?.pluginData.deletionLog || []), { id, entityType: 'matchSet', deletedAt: Date.now() }]
+    });
     setConfirmDelete(null);
   };
 

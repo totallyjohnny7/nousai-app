@@ -139,6 +139,7 @@ export async function pushToCloud(uid: string, data: NousAIData): Promise<void> 
       deviceId,
       chunkCount: chunks.length,
       updatedAt: new Date().toISOString(),
+      pushedAt: Date.now(),
       compressedSize: compressed.length,
       version: 3,
     });
@@ -163,8 +164,10 @@ export async function pushToCloud(uid: string, data: NousAIData): Promise<void> 
     }
   });
 
+  const pushTs = Date.now();
   localStorage.setItem('nousai-last-sync', new Date().toISOString());
   localStorage.setItem('nousai-last-push', new Date().toISOString());
+  localStorage.setItem('nousai-last-push-ts', String(pushTs));
   console.log(`[sync] Push: success, ${chunks.length} chunks, ${(compressed.length / 1024).toFixed(1)}KB compressed`);
 }
 
@@ -179,12 +182,12 @@ export async function pullFromCloud(uid: string, localData: NousAIData | null): 
     return null;
   }
 
-  const meta = metaSnap.data() as { deviceId: string; chunkCount: number; updatedAt: string; version: number };
+  const meta = metaSnap.data() as { deviceId: string; chunkCount: number; updatedAt: string; pushedAt?: number; version: number };
 
-  // Same-device check: skip merge if we were the last writer
-  const localDeviceId = getDeviceId();
-  if (meta.deviceId === localDeviceId) {
-    console.log('[sync] Pull: same device wrote last — skipping merge');
+  // Timestamp check: skip if cloud data is same or older than our last push
+  const lastLocalPush = parseInt(localStorage.getItem('nousai-last-push-ts') || '0');
+  if (meta.pushedAt && meta.pushedAt <= lastLocalPush) {
+    console.log('[sync] Pull: cloud data is same or older than last push — skipping');
     return null;
   }
 
@@ -216,17 +219,22 @@ function mergeWithTombstones(local: NousAIData, cloud: NousAIData): NousAIData {
     localArr: T[] | undefined,
     cloudArr: T[] | undefined,
   ): T[] {
+    // Ensure every item has an id (backfill for cards that predate id assignment)
+    const ensureId = (arr: T[] | undefined): T[] =>
+      (arr || []).map((item, i) => item.id ? item : { ...item, id: `_backfill_${i}_${Date.now()}` });
+    const safeLocal = ensureId(localArr);
+    const safeCloud = ensureId(cloudArr);
     const map = new Map<string, T>();
 
     // Add all local items
-    for (const item of localArr || []) {
+    for (const item of safeLocal) {
       // Skip if cloud deleted this item
       if (cloudDeletionLog.has(item.id) && !item.deleted) continue;
       map.set(item.id, item);
     }
 
     // Merge cloud items
-    for (const item of cloudArr || []) {
+    for (const item of safeCloud) {
       // Skip if local deleted this item
       if (localDeletionLog.has(item.id) && !item.deleted) continue;
 
@@ -259,11 +267,48 @@ function mergeWithTombstones(local: NousAIData, cloud: NousAIData): NousAIData {
     return Array.from(map.values());
   }
 
-  // Merge courses (including their flashcards)
-  const mergedCourses = mergeArrayById(
-    local.pluginData.coachData.courses as (Course & { deleted?: boolean; deletedAt?: number; updatedAt?: string })[],
-    cloud.pluginData.coachData.courses as (Course & { deleted?: boolean; deletedAt?: number; updatedAt?: string })[],
-  );
+  // Merge courses with per-card flashcard merge
+  type MergeableCourse = Course & { deleted?: boolean; deletedAt?: number; updatedAt?: string };
+  const localCourseMap = new Map((local.pluginData.coachData.courses || []).map(c => [c.id, c as MergeableCourse]));
+  const cloudCourseMap = new Map((cloud.pluginData.coachData.courses || []).map(c => [c.id, c as MergeableCourse]));
+  const allCourseIds = new Set([...localCourseMap.keys(), ...cloudCourseMap.keys()]);
+
+  const mergedCourses: Course[] = [];
+  for (const cid of allCourseIds) {
+    const localC = localCourseMap.get(cid);
+    const cloudC = cloudCourseMap.get(cid);
+
+    if (localC && cloudDeletionLog.has(cid) && !localC.deleted) continue;
+    if (cloudC && localDeletionLog.has(cid) && !cloudC.deleted) continue;
+
+    if (!localC) { mergedCourses.push(cloudC!); continue; }
+    if (!cloudC) { mergedCourses.push(localC); continue; }
+
+    // Both exist — merge course-level fields (newer wins)
+    const localTime = localC.updatedAt ? new Date(localC.updatedAt).getTime() : 0;
+    const cloudTime = cloudC.updatedAt ? new Date(cloudC.updatedAt).getTime() : 0;
+    const baseCourse = cloudTime >= localTime ? cloudC : localC;
+
+    // Handle course-level deletion
+    if (localC.deleted || cloudC.deleted) {
+      const lDel = localC.deleted ? (localC.deletedAt || 0) : 0;
+      const cDel = cloudC.deleted ? (cloudC.deletedAt || 0) : 0;
+      const delCourse = lDel >= cDel
+        ? { ...baseCourse, deleted: true, deletedAt: localC.deletedAt }
+        : { ...baseCourse, deleted: true, deletedAt: cloudC.deletedAt };
+      mergedCourses.push(delCourse as Course);
+      continue;
+    }
+
+    // Per-card merge within the course (cards have id field)
+    type MergeableCard = { id: string; deleted?: boolean; deletedAt?: number; updatedAt?: string };
+    const mergedCards = mergeArrayById(
+      (localC.flashcards || []) as unknown as MergeableCard[],
+      (cloudC.flashcards || []) as unknown as MergeableCard[],
+    );
+
+    mergedCourses.push({ ...baseCourse, flashcards: mergedCards as unknown as Course['flashcards'] });
+  }
 
   // Merge deletion logs
   const mergedDeletionLog = [

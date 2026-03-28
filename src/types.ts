@@ -138,6 +138,7 @@ export interface QuizAttempt {
 }
 
 export interface FlashcardItem {
+  id?: string;  // Stable ID for merge — generated on creation, backfilled on first load
   front: string;
   back: string;
   topic?: string;

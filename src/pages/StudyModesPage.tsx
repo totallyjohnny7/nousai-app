@@ -1218,7 +1218,10 @@ function CornellNotesMode() {
     // Also soft-delete from Library
     if (data) {
       const libNotes = (data.pluginData.notes || []).map((n) => n.id === `cornell-${id}` ? { ...n, deleted: true, deletedAt: Date.now(), updatedAt: new Date().toISOString() } : n)
-      updatePluginData({ notes: libNotes })
+      updatePluginData({
+        notes: libNotes,
+        deletionLog: [...(data.pluginData.deletionLog || []), { id: `cornell-${id}`, entityType: 'note', deletedAt: Date.now() }]
+      })
     }
   }
 

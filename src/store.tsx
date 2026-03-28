@@ -293,6 +293,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (d) {
         const migrated = runMigrations(d);
         const normalized = normalizeData(migrated);
+        // Backfill flashcard IDs for existing cards that don't have them
+        let backfilled = false;
+        for (const course of normalized.pluginData?.coachData?.courses || []) {
+          for (const card of course.flashcards || []) {
+            if (!card.id) {
+              card.id = crypto.randomUUID();
+              backfilled = true;
+            }
+          }
+        }
+        if (backfilled) log('[STORE] Backfilled flashcard IDs');
         const { report, repairedData } = dataHealthCheck(normalized);
         const final = report.autoRepaired.length > 0 ? repairedData : normalized;
         if (!report.healthy) {
@@ -678,7 +689,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteVideo(videoId: string) {
-    updatePluginData({ savedVideos: savedVideos.map(v => v.id === videoId ? { ...v, deleted: true, deletedAt: Date.now() } : v) });
+    if (!data) return;
+    const allVideos = (data.pluginData?.savedVideos || []) as SavedVideo[];
+    updatePluginData({
+      savedVideos: allVideos.map(v => v.id === videoId ? { ...v, deleted: true, deletedAt: Date.now() } : v),
+      deletionLog: [...(data.pluginData.deletionLog || []), { id: videoId, entityType: 'video', deletedAt: Date.now() }]
+    });
   }
 
   function updateVideoMeta(videoId: string, updates: Partial<Pick<SavedVideo, 'title' | 'captions' | 'defaultSpeed' | 'courseId' | 'downloadUrl' | 'thumbnailBase64' | 'notes' | 'noteTemplates' | 'duration'>>) {

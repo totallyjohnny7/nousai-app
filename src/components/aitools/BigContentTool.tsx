@@ -67,7 +67,7 @@ function BigContentToolInner() {
 
   const handleImport = () => {
     const targetCourseId = config.targetCourse;
-    const keptCards = [...kept].map((i) => ({ ...generatedCards[i], ...editedCards[i] }));
+    const keptCards = [...kept].map((i) => ({ id: crypto.randomUUID(), ...generatedCards[i], ...editedCards[i] }));
 
     if (targetCourseId) {
       const courses2 = (data?.pluginData?.coachData?.courses ?? []).map((c) =>
