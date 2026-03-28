@@ -123,8 +123,26 @@ function cleanTombstones(data: NousAIData): NousAIData {
   };
 }
 
+// ── Simple checksum for dedup ──────────────────────────────
+function quickHash(str: string): string {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  }
+  return h.toString(36);
+}
+
 // ── Push to cloud ──────────────────────────────────────────
 export async function pushToCloud(uid: string, data: NousAIData): Promise<void> {
+  // Dedup: skip if data hasn't changed since last push
+  const dataStr = JSON.stringify(data);
+  const hash = quickHash(dataStr);
+  const lastHash = localStorage.getItem('nousai-push-hash');
+  if (hash === lastHash) {
+    console.log('[sync] Push: skipped (no changes)');
+    return;
+  }
+
   const cleaned = cleanTombstones(data);
   const compressed = compress(cleaned);
   const chunks = chunkData(compressed);
@@ -168,11 +186,23 @@ export async function pushToCloud(uid: string, data: NousAIData): Promise<void> 
   localStorage.setItem('nousai-last-sync', new Date().toISOString());
   localStorage.setItem('nousai-last-push', new Date().toISOString());
   localStorage.setItem('nousai-last-push-ts', String(pushTs));
+  localStorage.setItem('nousai-push-hash', hash);
   console.log(`[sync] Push: success, ${chunks.length} chunks, ${(compressed.length / 1024).toFixed(1)}KB compressed`);
 }
 
 // ── Pull from cloud ────────────────────────────────────────
-export async function pullFromCloud(uid: string, localData: NousAIData | null): Promise<NousAIData | null> {
+const PULL_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
+export async function pullFromCloud(uid: string, localData: NousAIData | null, force = false): Promise<NousAIData | null> {
+  // Cooldown: skip if pulled recently (unless forced)
+  if (!force) {
+    const lastPull = parseInt(localStorage.getItem('nousai-last-pull-ts') || '0');
+    if (Date.now() - lastPull < PULL_COOLDOWN_MS) {
+      console.log('[sync] Pull: skipped (cooldown)');
+      return null;
+    }
+  }
+
   const fb = await getFirebaseFns();
 
   const metaRef = fb.doc(fb.db, 'users', uid, 'sync-v3', 'meta');
@@ -202,6 +232,7 @@ export async function pullFromCloud(uid: string, localData: NousAIData | null): 
 
   const compressed = unchunkData(chunks);
   const cloudData = decompress(compressed);
+  localStorage.setItem('nousai-last-pull-ts', String(Date.now()));
   console.log(`[sync] Pull: received from device ${meta.deviceId}, ${meta.chunkCount} chunks`);
 
   if (!localData) return cloudData;
@@ -389,7 +420,7 @@ export class SyncScheduler {
   async pullOnLogin(localData: NousAIData | null): Promise<NousAIData | null> {
     this.onStatusChange?.('syncing');
     try {
-      const result = await pullFromCloud(this.uid, localData);
+      const result = await pullFromCloud(this.uid, localData, true); // force on login
       this.onStatusChange?.(result ? 'synced' : 'idle');
       return result;
     } catch (e) {

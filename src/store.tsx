@@ -506,7 +506,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     setSyncStatus('syncing');
     try {
-      const result = await pullFromCloud(uid, dataRef.current);
+      const result = await pullFromCloud(uid, dataRef.current, true); // force — user-initiated
       if (result) {
         setData(normalizeData(result));
         setSyncStatus('synced');
