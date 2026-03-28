@@ -71,7 +71,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = RETRY_DELAYS): Promi
   for (let i = 0; i <= retries.length; i++) {
     try {
       return await fn();
-    } catch (e) {
+    } catch (e: unknown) {
       if (i === retries.length) throw e;
       console.warn(`[sync] Retry ${i + 1}/${retries.length} after ${retries[i]}ms:`, e instanceof Error ? e.message : e);
       await new Promise(r => setTimeout(r, retries[i]));
@@ -423,9 +423,13 @@ export class SyncScheduler {
       const result = await pullFromCloud(this.uid, localData, true); // force on login
       this.onStatusChange?.(result ? 'synced' : 'idle');
       return result;
-    } catch (e) {
-      console.warn('[sync] Pull failed:', e);
+    } catch (e: unknown) {
+      console.error('[sync] Pull on login failed:', e);
       this.onStatusChange?.('error');
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: `Sync pull failed: ${msg}` }));
+      }
       return null;
     }
   }
@@ -454,9 +458,13 @@ export class SyncScheduler {
       await pushToCloud(this.uid, data);
       this.dirty = false;
       this.onStatusChange?.('synced');
-    } catch (e) {
-      console.warn('[sync] Push failed:', e);
+    } catch (e: unknown) {
+      console.error('[sync] Push failed:', e);
       this.onStatusChange?.('error');
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('nousai-toast', { detail: `Sync push failed: ${msg}` }));
+      }
     }
   }
 }

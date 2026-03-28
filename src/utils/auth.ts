@@ -238,7 +238,7 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
  */
 export async function logOut(): Promise<void> {
   // Stop RxDB replication before signing out
-  await stopReplication().catch(() => {});
+  await stopReplication().catch((e: unknown) => console.error('[AUTH] Replication stop failed:', e));
 
   // Clear sync-related localStorage keys to prevent cross-user data leakage
   const SYNC_CLEAR_KEYS = [
@@ -265,7 +265,7 @@ export async function onAuthChange(callback: (user: AuthUser | null) => void): P
   }
 
   const fb = fbFns!;
-  return fb.onAuthStateChanged(firebaseAuth, (fbUser: any) => {
+  return fb.onAuthStateChanged(firebaseAuth, (fbUser: { uid: string; email: string | null; displayName: string | null; emailVerified: boolean; isAnonymous: boolean } | null) => {
     if (fbUser) {
       callback({
         uid: fbUser.uid,
@@ -281,7 +281,7 @@ export async function onAuthChange(callback: (user: AuthUser | null) => void): P
     } else {
       callback(null);
       // Stop replication on sign-out
-      stopReplication().catch(() => {});
+      stopReplication().catch((e: unknown) => console.error('[AUTH] Replication stop failed:', e));
     }
   });
 }
@@ -470,8 +470,10 @@ export async function signInWithGoogle(): Promise<{ user: AuthUser | null; error
     const provider = new GoogleAuthProvider();
     const cred = await signInWithPopup(auth, provider);
     return { user: { uid: cred.user.uid, email: cred.user.email || '', displayName: cred.user.displayName || undefined, emailVerified: cred.user.emailVerified, isAnonymous: false } };
-  } catch (e: any) {
-    return { user: null, error: e?.message || 'Google sign-in failed' };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Google sign-in failed';
+    console.error('[AUTH] Google sign-in failed:', e);
+    return { user: null, error: msg };
   }
 }
 
@@ -483,8 +485,10 @@ export async function signInAsGuest(): Promise<{ user: AuthUser | null; error?: 
     const auth = getAuth();
     const cred = await signInAnonymously(auth);
     return { user: { uid: cred.user.uid, email: '', displayName: undefined, emailVerified: false, isAnonymous: true } };
-  } catch (e: any) {
-    return { user: null, error: e?.message || 'Guest sign-in failed' };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Guest sign-in failed';
+    console.error('[AUTH] Guest sign-in failed:', e);
+    return { user: null, error: msg };
   }
 }
 
@@ -532,8 +536,10 @@ export async function deleteAccount(): Promise<{ error?: string }> {
 
     await deleteUser(auth.currentUser);
     return {};
-  } catch (e: any) {
-    return { error: e?.message || 'Failed to delete account' };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Failed to delete account';
+    console.error('[AUTH] Account deletion failed:', e);
+    return { error: msg };
   }
 }
 
@@ -598,8 +604,9 @@ export async function loadQKConfig(uid: string): Promise<object | null> {
   if (!snap.exists()) return null;
   try {
     const raw = (snap.data() as { config: string }).config;
-    return JSON.parse(raw);
-  } catch {
+    return JSON.parse(raw) as object;
+  } catch (e: unknown) {
+    console.error('[AUTH] Failed to parse QK config:', e);
     return null;
   }
 }

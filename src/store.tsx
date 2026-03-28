@@ -405,7 +405,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         tabRoleRef.current = 'follower';
         log('[STORE] Lost leadership — switching to read-only');
       },
-      onMessage: (msg: any) => {
+      onMessage: (msg: { type: string; payload?: unknown }) => {
         if (msg?.type === 'data-changed') {
           // Another tab (leader) updated RxDB — reload
           if (debounce) clearTimeout(debounce);
@@ -493,8 +493,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSyncStatus('synced');
       setLastSyncAt(new Date().toISOString());
       window.dispatchEvent(new CustomEvent('nousai-toast', { detail: 'Synced to cloud!' }));
-    } catch {
+    } catch (e: unknown) {
+      console.error('[STORE] Sync to cloud failed:', e);
       setSyncStatus('error');
+      window.dispatchEvent(new CustomEvent('nousai-toast', { detail: `Sync failed: ${e instanceof Error ? e.message : 'Unknown error'}` }));
     }
   }, [data]);
 
@@ -654,7 +656,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const text = await r.file.text();
       importData(text);
       return true;
-    } catch { return false; }
+    } catch (e: unknown) { console.error('[STORE] Import from file failed:', e); return false; }
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const events = useMemo(() => { const v = data?.settings?.canvasEvents; return Array.isArray(v) ? v : []; }, [data?.settings?.canvasEvents]);
@@ -885,7 +887,7 @@ async function loadBackupHandle(): Promise<FileSystemDirectoryHandle | null> {
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     });
-  } catch { return null; }
+  } catch (e: unknown) { console.error('[BACKUP] Failed to load handle:', e); return null; }
 }
 
 async function clearBackupHandle() {
