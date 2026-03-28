@@ -88,8 +88,9 @@ export async function saveSnapshot(
     await pruneSnapshots(DEFAULT_MAX_SNAPSHOTS);
     return id;
   } catch (e) {
+    // SYNC FIX #15: Return null on failure so callers know snapshot wasn't saved
     console.warn('[SNAPSHOT] Failed to save:', e);
-    return id;
+    return null as unknown as string;
   }
 }
 

@@ -678,11 +678,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       setSyncStatus('syncing');
 
-      // F1: Pre-pull backup — save current state before overwriting
+      // SYNC FIX #11: Pre-pull backup via IDB snapshot (not localStorage — quota safe)
       if (dataRef.current) {
         try {
-          localStorage.setItem('nousai-pre-pull-backup', JSON.stringify(dataRef.current));
-        } catch { /* quota exceeded — proceed anyway */ }
+          const { saveSnapshot } = await import('./utils/snapshotManager');
+          await saveSnapshot(dataRef.current, 'pre-pull');
+        } catch { /* snapshot failed — proceed anyway, better than blocking sync */ }
       }
 
       const cloudData = await withExponentialBackoff(() => syncFromCloud(uid));

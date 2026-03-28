@@ -255,17 +255,24 @@ export async function saveToRxDB(data: NousAIData): Promise<void> {
     if (hash !== lastSavedHash[key]) {
       // Upsert current items
       if (items.length > 0) {
+        // SYNC FIX #8: Generate stable UUIDs for items without IDs instead of index-based
+        // Index-based IDs (`key_000000`) are unstable — array reorders cause wrong overwrites
         await (db as any)[collection].bulkUpsert(
-          items.map((item: any, i: number) => ({
-            ...item,
-            id: item.id || `${key}_${String(i).padStart(6, '0')}`,
-            updatedAt: item.updatedAt || now,
-            createdAt: item.createdAt || now,
-          }))
+          items.map((item: any) => {
+            if (!item.id) {
+              // Generate stable ID from content hash to avoid index-based instability
+              item.id = `${key}_${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`;
+            }
+            return {
+              ...item,
+              updatedAt: item.updatedAt || now,
+              createdAt: item.createdAt || now,
+            };
+          })
         );
       }
-      // Delete items removed from the array (same pattern as courses)
-      const currentIds = new Set(items.map((item: any, i: number) => item.id || `${key}_${String(i).padStart(6, '0')}`));
+      // Delete items removed from the array
+      const currentIds = new Set(items.map((item: any) => item.id).filter(Boolean));
       const existing = await (db as any)[collection].find().exec();
       for (const doc of existing) {
         if (!currentIds.has(doc.id)) {
@@ -281,8 +288,9 @@ export async function saveToRxDB(data: NousAIData): Promise<void> {
   const srHash = quickHash(srCards);
   if (srHash !== lastSavedHash['srCards'] && srCards.length > 0) {
     await db.sr_cards.bulkUpsert(
-      srCards.map((c: any, i: number) => ({
-        id: c.id || `sr_${String(i).padStart(6, '0')}`,
+      // SYNC FIX #8: Stable IDs for SR cards
+      srCards.map((c: any) => ({
+        id: c.id || `sr_${c.cardKey || c.key || Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`,
         courseId: c.courseId || '',
         cardKey: c.cardKey || c.key || '',
         due: c.due || '',

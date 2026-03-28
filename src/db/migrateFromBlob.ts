@@ -350,6 +350,19 @@ export async function migrateFromBlob(db: RxDatabase): Promise<boolean> {
     }
     console.log('[MIGRATION] Migrated plugin blobs');
 
+    // SYNC FIX #19: Only mark complete if no critical singleton failures
+    // Check that critical singletons actually exist in RxDB before marking done
+    let singletonsMissing = false;
+    try {
+      const settingsDoc = await db.settings.findOne('main').exec();
+      if (!settingsDoc) singletonsMissing = true;
+    } catch { singletonsMissing = true; }
+
+    if (singletonsMissing && errors > 0) {
+      console.error('[MIGRATION] Critical singletons missing — NOT marking migration complete. Will retry on next load.');
+      return false;
+    }
+
     // ── Mark migration complete ─────────────────
     localStorage.setItem(MIGRATION_FLAG, 'true');
     localStorage.setItem('nousai-rxdb-migrated-at', now());

@@ -21,12 +21,18 @@ export interface WriteValidationResult {
 }
 
 /**
+ * SYNC FIX #20 — 2026-03-27
+ * Bug: Blocked legitimate bulk deletes (>50% card drop)
+ * Fix: Added `userInitiated` flag to bypass card-drop guard for intentional deletes
+ *
  * Validates incoming data before writing to IDB or cloud.
  * Returns { valid: false, reason } if the write should be blocked.
+ * Set userInitiated=true to bypass the catastrophic shrinkage check for intentional deletes.
  */
 export function validateBeforeWrite(
   incoming: NousAIData,
   existing: NousAIData | null,
+  userInitiated = false,
 ): WriteValidationResult {
   // Structural: top-level shape
   if (!incoming || typeof incoming !== 'object') {
@@ -74,7 +80,8 @@ export function validateBeforeWrite(
       );
 
       // Only flag if existing had cards (don't flag when starting from 0)
-      if (existingCardCount > 0) {
+      // SYNC FIX #20: Skip this guard for user-initiated operations (intentional bulk deletes)
+      if (existingCardCount > 0 && !userInitiated) {
         const dropRatio = 1 - (incomingCardCount / existingCardCount);
         if (dropRatio > CARD_DROP_THRESHOLD) {
           return {
@@ -85,7 +92,7 @@ export function validateBeforeWrite(
       }
 
       // Empty courses overwriting non-empty courses — extra protection
-      if (existingCourses.length > 0 && courses.length === 0) {
+      if (existingCourses.length > 0 && courses.length === 0 && !userInitiated) {
         return {
           valid: false,
           reason: `Would overwrite ${existingCourses.length} courses with empty array`,

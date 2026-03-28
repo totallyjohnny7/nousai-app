@@ -229,9 +229,26 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
   };
 }
 
+/**
+ * SYNC FIX #10 — 2026-03-27
+ * Bug: Logout didn't clear local data — next user inherited previous user's data
+ * Fix: Clear sync-related localStorage keys and Lamport clock on logout.
+ *      IDB data is kept (offline-first design) but tagged with previous UID
+ *      so it won't be used for the new user.
+ */
 export async function logOut(): Promise<void> {
   // Stop RxDB replication before signing out
   await stopReplication().catch(() => {});
+
+  // Clear sync-related localStorage keys to prevent cross-user data leakage
+  const SYNC_CLEAR_KEYS = [
+    'nousai-auth-uid', 'nousai-last-sync', 'nousai-last-pull', 'nousai-last-push',
+    'nousai-data-modified-at', 'nousai-crash-recovery', 'nousai_lamport',
+    'nousai-pre-pull-backup', 'nous_card_count_checkpoint',
+  ];
+  for (const key of SYNC_CLEAR_KEYS) {
+    try { localStorage.removeItem(key); } catch { /* ignore */ }
+  }
 
   const loaded = await loadFirebase();
   if (!loaded) return;
@@ -326,9 +343,11 @@ function decompressString(base64: string): string {
 }
 
 // ─── Sync Lock (D1) ─────────────────────────────────────
-// Prevents concurrent sync operations from racing
-let _isSyncing = false;
-export function isSyncing(): boolean { return _isSyncing; }
+// SYNC FIX #9 — 2026-03-27
+// Bug: Boolean lock was not atomic — two near-simultaneous triggers could both pass
+// Fix: Promise-based mutex. Second callers await the existing promise.
+let _syncPromise: Promise<any> | null = null;
+export function isSyncing(): boolean { return _syncPromise !== null; }
 
 // ─── Toast helper ────────────────────────────────────────
 function syncToast(message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info', duration = 3000) {
@@ -340,16 +359,17 @@ function syncToast(message: string, type: 'info' | 'success' | 'warning' | 'erro
 // The data flow is now: credential strip → JSON.stringify → gzip → chunk.
 
 export async function syncToCloud(uid: string, data: NousAIData): Promise<void> {
-  // D1: Sync lock — prevent concurrent syncs
-  if (_isSyncing) {
-    log('[AUTH] syncToCloud: skipped — another sync is in progress');
-    return;
+  // SYNC FIX #9: Promise-based mutex — second callers await existing sync
+  if (_syncPromise) {
+    log('[AUTH] syncToCloud: waiting for existing sync to complete...');
+    try { await _syncPromise; } catch { /* previous sync failed, we'll try fresh */ }
   }
-  _isSyncing = true;
+  const p = _syncToCloudInner(uid, data);
+  _syncPromise = p;
   try {
-    await _syncToCloudInner(uid, data);
+    await p;
   } finally {
-    _isSyncing = false;
+    if (_syncPromise === p) _syncPromise = null;
   }
 }
 
@@ -589,16 +609,17 @@ async function _syncToCloudInner(uid: string, dataArg: NousAIData): Promise<void
 }
 
 export async function syncFromCloud(uid: string): Promise<NousAIData | null> {
-  // D1: Sync lock
-  if (_isSyncing) {
-    log('[AUTH] syncFromCloud: skipped — another sync is in progress');
-    return null;
+  // SYNC FIX #9: Promise-based mutex
+  if (_syncPromise) {
+    log('[AUTH] syncFromCloud: waiting for existing sync to complete...');
+    try { await _syncPromise; } catch { /* previous sync failed, we'll try fresh */ }
   }
-  _isSyncing = true;
+  const p = _syncFromCloudInner(uid);
+  _syncPromise = p;
   try {
-    return await _syncFromCloudInner(uid);
+    return await p;
   } finally {
-    _isSyncing = false;
+    if (_syncPromise === p) _syncPromise = null;
   }
 }
 

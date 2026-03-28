@@ -128,9 +128,12 @@ export class DataRepository {
   static async set<T>(key: string, value: T): Promise<void> {
     const useIDB = await DataRepository.checkIDB();
 
+    // SYNC FIX #22: Actually write to both layers (belt-and-suspenders as documented)
     if (useIDB) {
       try {
         await idbSet<T>(key, value);
+        // Also write to localStorage as backup
+        try { lsSet<T>(key, value); } catch { /* localStorage full — IDB is primary, that's OK */ }
         return;
       } catch (e) {
         console.warn(`[DataRepository] IDB write failed for "${key}", falling back to localStorage:`, e);

@@ -53,9 +53,15 @@ export async function saveGoldenCopy(data: NousAIData): Promise<void> {
     });
     const existingCount = existing ? parseInt(existing, 10) : 0;
 
-    // Growth-only: only update if new data has more cards
-    if (newCount <= existingCount && existingCount > 0) {
-      return;
+    // SYNC FIX #23: Growth-only with quality exception
+    // Also update if count is within 10% — allows quality fixes (corruption repair) to save
+    if (existingCount > 0 && newCount < existingCount) {
+      const dropRatio = 1 - (newCount / existingCount);
+      if (dropRatio > 0.1) {
+        // More than 10% drop — protect against data loss
+        return;
+      }
+      // Within 10% — allow quality fix to save
     }
 
     // Encode as base64 to make it look like binary data to AI coders

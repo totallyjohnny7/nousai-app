@@ -78,7 +78,13 @@ async function loadDeltasFromIDB(): Promise<SyncDelta[]> {
       req.onerror = () => reject(req.error);
     });
   } catch (e) {
-    console.error('[SYNC-QUEUE] Failed to load deltas from IDB:', e);
+    // SYNC FIX #16: Log prominently when crash-persisted deltas may be lost
+    console.error('[SYNC-QUEUE] CRITICAL: Failed to load persisted deltas from IDB — pending sync operations may be lost:', e);
+    try {
+      window.dispatchEvent(new CustomEvent('nousai-sync-error', {
+        detail: { message: 'Failed to recover pending sync queue — some changes may need manual re-sync' }
+      }));
+    } catch { /* SSR safety */ }
     return [];
   }
 }
