@@ -1,0 +1,4360 @@
+{
+  "quizzes": [
+    {
+      "quiz_number": 1,
+      "title": "Hiragana あ～そ",
+      "date": "1/21",
+      "chapter": 1,
+      "type": "kana_writing",
+      "items": [
+        {
+          "prompt": "a",
+          "answer": "あ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "i",
+          "answer": "い",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "u",
+          "answer": "う",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "e",
+          "answer": "え",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "o",
+          "answer": "お",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ka",
+          "answer": "か",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ki",
+          "answer": "き",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ku",
+          "answer": "く",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ke",
+          "answer": "け",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ko",
+          "answer": "こ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "sa",
+          "answer": "さ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "shi",
+          "answer": "し",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "su",
+          "answer": "す",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "se",
+          "answer": "せ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "so",
+          "answer": "そ",
+          "type": "kana_writing"
+        }
+      ]
+    },
+    {
+      "quiz_number": 2,
+      "title": "Hiragana あ～ほ",
+      "date": "1/23",
+      "chapter": 1,
+      "type": "kana_writing",
+      "items": [
+        {
+          "prompt": "a",
+          "answer": "あ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "i",
+          "answer": "い",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "u",
+          "answer": "う",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "e",
+          "answer": "え",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "o",
+          "answer": "お",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ka",
+          "answer": "か",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ki",
+          "answer": "き",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ku",
+          "answer": "く",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ke",
+          "answer": "け",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ko",
+          "answer": "こ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "sa",
+          "answer": "さ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "shi",
+          "answer": "し",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "su",
+          "answer": "す",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "se",
+          "answer": "せ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "so",
+          "answer": "そ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ta",
+          "answer": "た",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "chi",
+          "answer": "ち",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "tsu",
+          "answer": "つ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "te",
+          "answer": "て",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "to",
+          "answer": "と",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "na",
+          "answer": "な",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ni",
+          "answer": "に",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "nu",
+          "answer": "ぬ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ne",
+          "answer": "ね",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "no",
+          "answer": "の",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ha",
+          "answer": "は",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "hi",
+          "answer": "ひ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "fu",
+          "answer": "ふ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "he",
+          "answer": "へ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ho",
+          "answer": "ほ",
+          "type": "kana_writing"
+        }
+      ]
+    },
+    {
+      "quiz_number": 3,
+      "title": "All Hiragana あ～ん",
+      "date": "1/26",
+      "chapter": 1,
+      "type": "kana_writing",
+      "items": [
+        {
+          "prompt": "a",
+          "answer": "あ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "i",
+          "answer": "い",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "u",
+          "answer": "う",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "e",
+          "answer": "え",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "o",
+          "answer": "お",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ka",
+          "answer": "か",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ki",
+          "answer": "き",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ku",
+          "answer": "く",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ke",
+          "answer": "け",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ko",
+          "answer": "こ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "sa",
+          "answer": "さ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "shi",
+          "answer": "し",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "su",
+          "answer": "す",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "se",
+          "answer": "せ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "so",
+          "answer": "そ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ta",
+          "answer": "た",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "chi",
+          "answer": "ち",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "tsu",
+          "answer": "つ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "te",
+          "answer": "て",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "to",
+          "answer": "と",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "na",
+          "answer": "な",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ni",
+          "answer": "に",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "nu",
+          "answer": "ぬ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ne",
+          "answer": "ね",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "no",
+          "answer": "の",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ha",
+          "answer": "は",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "hi",
+          "answer": "ひ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "fu",
+          "answer": "ふ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "he",
+          "answer": "へ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ho",
+          "answer": "ほ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ma",
+          "answer": "ま",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "mi",
+          "answer": "み",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "mu",
+          "answer": "む",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "me",
+          "answer": "め",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "mo",
+          "answer": "も",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ya",
+          "answer": "や",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "yu",
+          "answer": "ゆ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "yo",
+          "answer": "よ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ra",
+          "answer": "ら",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ri",
+          "answer": "り",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ru",
+          "answer": "る",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "re",
+          "answer": "れ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ro",
+          "answer": "ろ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "wa",
+          "answer": "わ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "wo",
+          "answer": "を",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "n",
+          "answer": "ん",
+          "type": "kana_writing"
+        }
+      ]
+    },
+    {
+      "quiz_number": 4,
+      "title": "Hiragana Voiced Consonants が～ぽ",
+      "date": "1/28",
+      "chapter": 1,
+      "type": "kana_writing",
+      "items": [
+        {
+          "prompt": "ga",
+          "answer": "が",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "gi",
+          "answer": "ぎ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "gu",
+          "answer": "ぐ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ge",
+          "answer": "げ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "go",
+          "answer": "ご",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "za",
+          "answer": "ざ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ji",
+          "answer": "じ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "zu",
+          "answer": "ず",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ze",
+          "answer": "ぜ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "zo",
+          "answer": "ぞ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "da",
+          "answer": "だ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "di",
+          "answer": "ぢ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "du",
+          "answer": "づ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "de",
+          "answer": "で",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "do",
+          "answer": "ど",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ba",
+          "answer": "ば",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "bi",
+          "answer": "び",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "bu",
+          "answer": "ぶ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "be",
+          "answer": "べ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "bo",
+          "answer": "ぼ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "pa",
+          "answer": "ぱ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "pi",
+          "answer": "ぴ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "pu",
+          "answer": "ぷ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "pe",
+          "answer": "ぺ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "po",
+          "answer": "ぽ",
+          "type": "kana_writing"
+        }
+      ]
+    },
+    {
+      "quiz_number": 5,
+      "title": "Hiragana Double Consonants (っ)",
+      "date": "2/02",
+      "chapter": 1,
+      "type": "kana_writing",
+      "items": [
+        {
+          "prompt": "kitte",
+          "answer": "きって",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "kippu",
+          "answer": "きっぷ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "zasshi",
+          "answer": "ざっし",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "kekkon",
+          "answer": "けっこん",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "happyaku",
+          "answer": "はっぴゃく",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "motto",
+          "answer": "もっと",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "yappari",
+          "answer": "やっぱり",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "chotto",
+          "answer": "ちょっと",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "massugu",
+          "answer": "まっすぐ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "happa",
+          "answer": "はっぱ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "nikki",
+          "answer": "にっき",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "sakka",
+          "answer": "さっか",
+          "type": "kana_writing"
+        }
+      ]
+    },
+    {
+      "quiz_number": 6,
+      "title": "Hiragana Glides きゃ～ぴょ",
+      "date": "2/04",
+      "chapter": 1,
+      "type": "kana_writing",
+      "items": [
+        {
+          "prompt": "kya",
+          "answer": "きゃ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "kyu",
+          "answer": "きゅ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "kyo",
+          "answer": "きょ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "sha",
+          "answer": "しゃ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "shu",
+          "answer": "しゅ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "sho",
+          "answer": "しょ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "cha",
+          "answer": "ちゃ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "chu",
+          "answer": "ちゅ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "cho",
+          "answer": "ちょ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "nya",
+          "answer": "にゃ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "nyu",
+          "answer": "にゅ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "nyo",
+          "answer": "にょ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "hya",
+          "answer": "ひゃ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "hyu",
+          "answer": "ひゅ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "hyo",
+          "answer": "ひょ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "mya",
+          "answer": "みゃ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "myu",
+          "answer": "みゅ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "myo",
+          "answer": "みょ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "rya",
+          "answer": "りゃ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ryu",
+          "answer": "りゅ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ryo",
+          "answer": "りょ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "gya",
+          "answer": "ぎゃ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "gyu",
+          "answer": "ぎゅ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "gyo",
+          "answer": "ぎょ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ja",
+          "answer": "じゃ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ju",
+          "answer": "じゅ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "jo",
+          "answer": "じょ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "bya",
+          "answer": "びゃ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "byu",
+          "answer": "びゅ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "byo",
+          "answer": "びょ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "pya",
+          "answer": "ぴゃ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "pyu",
+          "answer": "ぴゅ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "pyo",
+          "answer": "ぴょ",
+          "type": "kana_writing"
+        }
+      ]
+    },
+    {
+      "quiz_number": 7,
+      "title": "Ch.2 Vocab Dictation 1",
+      "date": "2/09",
+      "chapter": 2,
+      "type": "dictation",
+      "items": [
+        {
+          "japanese": "アジアけんきゅう",
+          "english": "Asian studies",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "アメリカ",
+          "english": "America, the United States",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "イギリス",
+          "english": "England",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "いちねんせい",
+          "english": "freshman, first-year student",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "いま",
+          "english": "now",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "えいご",
+          "english": "English",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "オーストラリア",
+          "english": "Australia",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "がくせい",
+          "english": "student",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "カナダ",
+          "english": "Canada",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "かんこく",
+          "english": "South Korea",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "けいえいがく",
+          "english": "management, business administration",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "こうがく",
+          "english": "engineering",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "こうこう",
+          "english": "high school",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "ごご",
+          "english": "p.m., afternoon",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "ごぜん",
+          "english": "a.m., morning",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "こちら",
+          "english": "this person, this way",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "さんねんせい",
+          "english": "junior, third-year student",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "スペイン",
+          "english": "Spain",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "せんこう",
+          "english": "major",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "だいがく",
+          "english": "college, university",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "だいがくいんせい",
+          "english": "graduate student",
+          "type": "dictation",
+          "chapter": 2
+        }
+      ]
+    },
+    {
+      "quiz_number": 8,
+      "title": "Ch.2 Vocab Dictation 2",
+      "date": "2/11",
+      "chapter": 2,
+      "type": "dictation",
+      "items": [
+        {
+          "japanese": "だいがくせい",
+          "english": "college student",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "たいわん",
+          "english": "Taiwan",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "ちゅうごく",
+          "english": "China",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "なまえ",
+          "english": "name",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "にねんせい",
+          "english": "sophomore, second-year student",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "にほん",
+          "english": "Japan",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "ビジネス",
+          "english": "business",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "フランス",
+          "english": "France",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "ぶんがく",
+          "english": "literature",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "メキシコ",
+          "english": "Mexico",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "よねんせい",
+          "english": "senior, fourth-year student",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "らいねん",
+          "english": "next year",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "りゅうがくせい",
+          "english": "international student",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "れきし",
+          "english": "history",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "ぼく",
+          "english": "I (normally used by males)",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "わたし",
+          "english": "I (used by both males and females)",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "どこ",
+          "english": "where",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "どちら",
+          "english": "where (polite), which way",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "なに／なん",
+          "english": "what",
+          "type": "dictation",
+          "chapter": 2
+        },
+        {
+          "japanese": "はん",
+          "english": "half past",
+          "type": "dictation",
+          "chapter": 2
+        }
+      ]
+    },
+    {
+      "quiz_number": 9,
+      "title": "Ch.3 Verbs (pp.85-87)",
+      "date": "2/16",
+      "chapter": 3,
+      "type": "vocab_write",
+      "items": [
+        {
+          "english": "(something) exists; to be held; to have",
+          "answer_japanese": "あります",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) go",
+          "answer_japanese": "いきます",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) return, (to) go home",
+          "answer_japanese": "かえります",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) drink",
+          "answer_japanese": "のみます",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) take (a bath), (to) enter",
+          "answer_japanese": "はいります",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) read",
+          "answer_japanese": "よみます",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) take (a shower)",
+          "answer_japanese": "あびます",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) get up, (to) wake up",
+          "answer_japanese": "おきます",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) eat",
+          "answer_japanese": "たべます",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) go to bed",
+          "answer_japanese": "ねます",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) see, (to) watch",
+          "answer_japanese": "みます",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) come",
+          "answer_japanese": "きます",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) do",
+          "answer_japanese": "します",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "(to) study",
+          "answer_japanese": "べんきょうします",
+          "type": "vocab_write",
+          "chapter": 3
+        }
+      ]
+    },
+    {
+      "quiz_number": 10,
+      "title": "Ch.3 Daily Activities (pp.88-89)",
+      "date": "2/18",
+      "chapter": 3,
+      "type": "vocab_write",
+      "items": [
+        {
+          "english": "when",
+          "answer_japanese": "いつ",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "not very often (with negative)",
+          "answer_japanese": "あまり",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "always",
+          "answer_japanese": "いつも",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "not at all (with negative)",
+          "answer_japanese": "ぜんぜん",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "usually",
+          "answer_japanese": "たいてい",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "sometimes",
+          "answer_japanese": "ときどき",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "often, well",
+          "answer_japanese": "よく",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "at, in, on (location of action)",
+          "answer_japanese": "で",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "at, on, in (point in time); to (goal)",
+          "answer_japanese": "に",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "to (direction)",
+          "answer_japanese": "へ",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "direct object marker",
+          "answer_japanese": "を",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "about ~ (time)",
+          "answer_japanese": "～ごろ",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "day (of the week)",
+          "answer_japanese": "～ようび",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "~ minute(s)",
+          "answer_japanese": "～ふん",
+          "type": "vocab_write",
+          "chapter": 3
+        }
+      ]
+    },
+    {
+      "quiz_number": 11,
+      "title": "Ch.3 Time Expressions (pp.84-85)",
+      "date": "2/20",
+      "chapter": 3,
+      "type": "vocab_write",
+      "items": [
+        {
+          "english": "morning",
+          "answer_japanese": "あさ",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "breakfast",
+          "answer_japanese": "あさごはん",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "the day after tomorrow",
+          "answer_japanese": "あさって",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "tomorrow",
+          "answer_japanese": "あした",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "home",
+          "answer_japanese": "うち",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "movie",
+          "answer_japanese": "えいが",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "the day before yesterday",
+          "answer_japanese": "おととい",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "bath",
+          "answer_japanese": "おふろ",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "school",
+          "answer_japanese": "がっこう",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "Tuesday",
+          "answer_japanese": "かようび",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "yesterday",
+          "answer_japanese": "きのう",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "today",
+          "answer_japanese": "きょう",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "Friday",
+          "answer_japanese": "きんようび",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "class",
+          "answer_japanese": "クラス",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "Monday",
+          "answer_japanese": "げつようび",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "coffee",
+          "answer_japanese": "コーヒー",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "meal, cooked rice",
+          "answer_japanese": "ごはん",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "this week",
+          "answer_japanese": "こんしゅう",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "tonight",
+          "answer_japanese": "こんばん",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "shower",
+          "answer_japanese": "シャワー",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "weekend",
+          "answer_japanese": "しゅうまつ",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "class, course",
+          "answer_japanese": "じゅぎょう",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "homework",
+          "answer_japanese": "しゅくだい",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "Wednesday",
+          "answer_japanese": "すいようび",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "life, living",
+          "answer_japanese": "せいかつ",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "last week",
+          "answer_japanese": "せんしゅう",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "next",
+          "answer_japanese": "つぎ",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "television, TV",
+          "answer_japanese": "テレビ",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "telephone number",
+          "answer_japanese": "でんわばんごう",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "library",
+          "answer_japanese": "としょかん",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "Saturday",
+          "answer_japanese": "どようび",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "Sunday",
+          "answer_japanese": "にちようび",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "night, evening",
+          "answer_japanese": "ばん",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "supper, dinner",
+          "answer_japanese": "ばんごはん",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "afternoon",
+          "answer_japanese": "ひる",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "lunch",
+          "answer_japanese": "ひるごはん",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "study",
+          "answer_japanese": "べんきょう",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "book",
+          "answer_japanese": "ほん",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "every morning",
+          "answer_japanese": "まいあさ",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "every week",
+          "answer_japanese": "まいしゅう",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "every day",
+          "answer_japanese": "まいにち",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "every night",
+          "answer_japanese": "まいばん",
+          "type": "vocab_write",
+          "chapter": 3
+        },
+        {
+          "english": "Thursday",
+          "answer_japanese": "もくようび",
+          "type": "vocab_write",
+          "chapter": 3
+        }
+      ]
+    },
+    {
+      "quiz_number": 12,
+      "title": "Ch.4 Nouns (pp.124-125)",
+      "date": "3/02",
+      "chapter": 4,
+      "type": "vocab_write",
+      "items": [
+        {
+          "english": "apartment",
+          "answer_japanese": "アパート",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "station",
+          "answer_japanese": "えき",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "pencil",
+          "answer_japanese": "えんぴつ",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "luggage, bag",
+          "answer_japanese": "かばん",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "coffee shop, cafe",
+          "answer_japanese": "カフェ",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "coffee shop (traditional)",
+          "answer_japanese": "きっさてん",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "textbook",
+          "answer_japanese": "きょうかしょ",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "bank",
+          "answer_japanese": "ぎんこう",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "eraser",
+          "answer_japanese": "けしゴム",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "park",
+          "answer_japanese": "こうえん",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "police box",
+          "answer_japanese": "こうばん",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "this area",
+          "answer_japanese": "このへん",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "convenience store",
+          "answer_japanese": "コンビニ",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "dictionary",
+          "answer_japanese": "じしょ",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "supermarket",
+          "answer_japanese": "スーパー",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "building, structure",
+          "answer_japanese": "たてもの",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "test",
+          "answer_japanese": "テスト",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "department store",
+          "answer_japanese": "デパート",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "notebook",
+          "answer_japanese": "ノート",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "building",
+          "answer_japanese": "ビル",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "hospital",
+          "answer_japanese": "びょういん",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "pen",
+          "answer_japanese": "ペン",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "ballpoint pen",
+          "answer_japanese": "ボールペン",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "bookstore",
+          "answer_japanese": "ほんや",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "town",
+          "answer_japanese": "まち",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "post office",
+          "answer_japanese": "ゆうびんきょく",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "dormitory",
+          "answer_japanese": "りょう",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "restaurant",
+          "answer_japanese": "レストラン",
+          "type": "vocab_write",
+          "chapter": 4
+        }
+      ]
+    },
+    {
+      "quiz_number": 13,
+      "title": "Ch.4 Adjectives (pp.125-128)",
+      "date": "3/04",
+      "chapter": 4,
+      "type": "vocab_write",
+      "items": [
+        {
+          "english": "blue",
+          "answer_japanese": "あおい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "red",
+          "answer_japanese": "あかい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "new",
+          "answer_japanese": "あたらしい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "good",
+          "answer_japanese": "いい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "big",
+          "answer_japanese": "おおきい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "yellow",
+          "answer_japanese": "きいろい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "black",
+          "answer_japanese": "くろい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "white",
+          "answer_japanese": "しろい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "tall, high",
+          "answer_japanese": "たかい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "small",
+          "answer_japanese": "ちいさい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "brown",
+          "answer_japanese": "ちゃいろい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "old",
+          "answer_japanese": "ふるい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "clean, pretty, neat",
+          "answer_japanese": "きれい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "famous",
+          "answer_japanese": "ゆうめい",
+          "type": "vocab_write",
+          "chapter": 4
+        },
+        {
+          "english": "fine, splendid, nice",
+          "answer_japanese": "りっぱ",
+          "type": "vocab_write",
+          "chapter": 4
+        }
+      ]
+    },
+    {
+      "quiz_number": 14,
+      "title": "Katakana ア～ト",
+      "date": "3/09",
+      "chapter": 2.5,
+      "type": "kana_writing",
+      "items": [
+        {
+          "prompt": "a",
+          "answer": "ア",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "i",
+          "answer": "イ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "u",
+          "answer": "ウ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "e",
+          "answer": "エ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "o",
+          "answer": "オ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ka",
+          "answer": "カ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ki",
+          "answer": "キ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ku",
+          "answer": "ク",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ke",
+          "answer": "ケ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ko",
+          "answer": "コ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "sa",
+          "answer": "サ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "shi",
+          "answer": "シ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "su",
+          "answer": "ス",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "se",
+          "answer": "セ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "so",
+          "answer": "ソ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ta",
+          "answer": "タ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "chi",
+          "answer": "チ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "tsu",
+          "answer": "ツ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "te",
+          "answer": "テ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "to",
+          "answer": "ト",
+          "type": "kana_writing"
+        }
+      ]
+    },
+    {
+      "quiz_number": 15,
+      "title": "Ch.4 Adjective Conjugation",
+      "date": "3/11",
+      "chapter": 4,
+      "type": "conjugation",
+      "items": [
+        {
+          "base_form": "あおい",
+          "meaning": "blue",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "あおいです",
+            "negative": "あおくないです",
+            "past_aff": "あおかったです",
+            "past_neg": "あおくなかったです"
+          }
+        },
+        {
+          "base_form": "あかい",
+          "meaning": "red",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "あかいです",
+            "negative": "あかくないです",
+            "past_aff": "あかかったです",
+            "past_neg": "あかくなかったです"
+          }
+        },
+        {
+          "base_form": "あたらしい",
+          "meaning": "new",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "あたらしいです",
+            "negative": "あたらしくないです",
+            "past_aff": "あたらしかったです",
+            "past_neg": "あたらしくなかったです"
+          }
+        },
+        {
+          "base_form": "いい",
+          "meaning": "good",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "いいです",
+            "negative": "よくないです",
+            "past_aff": "よかったです",
+            "past_neg": "よくなかったです"
+          }
+        },
+        {
+          "base_form": "おおきい",
+          "meaning": "big",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "おおきいです",
+            "negative": "おおきくないです",
+            "past_aff": "おおきかったです",
+            "past_neg": "おおきくなかったです"
+          }
+        },
+        {
+          "base_form": "きいろい",
+          "meaning": "yellow",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "きいろいです",
+            "negative": "きいろくないです",
+            "past_aff": "きいろかったです",
+            "past_neg": "きいろくなかったです"
+          }
+        },
+        {
+          "base_form": "くろい",
+          "meaning": "black",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "くろいです",
+            "negative": "くろくないです",
+            "past_aff": "くろかったです",
+            "past_neg": "くろくなかったです"
+          }
+        },
+        {
+          "base_form": "しろい",
+          "meaning": "white",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "しろいです",
+            "negative": "しろくないです",
+            "past_aff": "しろかったです",
+            "past_neg": "しろくなかったです"
+          }
+        },
+        {
+          "base_form": "たかい",
+          "meaning": "tall, high",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "たかいです",
+            "negative": "たかくないです",
+            "past_aff": "たかかったです",
+            "past_neg": "たかくなかったです"
+          }
+        },
+        {
+          "base_form": "ちいさい",
+          "meaning": "small",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "ちいさいです",
+            "negative": "ちいさくないです",
+            "past_aff": "ちいさかったです",
+            "past_neg": "ちいさくなかったです"
+          }
+        },
+        {
+          "base_form": "ちゃいろい",
+          "meaning": "brown",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "ちゃいろいです",
+            "negative": "ちゃいろくないです",
+            "past_aff": "ちゃいろかったです",
+            "past_neg": "ちゃいろくなかったです"
+          }
+        },
+        {
+          "base_form": "ふるい",
+          "meaning": "old",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "ふるいです",
+            "negative": "ふるくないです",
+            "past_aff": "ふるかったです",
+            "past_neg": "ふるくなかったです"
+          }
+        },
+        {
+          "base_form": "きれい",
+          "meaning": "clean, pretty, neat",
+          "type": "conjugation",
+          "adj_type": "na-adjective",
+          "conjugations": {
+            "affirmative": "きれいです",
+            "negative": "きれいじゃないです",
+            "past_aff": "きれいでした",
+            "past_neg": "きれいじゃありませんでした"
+          }
+        },
+        {
+          "base_form": "ゆうめい",
+          "meaning": "famous",
+          "type": "conjugation",
+          "adj_type": "na-adjective",
+          "conjugations": {
+            "affirmative": "ゆうめいです",
+            "negative": "ゆうめいじゃないです",
+            "past_aff": "ゆうめいでした",
+            "past_neg": "ゆうめいじゃありませんでした"
+          }
+        },
+        {
+          "base_form": "りっぱ",
+          "meaning": "fine, splendid, nice",
+          "type": "conjugation",
+          "adj_type": "na-adjective",
+          "conjugations": {
+            "affirmative": "りっぱです",
+            "negative": "りっぱじゃないです",
+            "past_aff": "りっぱでした",
+            "past_neg": "りっぱじゃありませんでした"
+          }
+        }
+      ]
+    },
+    {
+      "quiz_number": 16,
+      "title": "Katakana ア～ホ",
+      "date": "3/23",
+      "chapter": 2.5,
+      "type": "kana_writing",
+      "items": [
+        {
+          "prompt": "a",
+          "answer": "ア",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "i",
+          "answer": "イ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "u",
+          "answer": "ウ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "e",
+          "answer": "エ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "o",
+          "answer": "オ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ka",
+          "answer": "カ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ki",
+          "answer": "キ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ku",
+          "answer": "ク",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ke",
+          "answer": "ケ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ko",
+          "answer": "コ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "sa",
+          "answer": "サ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "shi",
+          "answer": "シ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "su",
+          "answer": "ス",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "se",
+          "answer": "セ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "so",
+          "answer": "ソ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ta",
+          "answer": "タ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "chi",
+          "answer": "チ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "tsu",
+          "answer": "ツ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "te",
+          "answer": "テ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "to",
+          "answer": "ト",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "na",
+          "answer": "ナ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ni",
+          "answer": "ニ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "nu",
+          "answer": "ヌ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ne",
+          "answer": "ネ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "no",
+          "answer": "ノ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ha",
+          "answer": "ハ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "hi",
+          "answer": "ヒ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "fu",
+          "answer": "フ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "he",
+          "answer": "ヘ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ho",
+          "answer": "ホ",
+          "type": "kana_writing"
+        }
+      ]
+    },
+    {
+      "quiz_number": 17,
+      "title": "Ch.4 Kanji (大学校先生)",
+      "date": "3/25",
+      "chapter": 4,
+      "type": "kanji",
+      "items": [
+        {
+          "kanji": "大",
+          "kun_reading": "おお(きい)",
+          "on_reading": "ダイ",
+          "meaning": "big, large",
+          "type": "kanji",
+          "chapter": 4,
+          "example_words": [
+            "大学 (だいがく) - university",
+            "大きい (おおきい) - big",
+            "大学生 (だいがくせい) - college student"
+          ]
+        },
+        {
+          "kanji": "学",
+          "kun_reading": "まな(ぶ)",
+          "on_reading": "ガク・ガッ",
+          "meaning": "to study, learn",
+          "type": "kanji",
+          "chapter": 4,
+          "example_words": [
+            "学校 (がっこう) - school",
+            "大学 (だいがく) - university",
+            "学生 (がくせい) - student"
+          ]
+        },
+        {
+          "kanji": "校",
+          "kun_reading": "",
+          "on_reading": "コウ",
+          "meaning": "school",
+          "type": "kanji",
+          "chapter": 4,
+          "example_words": [
+            "学校 (がっこう) - school",
+            "高校 (こうこう) - high school"
+          ]
+        },
+        {
+          "kanji": "先",
+          "kun_reading": "さき",
+          "on_reading": "セン",
+          "meaning": "ahead, previous",
+          "type": "kanji",
+          "chapter": 4,
+          "example_words": [
+            "先生 (せんせい) - teacher",
+            "先週 (せんしゅう) - last week"
+          ]
+        },
+        {
+          "kanji": "生",
+          "kun_reading": "なま・う(まれる)",
+          "on_reading": "セイ",
+          "meaning": "life, to live",
+          "type": "kanji",
+          "chapter": 4,
+          "example_words": [
+            "学生 (がくせい) - student",
+            "先生 (せんせい) - teacher",
+            "一年生 (いちねんせい) - freshman"
+          ]
+        }
+      ]
+    },
+    {
+      "quiz_number": 18,
+      "title": "All Katakana ア～ン",
+      "date": "3/30",
+      "chapter": 2.5,
+      "type": "kana_writing",
+      "items": [
+        {
+          "prompt": "a",
+          "answer": "ア",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "i",
+          "answer": "イ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "u",
+          "answer": "ウ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "e",
+          "answer": "エ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "o",
+          "answer": "オ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ka",
+          "answer": "カ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ki",
+          "answer": "キ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ku",
+          "answer": "ク",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ke",
+          "answer": "ケ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ko",
+          "answer": "コ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "sa",
+          "answer": "サ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "shi",
+          "answer": "シ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "su",
+          "answer": "ス",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "se",
+          "answer": "セ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "so",
+          "answer": "ソ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ta",
+          "answer": "タ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "chi",
+          "answer": "チ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "tsu",
+          "answer": "ツ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "te",
+          "answer": "テ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "to",
+          "answer": "ト",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "na",
+          "answer": "ナ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ni",
+          "answer": "ニ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "nu",
+          "answer": "ヌ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ne",
+          "answer": "ネ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "no",
+          "answer": "ノ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ha",
+          "answer": "ハ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "hi",
+          "answer": "ヒ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "fu",
+          "answer": "フ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "he",
+          "answer": "ヘ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ho",
+          "answer": "ホ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ma",
+          "answer": "マ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "mi",
+          "answer": "ミ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "mu",
+          "answer": "ム",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "me",
+          "answer": "メ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "mo",
+          "answer": "モ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ya",
+          "answer": "ヤ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "yu",
+          "answer": "ユ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "yo",
+          "answer": "ヨ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ra",
+          "answer": "ラ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ri",
+          "answer": "リ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ru",
+          "answer": "ル",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "re",
+          "answer": "レ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "ro",
+          "answer": "ロ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "wa",
+          "answer": "ワ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "wo",
+          "answer": "ヲ",
+          "type": "kana_writing"
+        },
+        {
+          "prompt": "n",
+          "answer": "ン",
+          "type": "kana_writing"
+        }
+      ]
+    },
+    {
+      "quiz_number": 19,
+      "title": "Ch.5 Vocabulary",
+      "date": "4/01",
+      "chapter": 5,
+      "type": "vocab_write",
+      "items": [
+        {
+          "english": "on, above, over",
+          "answer_japanese": "うえ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "behind, in back of",
+          "answer_japanese": "うしろ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "under, beneath",
+          "answer_japanese": "した",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "outside",
+          "answer_japanese": "そと",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "near, in the vicinity of",
+          "answer_japanese": "ちかく",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "next to",
+          "answer_japanese": "となり",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "in, inside",
+          "answer_japanese": "なか",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "to the left, left side",
+          "answer_japanese": "ひだり",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "in front of",
+          "answer_japanese": "まえ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "to the right",
+          "answer_japanese": "みぎ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "next to, at the side of",
+          "answer_japanese": "よこ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "chair",
+          "answer_japanese": "いす",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "dog",
+          "answer_japanese": "いぬ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "picture",
+          "answer_japanese": "え",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "Japanese-style closet",
+          "answer_japanese": "おしいれ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "school cafeteria",
+          "answer_japanese": "がくしょく",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "student union",
+          "answer_japanese": "がくせいかいかん",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "river",
+          "answer_japanese": "かわ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "tree",
+          "answer_japanese": "き",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "classroom",
+          "answer_japanese": "きょうしつ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "car",
+          "answer_japanese": "くるま",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "cell phone",
+          "answer_japanese": "けいたい",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "chalkboard",
+          "answer_japanese": "こくばん",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "computer",
+          "answer_japanese": "コンピュータ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "bicycle",
+          "answer_japanese": "じてんしゃ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "photograph",
+          "answer_japanese": "しゃしん",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "sofa",
+          "answer_japanese": "ソファ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "gym",
+          "answer_japanese": "たいいくかん",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "chest, drawers",
+          "answer_japanese": "たんす",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "desk",
+          "answer_japanese": "つくえ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "table",
+          "answer_japanese": "テーブル",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "telephone",
+          "answer_japanese": "でんわ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "door",
+          "answer_japanese": "ドア",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "toilet, restroom",
+          "answer_japanese": "トイレ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "clock, watch",
+          "answer_japanese": "とけい",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "place",
+          "answer_japanese": "ところ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "cat",
+          "answer_japanese": "ねこ",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "bus",
+          "answer_japanese": "バス",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "person",
+          "answer_japanese": "ひと",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "futon",
+          "answer_japanese": "ふとん",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "bed",
+          "answer_japanese": "ベッド",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "room",
+          "answer_japanese": "へや",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "bookshelf",
+          "answer_japanese": "ほんだな",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "window",
+          "answer_japanese": "まど",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "thing (tangible)",
+          "answer_japanese": "もの",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "mountain",
+          "answer_japanese": "やま",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "bright",
+          "answer_japanese": "あかるい",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "dark",
+          "answer_japanese": "くらい",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "cramped, narrow",
+          "answer_japanese": "せまい",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "fast, quick",
+          "answer_japanese": "はやい",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "spacious, wide",
+          "answer_japanese": "ひろい",
+          "type": "vocab_write",
+          "chapter": 5
+        },
+        {
+          "english": "quiet",
+          "answer_japanese": "しずか",
+          "type": "vocab_write",
+          "chapter": 5
+        }
+      ]
+    },
+    {
+      "quiz_number": 20,
+      "title": "Ch.5 Kanji (山川田人上中下小日本)",
+      "date": "4/06",
+      "chapter": 5,
+      "type": "kanji",
+      "items": [
+        {
+          "kanji": "山",
+          "kun_reading": "やま",
+          "on_reading": "サン・ザン",
+          "meaning": "mountain",
+          "type": "kanji",
+          "chapter": 5,
+          "example_words": [
+            "山川 (やまかわ) - family name",
+            "富士山 (ふじさん) - Mt. Fuji",
+            "山の上 (やまのうえ) - top of the mountain"
+          ]
+        },
+        {
+          "kanji": "川",
+          "kun_reading": "かわ・がわ",
+          "on_reading": "セン",
+          "meaning": "river",
+          "type": "kanji",
+          "chapter": 5,
+          "example_words": [
+            "小川 (おがわ) - family name / small river",
+            "川中 (かわなか) - family name"
+          ]
+        },
+        {
+          "kanji": "田",
+          "kun_reading": "た・だ",
+          "on_reading": "デン",
+          "meaning": "rice paddy",
+          "type": "kanji",
+          "chapter": 5,
+          "example_words": [
+            "上田 (うえだ) - family name",
+            "田中 (たなか) - family name"
+          ]
+        },
+        {
+          "kanji": "人",
+          "kun_reading": "ひと",
+          "on_reading": "ジン・ニン",
+          "meaning": "person",
+          "type": "kanji",
+          "chapter": 5,
+          "example_words": [
+            "日本人 (にほんじん) - Japanese person",
+            "あの人 (あのひと) - that person"
+          ]
+        },
+        {
+          "kanji": "上",
+          "kun_reading": "うえ・かみ・あ(がる)",
+          "on_reading": "ジョウ",
+          "meaning": "on, up, above",
+          "type": "kanji",
+          "chapter": 5,
+          "example_words": [
+            "テーブルの上 (うえ) - on the table",
+            "上がってください (あがってください) - please come in"
+          ]
+        },
+        {
+          "kanji": "中",
+          "kun_reading": "なか",
+          "on_reading": "チュウ",
+          "meaning": "in, middle, center",
+          "type": "kanji",
+          "chapter": 5,
+          "example_words": [
+            "へやの中 (なか) - inside the room",
+            "中国 (ちゅうごく) - China"
+          ]
+        },
+        {
+          "kanji": "下",
+          "kun_reading": "した・くだ(さい)",
+          "on_reading": "カ・ゲ",
+          "meaning": "under, below",
+          "type": "kanji",
+          "chapter": 5,
+          "example_words": [
+            "まどの下 (した) - under the window",
+            "下さい (ください) - please"
+          ]
+        },
+        {
+          "kanji": "小",
+          "kun_reading": "ちい(さい)",
+          "on_reading": "ショウ",
+          "meaning": "small",
+          "type": "kanji",
+          "chapter": 5,
+          "example_words": [
+            "小さいへや (ちいさいへや) - small room",
+            "小川 (おがわ) - family name"
+          ]
+        },
+        {
+          "kanji": "日",
+          "kun_reading": "ひ・び",
+          "on_reading": "ニチ・ニ・ジツ・カ",
+          "meaning": "sun, day",
+          "type": "kanji",
+          "chapter": 5,
+          "example_words": [
+            "日本 (にほん) - Japan",
+            "毎日 (まいにち) - every day",
+            "日曜日 (にちようび) - Sunday"
+          ]
+        },
+        {
+          "kanji": "本",
+          "kun_reading": "もと",
+          "on_reading": "ホン・ボン",
+          "meaning": "root, book",
+          "type": "kanji",
+          "chapter": 5,
+          "example_words": [
+            "日本 (にほん) - Japan",
+            "本 (ほん) - book",
+            "本屋 (ほんや) - bookstore"
+          ]
+        }
+      ]
+    },
+    {
+      "quiz_number": 21,
+      "title": "Ch.6 Vocab 1 — Chores & Activities",
+      "date": "4/08",
+      "chapter": 6,
+      "type": "vocab_write",
+      "items": [
+        {
+          "english": "part-time job",
+          "answer_japanese": "アルバイト",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "exercise",
+          "answer_japanese": "うんどう",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "music",
+          "answer_japanese": "おんがく",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "shopping",
+          "answer_japanese": "かいもの",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "game",
+          "answer_japanese": "ゲーム",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "concert",
+          "answer_japanese": "コンサート",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "next time",
+          "answer_japanese": "こんど",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "magazine",
+          "answer_japanese": "ざっし",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "walk, stroll",
+          "answer_japanese": "さんぽ",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "job",
+          "answer_japanese": "しごと",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "question",
+          "answer_japanese": "しつもん",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "jogging",
+          "answer_japanese": "ジョギング",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "newspaper",
+          "answer_japanese": "しんぶん",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "laundry",
+          "answer_japanese": "せんたく",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "cleaning",
+          "answer_japanese": "そうじ",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "letter",
+          "answer_japanese": "てがみ",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "tennis",
+          "answer_japanese": "テニス",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "friend",
+          "answer_japanese": "ともだち",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "party",
+          "answer_japanese": "パーティ",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "picnic",
+          "answer_japanese": "ピクニック",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "pool",
+          "answer_japanese": "プール",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "e-mail",
+          "answer_japanese": "メール",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "rest, a day off",
+          "answer_japanese": "やすみ",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "a day off, holiday",
+          "answer_japanese": "やすみのひ",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "parents",
+          "answer_japanese": "りょうしん",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "cooking, cuisine",
+          "answer_japanese": "りょうり",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) meet",
+          "answer_japanese": "あいます",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) play",
+          "answer_japanese": "あそびます",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) walk",
+          "answer_japanese": "あるきます",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) say",
+          "answer_japanese": "いいます",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) swim",
+          "answer_japanese": "およぎます",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) write",
+          "answer_japanese": "かきます",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) ask, listen to",
+          "answer_japanese": "ききます",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) talk",
+          "answer_japanese": "はなします",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) wait",
+          "answer_japanese": "まちます",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) call, invite",
+          "answer_japanese": "よびます",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) make (a phone call)",
+          "answer_japanese": "かけます",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "(to) go out",
+          "answer_japanese": "でかけます",
+          "type": "vocab_write",
+          "chapter": 6
+        }
+      ]
+    },
+    {
+      "quiz_number": 22,
+      "title": "Ch.6 Vocab 2 — Day Off",
+      "date": "4/13",
+      "chapter": 6,
+      "type": "vocab_write",
+      "items": [
+        {
+          "english": "busy",
+          "answer_japanese": "いそがしい",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "happy",
+          "answer_japanese": "うれしい",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "interesting",
+          "answer_japanese": "おもしろい",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "sad",
+          "answer_japanese": "かなしい",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "lonely",
+          "answer_japanese": "さびしい",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "fun",
+          "answer_japanese": "たのしい",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "boring",
+          "answer_japanese": "つまらない",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "difficult",
+          "answer_japanese": "むずかしい",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "easy; kind",
+          "answer_japanese": "やさしい",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "healthy, cheerful, lively",
+          "answer_japanese": "げんき",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "sorry, regrettable",
+          "answer_japanese": "ざんねん",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "all right, no problem",
+          "answer_japanese": "だいじょうぶ",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "tough",
+          "answer_japanese": "たいへん",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "lively (place/event)",
+          "answer_japanese": "にぎやか",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "free, idle, unscheduled",
+          "answer_japanese": "ひま",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "how?",
+          "answer_japanese": "どう",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "together",
+          "answer_japanese": "いっしょに",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "by all means, I'd love to",
+          "answer_japanese": "ぜひ",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "slowly; to relax",
+          "answer_japanese": "ゆっくり",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "with; and",
+          "answer_japanese": "と",
+          "type": "vocab_write",
+          "chapter": 6
+        },
+        {
+          "english": "and",
+          "answer_japanese": "そして",
+          "type": "vocab_write",
+          "chapter": 6
+        }
+      ]
+    },
+    {
+      "quiz_number": 23,
+      "title": "Ch.6 Kanji (今私月火水木金土曜何週末休)",
+      "date": "4/15",
+      "chapter": 6,
+      "type": "kanji",
+      "items": [
+        {
+          "kanji": "今",
+          "kun_reading": "いま",
+          "on_reading": "コン",
+          "meaning": "now",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "今週 (こんしゅう) - this week",
+            "今日 (きょう) - today",
+            "今、何時ですか (いま、なんじですか) - What time is it now?"
+          ]
+        },
+        {
+          "kanji": "私",
+          "kun_reading": "わたし・わたくし",
+          "on_reading": "シ",
+          "meaning": "I; private",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "私 (わたし) - I",
+            "私の本 (わたしのほん) - my book"
+          ]
+        },
+        {
+          "kanji": "月",
+          "kun_reading": "つき",
+          "on_reading": "ゲツ・ガツ",
+          "meaning": "moon, month",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "月曜日 (げつようび) - Monday"
+          ]
+        },
+        {
+          "kanji": "火",
+          "kun_reading": "ひ",
+          "on_reading": "カ",
+          "meaning": "fire",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "火曜日 (かようび) - Tuesday"
+          ]
+        },
+        {
+          "kanji": "水",
+          "kun_reading": "みず",
+          "on_reading": "スイ",
+          "meaning": "water",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "水曜日 (すいようび) - Wednesday"
+          ]
+        },
+        {
+          "kanji": "木",
+          "kun_reading": "き",
+          "on_reading": "モク",
+          "meaning": "tree",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "木曜日 (もくようび) - Thursday",
+            "大きい木 (おおきいき) - big tree"
+          ]
+        },
+        {
+          "kanji": "金",
+          "kun_reading": "かね",
+          "on_reading": "キン",
+          "meaning": "gold, money, metal",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "金曜日 (きんようび) - Friday"
+          ]
+        },
+        {
+          "kanji": "土",
+          "kun_reading": "つち",
+          "on_reading": "ト・ド",
+          "meaning": "earth, soil, ground",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "土曜日 (どようび) - Saturday"
+          ]
+        },
+        {
+          "kanji": "曜",
+          "kun_reading": "",
+          "on_reading": "ヨウ",
+          "meaning": "day of the week",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "月曜日 (げつようび) - Monday",
+            "何曜日 (なんようび) - what day"
+          ]
+        },
+        {
+          "kanji": "何",
+          "kun_reading": "なに・なん",
+          "on_reading": "",
+          "meaning": "what",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "何曜日 (なんようび) - what day",
+            "何ですか (なんですか) - what is it?",
+            "何をしますか (なにをしますか) - what will you do?"
+          ]
+        },
+        {
+          "kanji": "週",
+          "kun_reading": "",
+          "on_reading": "シュウ",
+          "meaning": "week",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "今週 (こんしゅう) - this week",
+            "先週 (せんしゅう) - last week",
+            "週末 (しゅうまつ) - weekend"
+          ]
+        },
+        {
+          "kanji": "末",
+          "kun_reading": "すえ",
+          "on_reading": "マツ",
+          "meaning": "end",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "週末 (しゅうまつ) - weekend"
+          ]
+        },
+        {
+          "kanji": "休",
+          "kun_reading": "やす(む)",
+          "on_reading": "キュウ",
+          "meaning": "to rest",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "休みの日 (やすみのひ) - day off"
+          ]
+        },
+        {
+          "kanji": "来",
+          "kun_reading": "く(る)",
+          "on_reading": "ライ",
+          "meaning": "to come",
+          "type": "kanji",
+          "chapter": 6,
+          "example_words": [
+            "来週 (らいしゅう) - next week"
+          ]
+        }
+      ]
+    },
+    {
+      "quiz_number": 24,
+      "title": "Ch.6 Polite Past Adjectives + Copula です",
+      "date": "4/27",
+      "chapter": 6,
+      "type": "conjugation",
+      "items": [
+        {
+          "base_form": "いそがしい",
+          "meaning": "busy",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "いそがしいです",
+            "negative": "いそがしくないです",
+            "past_aff": "いそがしかったです",
+            "past_neg": "いそがしくなかったです"
+          }
+        },
+        {
+          "base_form": "うれしい",
+          "meaning": "happy",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "うれしいです",
+            "negative": "うれしくないです",
+            "past_aff": "うれしかったです",
+            "past_neg": "うれしくなかったです"
+          }
+        },
+        {
+          "base_form": "おもしろい",
+          "meaning": "interesting",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "おもしろいです",
+            "negative": "おもしろくないです",
+            "past_aff": "おもしろかったです",
+            "past_neg": "おもしろくなかったです"
+          }
+        },
+        {
+          "base_form": "かなしい",
+          "meaning": "sad",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "かなしいです",
+            "negative": "かなしくないです",
+            "past_aff": "かなしかったです",
+            "past_neg": "かなしくなかったです"
+          }
+        },
+        {
+          "base_form": "さびしい",
+          "meaning": "lonely",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "さびしいです",
+            "negative": "さびしくないです",
+            "past_aff": "さびしかったです",
+            "past_neg": "さびしくなかったです"
+          }
+        },
+        {
+          "base_form": "たのしい",
+          "meaning": "fun",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "たのしいです",
+            "negative": "たのしくないです",
+            "past_aff": "たのしかったです",
+            "past_neg": "たのしくなかったです"
+          }
+        },
+        {
+          "base_form": "つまらない",
+          "meaning": "boring",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "つまらないです",
+            "negative": "つまらなくないです",
+            "past_aff": "つまらなかったです",
+            "past_neg": "つまらなくなかったです"
+          }
+        },
+        {
+          "base_form": "むずかしい",
+          "meaning": "difficult",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "むずかしいです",
+            "negative": "むずかしくないです",
+            "past_aff": "むずかしかったです",
+            "past_neg": "むずかしくなかったです"
+          }
+        },
+        {
+          "base_form": "やさしい",
+          "meaning": "easy; kind",
+          "type": "conjugation",
+          "adj_type": "i-adjective",
+          "conjugations": {
+            "affirmative": "やさしいです",
+            "negative": "やさしくないです",
+            "past_aff": "やさしかったです",
+            "past_neg": "やさしくなかったです"
+          }
+        },
+        {
+          "base_form": "げんき",
+          "meaning": "healthy, cheerful, lively",
+          "type": "conjugation",
+          "adj_type": "na-adjective",
+          "conjugations": {
+            "affirmative": "げんきです",
+            "negative": "げんきじゃないです",
+            "past_aff": "げんきでした",
+            "past_neg": "げんきじゃありませんでした"
+          }
+        },
+        {
+          "base_form": "ざんねん",
+          "meaning": "sorry, regrettable",
+          "type": "conjugation",
+          "adj_type": "na-adjective",
+          "conjugations": {
+            "affirmative": "ざんねんです",
+            "negative": "ざんねんじゃないです",
+            "past_aff": "ざんねんでした",
+            "past_neg": "ざんねんじゃありませんでした"
+          }
+        },
+        {
+          "base_form": "だいじょうぶ",
+          "meaning": "all right, no problem",
+          "type": "conjugation",
+          "adj_type": "na-adjective",
+          "conjugations": {
+            "affirmative": "だいじょうぶです",
+            "negative": "だいじょうぶじゃないです",
+            "past_aff": "だいじょうぶでした",
+            "past_neg": "だいじょうぶじゃありませんでした"
+          }
+        },
+        {
+          "base_form": "たいへん",
+          "meaning": "tough",
+          "type": "conjugation",
+          "adj_type": "na-adjective",
+          "conjugations": {
+            "affirmative": "たいへんです",
+            "negative": "たいへんじゃないです",
+            "past_aff": "たいへんでした",
+            "past_neg": "たいへんじゃありませんでした"
+          }
+        },
+        {
+          "base_form": "にぎやか",
+          "meaning": "lively (place/event)",
+          "type": "conjugation",
+          "adj_type": "na-adjective",
+          "conjugations": {
+            "affirmative": "にぎやかです",
+            "negative": "にぎやかじゃないです",
+            "past_aff": "にぎやかでした",
+            "past_neg": "にぎやかじゃありませんでした"
+          }
+        },
+        {
+          "base_form": "ひま",
+          "meaning": "free, idle, unscheduled",
+          "type": "conjugation",
+          "adj_type": "na-adjective",
+          "conjugations": {
+            "affirmative": "ひまです",
+            "negative": "ひまじゃないです",
+            "past_aff": "ひまでした",
+            "past_neg": "ひまじゃありませんでした"
+          }
+        },
+        {
+          "base_form": "です",
+          "meaning": "to be (copula)",
+          "type": "conjugation",
+          "adj_type": "copula",
+          "conjugations": {
+            "affirmative": "です",
+            "negative": "じゃないです",
+            "past_aff": "でした",
+            "past_neg": "じゃありませんでした"
+          }
+        }
+      ]
+    },
+    {
+      "quiz_number": "midterm",
+      "title": "Midterm — Ch.1-3",
+      "date": "2/23",
+      "chapter": "1-3",
+      "type": "mixed",
+      "items": [
+        {
+          "japanese": "せんせい",
+          "english": "teacher, professor",
+          "type": "vocab",
+          "chapter": 1
+        },
+        {
+          "japanese": "アジアけんきゅう",
+          "english": "Asian studies",
+          "type": "vocab",
+          "chapter": 2
+        },
+        {
+          "japanese": "けいえいがく",
+          "english": "management, business administration",
+          "type": "vocab",
+          "chapter": 2
+        },
+        {
+          "japanese": "だいがくいんせい",
+          "english": "graduate student",
+          "type": "vocab",
+          "chapter": 2
+        },
+        {
+          "japanese": "メキシコ",
+          "english": "Mexico",
+          "type": "vocab",
+          "chapter": 2
+        },
+        {
+          "japanese": "あさ",
+          "english": "morning",
+          "type": "vocab",
+          "chapter": 3
+        },
+        {
+          "japanese": "ごはん",
+          "english": "meal, cooked rice",
+          "type": "vocab",
+          "chapter": 3
+        },
+        {
+          "japanese": "ばん",
+          "english": "night, evening",
+          "type": "vocab",
+          "chapter": 3
+        },
+        {
+          "japanese": "よみます",
+          "english": "(to) read",
+          "type": "vocab",
+          "chapter": 3
+        },
+        {
+          "pattern": "~は ~です",
+          "meaning": "Identifying someone or something (X is Y)",
+          "example_jp": "たなかさんは さんねんせいです。",
+          "example_en": "Mr./Ms. Tanaka is a junior.",
+          "type": "grammar_fill_in",
+          "chapter": 2
+        },
+        {
+          "pattern": "~は ~ですか",
+          "meaning": "Asking yes/no questions",
+          "example_jp": "キムさんは かんこくじんですか。",
+          "example_en": "Is Mr./Ms. Kim Korean?",
+          "type": "grammar_fill_in",
+          "chapter": 2
+        },
+        {
+          "pattern": "Noun の Noun",
+          "meaning": "Indicating relationships between nouns (possession, membership, location)",
+          "example_jp": "とうきょうだいがくの がくせい",
+          "example_en": "student at Tokyo University",
+          "type": "grammar_fill_in",
+          "chapter": 2
+        },
+        {
+          "pattern": "なん / どこ (question words)",
+          "meaning": "Asking for personal information using question words",
+          "example_jp": "おなまえは なんですか。",
+          "example_en": "What is your name?",
+          "type": "grammar_fill_in",
+          "chapter": 2
+        },
+        {
+          "pattern": "~も",
+          "meaning": "Listing and describing similarities (also, too)",
+          "example_jp": "わたしも にほんごの せんこうですよ。",
+          "example_en": "I am a Japanese major, too.",
+          "type": "grammar_fill_in",
+          "chapter": 2
+        },
+        {
+          "pattern": "Verb ます form + に/へ/を/で",
+          "meaning": "Talking about routines, future actions using polite present verbs with particles",
+          "example_jp": "がっこうへ いきます。",
+          "example_en": "I go to school.",
+          "type": "grammar_fill_in",
+          "chapter": 3
+        },
+        {
+          "pattern": "~が あります",
+          "meaning": "Presenting objects or events (something exists / is held)",
+          "example_jp": "じゅぎょうが あります。",
+          "example_en": "I have a class.",
+          "type": "grammar_fill_in",
+          "chapter": 3
+        },
+        {
+          "pattern": "Time + に",
+          "meaning": "Telling time (at a specific time)",
+          "example_jp": "しちじに おきます。",
+          "example_en": "I get up at seven o'clock.",
+          "type": "grammar_fill_in",
+          "chapter": 3
+        },
+        {
+          "pattern": "Frequency adverbs (いつも/よく/ときどき/あまり/ぜんぜん)",
+          "meaning": "Expressing frequency of actions",
+          "example_jp": "まいにち コーヒーを のみます。",
+          "example_en": "I drink coffee every day.",
+          "type": "grammar_fill_in",
+          "chapter": 3
+        },
+        {
+          "pattern": "Verb ました / ませんでした",
+          "meaning": "Expressing past actions and events (polite past)",
+          "example_jp": "きのう えいがを みました。",
+          "example_en": "I watched a movie yesterday.",
+          "type": "grammar_fill_in",
+          "chapter": 3
+        },
+        {
+          "type": "particle_selection",
+          "particle": "は",
+          "hint": "topic marker",
+          "chapter": 2
+        },
+        {
+          "type": "particle_selection",
+          "particle": "も",
+          "hint": "similarity marker (also, too)",
+          "chapter": 2
+        },
+        {
+          "type": "particle_selection",
+          "particle": "の",
+          "hint": "noun modifier marker (of, 's)",
+          "chapter": 2
+        },
+        {
+          "type": "particle_selection",
+          "particle": "に",
+          "hint": "at, on, in (point in time); to (goal)",
+          "chapter": 3
+        },
+        {
+          "type": "particle_selection",
+          "particle": "を",
+          "hint": "direct object marker",
+          "chapter": 3
+        },
+        {
+          "type": "reading",
+          "prompt": "Read the passage and answer: What time does Tanaka-san wake up?",
+          "chapter": 3
+        },
+        {
+          "type": "reading",
+          "prompt": "Read the passage and answer: What does the student study?",
+          "chapter": 2
+        },
+        {
+          "type": "reading",
+          "prompt": "Read the passage and answer: Where does the student go on Monday?",
+          "chapter": 3
+        },
+        {
+          "type": "reading",
+          "prompt": "Read the passage and answer: What year student is Yamada-san?",
+          "chapter": 2
+        },
+        {
+          "type": "reading",
+          "prompt": "Read the passage and answer: What does the student do on the weekend?",
+          "chapter": 3
+        }
+      ]
+    },
+    {
+      "quiz_number": "final",
+      "title": "Final Exam — Ch.1-6",
+      "date": "5/06",
+      "chapter": "1-6",
+      "type": "mixed",
+      "items": [
+        {
+          "japanese": "せんせい",
+          "english": "teacher, professor",
+          "type": "vocab",
+          "chapter": 1
+        },
+        {
+          "japanese": "アジアけんきゅう",
+          "english": "Asian studies",
+          "type": "vocab",
+          "chapter": 2
+        },
+        {
+          "japanese": "ごご",
+          "english": "p.m., afternoon",
+          "type": "vocab",
+          "chapter": 2
+        },
+        {
+          "japanese": "ビジネス",
+          "english": "business",
+          "type": "vocab",
+          "chapter": 2
+        },
+        {
+          "japanese": "あさ",
+          "english": "morning",
+          "type": "vocab",
+          "chapter": 3
+        },
+        {
+          "japanese": "じゅぎょう",
+          "english": "class, course",
+          "type": "vocab",
+          "chapter": 3
+        },
+        {
+          "japanese": "もくようび",
+          "english": "Thursday",
+          "type": "vocab",
+          "chapter": 3
+        },
+        {
+          "japanese": "アパート",
+          "english": "apartment",
+          "type": "vocab",
+          "chapter": 4
+        },
+        {
+          "japanese": "ノート",
+          "english": "notebook",
+          "type": "vocab",
+          "chapter": 4
+        },
+        {
+          "japanese": "あかい",
+          "english": "red",
+          "type": "vocab",
+          "chapter": 4
+        },
+        {
+          "japanese": "うえ",
+          "english": "on, above, over",
+          "type": "vocab",
+          "chapter": 5
+        },
+        {
+          "japanese": "かわ",
+          "english": "river",
+          "type": "vocab",
+          "chapter": 5
+        },
+        {
+          "japanese": "ところ",
+          "english": "place",
+          "type": "vocab",
+          "chapter": 5
+        },
+        {
+          "japanese": "アルバイト",
+          "english": "part-time job",
+          "type": "vocab",
+          "chapter": 6
+        },
+        {
+          "japanese": "ピクニック",
+          "english": "picnic",
+          "type": "vocab",
+          "chapter": 6
+        },
+        {
+          "japanese": "いそがしい",
+          "english": "busy",
+          "type": "vocab",
+          "chapter": 6
+        },
+        {
+          "pattern": "~は ~です",
+          "meaning": "Identifying someone or something (X is Y)",
+          "example_jp": "たなかさんは さんねんせいです。",
+          "example_en": "Mr./Ms. Tanaka is a junior.",
+          "type": "grammar_fill_in",
+          "chapter": 2
+        },
+        {
+          "pattern": "~は ~ですか",
+          "meaning": "Asking yes/no questions",
+          "example_jp": "キムさんは かんこくじんですか。",
+          "example_en": "Is Mr./Ms. Kim Korean?",
+          "type": "grammar_fill_in",
+          "chapter": 2
+        },
+        {
+          "pattern": "Noun の Noun",
+          "meaning": "Indicating relationships between nouns (possession, membership, location)",
+          "example_jp": "とうきょうだいがくの がくせい",
+          "example_en": "student at Tokyo University",
+          "type": "grammar_fill_in",
+          "chapter": 2
+        },
+        {
+          "pattern": "なん / どこ (question words)",
+          "meaning": "Asking for personal information using question words",
+          "example_jp": "おなまえは なんですか。",
+          "example_en": "What is your name?",
+          "type": "grammar_fill_in",
+          "chapter": 2
+        },
+        {
+          "pattern": "~も",
+          "meaning": "Listing and describing similarities (also, too)",
+          "example_jp": "わたしも にほんごの せんこうですよ。",
+          "example_en": "I am a Japanese major, too.",
+          "type": "grammar_fill_in",
+          "chapter": 2
+        },
+        {
+          "pattern": "Verb ます form + に/へ/を/で",
+          "meaning": "Talking about routines, future actions using polite present verbs with particles",
+          "example_jp": "がっこうへ いきます。",
+          "example_en": "I go to school.",
+          "type": "grammar_fill_in",
+          "chapter": 3
+        },
+        {
+          "pattern": "~が あります",
+          "meaning": "Presenting objects or events (something exists / is held)",
+          "example_jp": "じゅぎょうが あります。",
+          "example_en": "I have a class.",
+          "type": "grammar_fill_in",
+          "chapter": 3
+        },
+        {
+          "pattern": "Time + に",
+          "meaning": "Telling time (at a specific time)",
+          "example_jp": "しちじに おきます。",
+          "example_en": "I get up at seven o'clock.",
+          "type": "grammar_fill_in",
+          "chapter": 3
+        },
+        {
+          "pattern": "Frequency adverbs (いつも/よく/ときどき/あまり/ぜんぜん)",
+          "meaning": "Expressing frequency of actions",
+          "example_jp": "まいにち コーヒーを のみます。",
+          "example_en": "I drink coffee every day.",
+          "type": "grammar_fill_in",
+          "chapter": 3
+        },
+        {
+          "pattern": "Verb ました / ませんでした",
+          "meaning": "Expressing past actions and events (polite past)",
+          "example_jp": "きのう えいがを みました。",
+          "example_en": "I watched a movie yesterday.",
+          "type": "grammar_fill_in",
+          "chapter": 3
+        },
+        {
+          "pattern": "これ/それ/あれ/どれ",
+          "meaning": "Referring to things (this/that/that over there/which)",
+          "example_jp": "これは なんですか。",
+          "example_en": "What is this?",
+          "type": "grammar_fill_in",
+          "chapter": 4
+        },
+        {
+          "pattern": "~は ~に あります/います + ここ/そこ/あそこ",
+          "meaning": "Asking for and giving locations",
+          "example_jp": "ぎんこうは えきの ちかくに あります。",
+          "example_en": "The bank is near the station.",
+          "type": "grammar_fill_in",
+          "chapter": 4
+        },
+        {
+          "pattern": "Adjective + Noun; Adjective です",
+          "meaning": "Describing people and things using adjectives",
+          "example_jp": "おおきい たてものです。",
+          "example_en": "It is a big building.",
+          "type": "grammar_fill_in",
+          "chapter": 4
+        },
+        {
+          "pattern": "~に ~が あります/います",
+          "meaning": "Describing things, people, and locations (there is/are)",
+          "example_jp": "こうえんに こどもが います。",
+          "example_en": "There are children in the park.",
+          "type": "grammar_fill_in",
+          "chapter": 4
+        },
+        {
+          "pattern": "ね and よ",
+          "meaning": "Sentence-ending particles for confirmation (ne) and assertion (yo)",
+          "example_jp": "いい てんきですね。",
+          "example_en": "It's nice weather, isn't it?",
+          "type": "grammar_fill_in",
+          "chapter": 4
+        },
+        {
+          "pattern": "この/その/あの/どの + Noun",
+          "meaning": "Referring to people, places, things (this/that/that over there/which + noun)",
+          "example_jp": "この ほんは わたしのです。",
+          "example_en": "This book is mine.",
+          "type": "grammar_fill_in",
+          "chapter": 5
+        },
+        {
+          "pattern": "Location nouns (うえ/した/なか/そと/まえ/うしろ/となり/よこ/ちかく/みぎ/ひだり)",
+          "meaning": "Describing positions using location nouns",
+          "example_jp": "つくえの うえに ほんが あります。",
+          "example_en": "There is a book on the desk.",
+          "type": "grammar_fill_in",
+          "chapter": 5
+        },
+        {
+          "pattern": "Noun/Adjective + の (pronoun)",
+          "meaning": "Referring to things mentioned immediately before",
+          "example_jp": "あかい のは わたしのです。",
+          "example_en": "The red one is mine.",
+          "type": "grammar_fill_in",
+          "chapter": 5
+        },
+        {
+          "pattern": "から/まで/で + ~ぐらい",
+          "meaning": "Expressing distance and duration",
+          "example_jp": "ここから がっこうまで バスで さんじゅっぷんぐらいです。",
+          "example_en": "It's about 30 minutes from here to school by bus.",
+          "type": "grammar_fill_in",
+          "chapter": 5
+        },
+        {
+          "pattern": "は vs. が; double particles",
+          "meaning": "Topic marker は vs. subject marker が; double particle usage",
+          "example_jp": "この へやには テレビが あります。",
+          "example_en": "In this room, there is a TV.",
+          "type": "grammar_fill_in",
+          "chapter": 5
+        },
+        {
+          "pattern": "と and に (association/purpose)",
+          "meaning": "Using と (with) for companions and に for purpose",
+          "example_jp": "ともだちと えいがに いきます。",
+          "example_en": "I go to the movies with a friend.",
+          "type": "grammar_fill_in",
+          "chapter": 6
+        },
+        {
+          "pattern": "Past adjectives + でした/でしたか",
+          "meaning": "Commenting about the past using polite past adjectives",
+          "example_jp": "パーティは たのしかったです。",
+          "example_en": "The party was fun.",
+          "type": "grammar_fill_in",
+          "chapter": 6
+        },
+        {
+          "pattern": "て-form of verbs; ~てください",
+          "meaning": "Connecting verb phrases and making requests",
+          "example_jp": "ここに なまえを かいてください。",
+          "example_en": "Please write your name here.",
+          "type": "grammar_fill_in",
+          "chapter": 6
+        },
+        {
+          "pattern": "て-form for connecting phrases",
+          "meaning": "Connecting verb and adjective phrases using て-form",
+          "example_jp": "あさ おきて、あさごはんを たべます。",
+          "example_en": "I wake up in the morning and eat breakfast.",
+          "type": "grammar_fill_in",
+          "chapter": 6
+        },
+        {
+          "pattern": "~ませんか",
+          "meaning": "Extending an invitation (won't you...?)",
+          "example_jp": "いっしょに テニスを しませんか。",
+          "example_en": "Won't you play tennis together (with me)?",
+          "type": "grammar_fill_in",
+          "chapter": 6
+        },
+        {
+          "kanji": "大学",
+          "reading": "だいがく",
+          "meaning": "university",
+          "type": "kanji_reading",
+          "chapter": 4
+        },
+        {
+          "kanji": "先生",
+          "reading": "せんせい",
+          "meaning": "teacher",
+          "type": "kanji_reading",
+          "chapter": 4
+        },
+        {
+          "kanji": "日本",
+          "reading": "にほん",
+          "meaning": "Japan",
+          "type": "kanji_reading",
+          "chapter": 5
+        },
+        {
+          "kanji": "今週",
+          "reading": "こんしゅう",
+          "meaning": "this week",
+          "type": "kanji_reading",
+          "chapter": 6
+        },
+        {
+          "kanji": "休み",
+          "reading": "やすみ",
+          "meaning": "day off",
+          "type": "kanji_reading",
+          "chapter": 6
+        }
+      ]
+    }
+  ]
+}

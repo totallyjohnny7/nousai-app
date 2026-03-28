@@ -1,0 +1,31 @@
+[
+  {"pattern": "~は ~です", "meaning": "Identifying someone or something (X is Y)", "example_jp": "たなかさんは さんねんせいです。", "example_en": "Mr./Ms. Tanaka is a junior.", "chapter": 2, "grammar_number": 1},
+  {"pattern": "~は ~ですか", "meaning": "Asking yes/no questions", "example_jp": "キムさんは かんこくじんですか。", "example_en": "Is Mr./Ms. Kim Korean?", "chapter": 2, "grammar_number": 2},
+  {"pattern": "Noun の Noun", "meaning": "Indicating relationships between nouns (possession, membership, location)", "example_jp": "とうきょうだいがくの がくせい", "example_en": "student at Tokyo University", "chapter": 2, "grammar_number": 3},
+  {"pattern": "なん / どこ (question words)", "meaning": "Asking for personal information using question words", "example_jp": "おなまえは なんですか。", "example_en": "What is your name?", "chapter": 2, "grammar_number": 4},
+  {"pattern": "~も", "meaning": "Listing and describing similarities (also, too)", "example_jp": "わたしも にほんごの せんこうですよ。", "example_en": "I am a Japanese major, too.", "chapter": 2, "grammar_number": 5},
+
+  {"pattern": "Verb ます form + に/へ/を/で", "meaning": "Talking about routines, future actions using polite present verbs with particles", "example_jp": "がっこうへ いきます。", "example_en": "I go to school.", "chapter": 3, "grammar_number": 1},
+  {"pattern": "~が あります", "meaning": "Presenting objects or events (something exists / is held)", "example_jp": "じゅぎょうが あります。", "example_en": "I have a class.", "chapter": 3, "grammar_number": 2},
+  {"pattern": "Time + に", "meaning": "Telling time (at a specific time)", "example_jp": "しちじに おきます。", "example_en": "I get up at seven o'clock.", "chapter": 3, "grammar_number": 3},
+  {"pattern": "Frequency adverbs (いつも/よく/ときどき/あまり/ぜんぜん)", "meaning": "Expressing frequency of actions", "example_jp": "まいにち コーヒーを のみます。", "example_en": "I drink coffee every day.", "chapter": 3, "grammar_number": 4},
+  {"pattern": "Verb ました / ませんでした", "meaning": "Expressing past actions and events (polite past)", "example_jp": "きのう えいがを みました。", "example_en": "I watched a movie yesterday.", "chapter": 3, "grammar_number": 5},
+
+  {"pattern": "これ/それ/あれ/どれ", "meaning": "Referring to things (this/that/that over there/which)", "example_jp": "これは なんですか。", "example_en": "What is this?", "chapter": 4, "grammar_number": 1},
+  {"pattern": "~は ~に あります/います + ここ/そこ/あそこ", "meaning": "Asking for and giving locations", "example_jp": "ぎんこうは えきの ちかくに あります。", "example_en": "The bank is near the station.", "chapter": 4, "grammar_number": 2},
+  {"pattern": "Adjective + Noun; Adjective です", "meaning": "Describing people and things using adjectives", "example_jp": "おおきい たてものです。", "example_en": "It is a big building.", "chapter": 4, "grammar_number": 3},
+  {"pattern": "~に ~が あります/います", "meaning": "Describing things, people, and locations (there is/are)", "example_jp": "こうえんに こどもが います。", "example_en": "There are children in the park.", "chapter": 4, "grammar_number": 4},
+  {"pattern": "ね and よ", "meaning": "Sentence-ending particles for confirmation (ne) and assertion (yo)", "example_jp": "いい てんきですね。", "example_en": "It's nice weather, isn't it?", "chapter": 4, "grammar_number": 5},
+
+  {"pattern": "この/その/あの/どの + Noun", "meaning": "Referring to people, places, things (this/that/that over there/which + noun)", "example_jp": "この ほんは わたしのです。", "example_en": "This book is mine.", "chapter": 5, "grammar_number": 1},
+  {"pattern": "Location nouns (うえ/した/なか/そと/まえ/うしろ/となり/よこ/ちかく/みぎ/ひだり)", "meaning": "Describing positions using location nouns", "example_jp": "つくえの うえに ほんが あります。", "example_en": "There is a book on the desk.", "chapter": 5, "grammar_number": 2},
+  {"pattern": "Noun/Adjective + の (pronoun)", "meaning": "Referring to things mentioned immediately before", "example_jp": "あかい のは わたしのです。", "example_en": "The red one is mine.", "chapter": 5, "grammar_number": 3},
+  {"pattern": "から/まで/で + ~ぐらい", "meaning": "Expressing distance and duration", "example_jp": "ここから がっこうまで バスで さんじゅっぷんぐらいです。", "example_en": "It's about 30 minutes from here to school by bus.", "chapter": 5, "grammar_number": 4},
+  {"pattern": "は vs. が; double particles", "meaning": "Topic marker は vs. subject marker が; double particle usage", "example_jp": "この へやには テレビが あります。", "example_en": "In this room, there is a TV.", "chapter": 5, "grammar_number": 5},
+
+  {"pattern": "と and に (association/purpose)", "meaning": "Using と (with) for companions and に for purpose", "example_jp": "ともだちと えいがに いきます。", "example_en": "I go to the movies with a friend.", "chapter": 6, "grammar_number": 1},
+  {"pattern": "Past adjectives + でした/でしたか", "meaning": "Commenting about the past using polite past adjectives", "example_jp": "パーティは たのしかったです。", "example_en": "The party was fun.", "chapter": 6, "grammar_number": 2},
+  {"pattern": "て-form of verbs; ~てください", "meaning": "Connecting verb phrases and making requests", "example_jp": "ここに なまえを かいてください。", "example_en": "Please write your name here.", "chapter": 6, "grammar_number": 3},
+  {"pattern": "て-form for connecting phrases", "meaning": "Connecting verb and adjective phrases using て-form", "example_jp": "あさ おきて、あさごはんを たべます。", "example_en": "I wake up in the morning and eat breakfast.", "chapter": 6, "grammar_number": 4},
+  {"pattern": "~ませんか", "meaning": "Extending an invitation (won't you...?)", "example_jp": "いっしょに テニスを しませんか。", "example_en": "Won't you play tennis together (with me)?", "chapter": 6, "grammar_number": 5}
+]

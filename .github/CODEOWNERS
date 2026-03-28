@@ -1,0 +1,14 @@
+# NousAI Code Owners
+# These users are automatically requested for review on PRs touching these paths.
+
+# Default — all files
+* @totallyjohnny7
+
+# Critical paths — require owner review
+src/store.tsx @totallyjohnny7
+src/utils/auth.ts @totallyjohnny7
+src/utils/fsrs.ts @totallyjohnny7
+src/types.ts @totallyjohnny7
+api/ @totallyjohnny7
+firestore.rules @totallyjohnny7
+.github/workflows/ @totallyjohnny7

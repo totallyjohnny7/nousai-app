@@ -1,0 +1,33 @@
+[
+  {"kanji": "大", "kun_reading": "おお(きい)", "on_reading": "ダイ", "meaning": "big, large", "chapter": 4, "example_words": ["大学 (だいがく) - university", "大きい (おおきい) - big", "大学生 (だいがくせい) - college student"]},
+  {"kanji": "学", "kun_reading": "まな(ぶ)", "on_reading": "ガク・ガッ", "meaning": "to study, learn", "chapter": 4, "example_words": ["学校 (がっこう) - school", "大学 (だいがく) - university", "学生 (がくせい) - student"]},
+  {"kanji": "校", "kun_reading": "", "on_reading": "コウ", "meaning": "school", "chapter": 4, "example_words": ["学校 (がっこう) - school", "高校 (こうこう) - high school"]},
+  {"kanji": "先", "kun_reading": "さき", "on_reading": "セン", "meaning": "ahead, previous", "chapter": 4, "example_words": ["先生 (せんせい) - teacher", "先週 (せんしゅう) - last week"]},
+  {"kanji": "生", "kun_reading": "なま・う(まれる)", "on_reading": "セイ", "meaning": "life, to live", "chapter": 4, "example_words": ["学生 (がくせい) - student", "先生 (せんせい) - teacher", "一年生 (いちねんせい) - freshman"]},
+
+  {"kanji": "山", "kun_reading": "やま", "on_reading": "サン・ザン", "meaning": "mountain", "chapter": 5, "example_words": ["山川 (やまかわ) - family name", "富士山 (ふじさん) - Mt. Fuji", "山の上 (やまのうえ) - top of the mountain"]},
+  {"kanji": "川", "kun_reading": "かわ・がわ", "on_reading": "セン", "meaning": "river", "chapter": 5, "example_words": ["小川 (おがわ) - family name / small river", "川中 (かわなか) - family name"]},
+  {"kanji": "田", "kun_reading": "た・だ", "on_reading": "デン", "meaning": "rice paddy", "chapter": 5, "example_words": ["上田 (うえだ) - family name", "田中 (たなか) - family name"]},
+  {"kanji": "人", "kun_reading": "ひと", "on_reading": "ジン・ニン", "meaning": "person", "chapter": 5, "example_words": ["日本人 (にほんじん) - Japanese person", "あの人 (あのひと) - that person"]},
+  {"kanji": "上", "kun_reading": "うえ・かみ・あ(がる)", "on_reading": "ジョウ", "meaning": "on, up, above", "chapter": 5, "example_words": ["テーブルの上 (うえ) - on the table", "上がってください (あがってください) - please come in"]},
+  {"kanji": "中", "kun_reading": "なか", "on_reading": "チュウ", "meaning": "in, middle, center", "chapter": 5, "example_words": ["へやの中 (なか) - inside the room", "中国 (ちゅうごく) - China"]},
+  {"kanji": "下", "kun_reading": "した・くだ(さい)", "on_reading": "カ・ゲ", "meaning": "under, below", "chapter": 5, "example_words": ["まどの下 (した) - under the window", "下さい (ください) - please"]},
+  {"kanji": "小", "kun_reading": "ちい(さい)", "on_reading": "ショウ", "meaning": "small", "chapter": 5, "example_words": ["小さいへや (ちいさいへや) - small room", "小川 (おがわ) - family name"]},
+  {"kanji": "日", "kun_reading": "ひ・び", "on_reading": "ニチ・ニ・ジツ・カ", "meaning": "sun, day", "chapter": 5, "example_words": ["日本 (にほん) - Japan", "毎日 (まいにち) - every day", "日曜日 (にちようび) - Sunday"]},
+  {"kanji": "本", "kun_reading": "もと", "on_reading": "ホン・ボン", "meaning": "root, book", "chapter": 5, "example_words": ["日本 (にほん) - Japan", "本 (ほん) - book", "本屋 (ほんや) - bookstore"]},
+
+  {"kanji": "今", "kun_reading": "いま", "on_reading": "コン", "meaning": "now", "chapter": 6, "example_words": ["今週 (こんしゅう) - this week", "今日 (きょう) - today", "今、何時ですか (いま、なんじですか) - What time is it now?"]},
+  {"kanji": "私", "kun_reading": "わたし・わたくし", "on_reading": "シ", "meaning": "I; private", "chapter": 6, "example_words": ["私 (わたし) - I", "私の本 (わたしのほん) - my book"]},
+  {"kanji": "月", "kun_reading": "つき", "on_reading": "ゲツ・ガツ", "meaning": "moon, month", "chapter": 6, "example_words": ["月曜日 (げつようび) - Monday"]},
+  {"kanji": "火", "kun_reading": "ひ", "on_reading": "カ", "meaning": "fire", "chapter": 6, "example_words": ["火曜日 (かようび) - Tuesday"]},
+  {"kanji": "水", "kun_reading": "みず", "on_reading": "スイ", "meaning": "water", "chapter": 6, "example_words": ["水曜日 (すいようび) - Wednesday"]},
+  {"kanji": "木", "kun_reading": "き", "on_reading": "モク", "meaning": "tree", "chapter": 6, "example_words": ["木曜日 (もくようび) - Thursday", "大きい木 (おおきいき) - big tree"]},
+  {"kanji": "金", "kun_reading": "かね", "on_reading": "キン", "meaning": "gold, money, metal", "chapter": 6, "example_words": ["金曜日 (きんようび) - Friday"]},
+  {"kanji": "土", "kun_reading": "つち", "on_reading": "ト・ド", "meaning": "earth, soil, ground", "chapter": 6, "example_words": ["土曜日 (どようび) - Saturday"]},
+  {"kanji": "曜", "kun_reading": "", "on_reading": "ヨウ", "meaning": "day of the week", "chapter": 6, "example_words": ["月曜日 (げつようび) - Monday", "何曜日 (なんようび) - what day"]},
+  {"kanji": "何", "kun_reading": "なに・なん", "on_reading": "", "meaning": "what", "chapter": 6, "example_words": ["何曜日 (なんようび) - what day", "何ですか (なんですか) - what is it?", "何をしますか (なにをしますか) - what will you do?"]},
+  {"kanji": "週", "kun_reading": "", "on_reading": "シュウ", "meaning": "week", "chapter": 6, "example_words": ["今週 (こんしゅう) - this week", "先週 (せんしゅう) - last week", "週末 (しゅうまつ) - weekend"]},
+  {"kanji": "末", "kun_reading": "すえ", "on_reading": "マツ", "meaning": "end", "chapter": 6, "example_words": ["週末 (しゅうまつ) - weekend"]},
+  {"kanji": "休", "kun_reading": "やす(む)", "on_reading": "キュウ", "meaning": "to rest", "chapter": 6, "example_words": ["休みの日 (やすみのひ) - day off"]},
+  {"kanji": "来", "kun_reading": "く(る)", "on_reading": "ライ", "meaning": "to come", "chapter": 6, "example_words": ["来週 (らいしゅう) - next week"]}
+]

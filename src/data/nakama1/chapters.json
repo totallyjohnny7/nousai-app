@@ -1,0 +1,108 @@
+{
+  "textbook": "Nakama 1: Introductory Japanese: Communication, Culture, Context",
+  "edition": "Enhanced Third Edition",
+  "authors": ["Yukiko Abe Hatasa", "Kazumi Hatasa", "Seiichi Makino"],
+  "publisher": "Cengage Learning",
+  "year": 2021,
+  "isbn": "978-0-357-14213-4",
+  "chapters": [
+    {
+      "number": 1,
+      "title_jp": "だいいっか",
+      "title_en": "The Japanese Sound System and Hiragana",
+      "topics": ["Hiragana characters", "Japanese sound system", "Basic greetings", "Self-introduction"],
+      "vocabulary_count": 3,
+      "grammar_points": 0,
+      "kanji_count": 0,
+      "pages": "1-30"
+    },
+    {
+      "number": 2,
+      "title_jp": "あいさつと じこしょうかい",
+      "title_en": "Greetings and Introductions",
+      "topics": ["Countries", "Nationalities", "Languages", "Year in school", "Majors", "Time expressions"],
+      "vocabulary_count": 53,
+      "grammar_points": 5,
+      "kanji_count": 0,
+      "pages": "31-80",
+      "grammar_summary": [
+        "G1: ~は ~です (identifying)",
+        "G2: ~は ~ですか (yes/no questions)",
+        "G3: Noun の Noun (relationships)",
+        "G4: Question words (なん/どこ)",
+        "G5: ~も (similarities)"
+      ]
+    },
+    {
+      "number": 3,
+      "title_jp": "まいにちの せいかつ",
+      "title_en": "Daily Routines",
+      "topics": ["Daily activities", "Numbers", "Minutes", "Relative time", "Days of the week"],
+      "vocabulary_count": 62,
+      "grammar_points": 5,
+      "kanji_count": 0,
+      "pages": "81-125",
+      "grammar_summary": [
+        "G1: Polite present verbs + に/へ/を/で",
+        "G2: ~が あります (presenting objects/events)",
+        "G3: Time + に (telling time)",
+        "G4: Frequency adverbs",
+        "G5: Polite past verbs (ました/ませんでした)"
+      ]
+    },
+    {
+      "number": 4,
+      "title_jp": "にほんの まち",
+      "title_en": "Japanese Cities",
+      "topics": ["Buildings", "Landmarks", "Adjectives (i and na)", "Colors", "Demonstratives"],
+      "vocabulary_count": 47,
+      "grammar_points": 5,
+      "kanji_count": 5,
+      "pages": "125-165",
+      "kanji_list": ["大", "学", "校", "先", "生"],
+      "grammar_summary": [
+        "G1: これ/それ/あれ/どれ",
+        "G2: ~は ~に あります/います + ここ/そこ/あそこ",
+        "G3: Adjectives + noun; polite adjective forms",
+        "G4: ~に ~が あります/います",
+        "G5: ね and よ"
+      ]
+    },
+    {
+      "number": 5,
+      "title_jp": "にほんの うち",
+      "title_en": "Japanese Homes",
+      "topics": ["Room items", "Furniture", "Location nouns", "Position descriptions"],
+      "vocabulary_count": 55,
+      "grammar_points": 5,
+      "kanji_count": 10,
+      "pages": "165-210",
+      "kanji_list": ["山", "川", "田", "人", "上", "中", "下", "小", "日", "本"],
+      "grammar_summary": [
+        "G1: この/その/あの/どの + Noun",
+        "G2: Location nouns (うえ/した/なか etc.)",
+        "G3: Noun/Adj + の (pronoun)",
+        "G4: から/まで/で + ~ぐらい (distance/duration)",
+        "G5: は vs. が; double particles"
+      ]
+    },
+    {
+      "number": 6,
+      "title_jp": "休みの日",
+      "title_en": "Leisure Time",
+      "topics": ["Household chores", "Leisure activities", "Emotion adjectives", "Days of the week kanji"],
+      "vocabulary_count": 50,
+      "grammar_points": 5,
+      "kanji_count": 14,
+      "pages": "210-250",
+      "kanji_list": ["今", "私", "月", "火", "水", "木", "金", "土", "曜", "何", "週", "末", "休", "来"],
+      "grammar_summary": [
+        "G1: と and に (with/for purpose)",
+        "G2: Polite past adjectives + でした",
+        "G3: て-form of verbs; ~てください",
+        "G4: て-form for connecting phrases",
+        "G5: ~ませんか (invitations)"
+      ]
+    }
+  ]
+}

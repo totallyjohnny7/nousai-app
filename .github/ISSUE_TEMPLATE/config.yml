@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask @claude
+    url: https://github.com/totallyjohnny7/nousai-app/issues
+    about: Tag @claude in any issue to get AI-assisted development

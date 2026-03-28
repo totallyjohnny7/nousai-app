@@ -1,0 +1,614 @@
+{
+  "course": "JAPN1110-001",
+  "semester": "Spring 2026",
+  "textbook": "Nakama 1",
+  "quizzes": [
+    {
+      "quiz_number": 1,
+      "date": "2026-01-21",
+      "day": "Wednesday",
+      "title": "Quiz 1: Hiragana あ～そ",
+      "what_it_covers": "Hiragana characters a-so row (あ、い、う、え、お、か、き、く、け、こ、さ、し、す、せ、そ)",
+      "source_pages": "pp.4-8",
+      "format_clues": "reading/writing hiragana characters",
+      "chapter": 1,
+      "week": 2
+    },
+    {
+      "quiz_number": 2,
+      "date": "2026-01-23",
+      "day": "Friday",
+      "title": "Quiz 2: Hiragana あ～ほ",
+      "what_it_covers": "Hiragana characters a-ho rows (all basic hiragana through は行)",
+      "source_pages": "pp.4-12",
+      "format_clues": "reading/writing hiragana characters",
+      "chapter": 1,
+      "week": 2
+    },
+    {
+      "quiz_number": 3,
+      "date": "2026-01-26",
+      "day": "Monday",
+      "title": "Quiz 3: All hiragana",
+      "what_it_covers": "All basic hiragana characters (あ～ん)",
+      "source_pages": "pp.4-16",
+      "format_clues": "reading/writing all basic hiragana",
+      "chapter": 1,
+      "week": 3
+    },
+    {
+      "quiz_number": 4,
+      "date": "2026-01-28",
+      "day": "Wednesday",
+      "title": "Quiz 4: Hiragana with voiced consonants",
+      "what_it_covers": "Hiragana with voiced consonants (Textbook p.18) e.g. 'ka-gi' to かぎ — dakuten characters (が、ざ、だ、ば行) and handakuten (ぱ行)",
+      "source_pages": "p.18",
+      "format_clues": "dictation — hear romaji, write hiragana",
+      "chapter": 1,
+      "week": 3
+    },
+    {
+      "quiz_number": 5,
+      "date": "2026-02-02",
+      "day": "Monday",
+      "title": "Quiz 5: Hiragana with double consonants",
+      "what_it_covers": "Hiragana with double consonants (small つ p.25) e.g. 'ha-p-pa' to はっぱ — sokuon (っ) usage",
+      "source_pages": "p.25",
+      "format_clues": "dictation — hear romaji, write hiragana with small tsu",
+      "chapter": 1,
+      "week": 4
+    },
+    {
+      "quiz_number": 6,
+      "date": "2026-02-04",
+      "day": "Wednesday",
+      "title": "Quiz 6: Hiragana with glides",
+      "what_it_covers": "Hiragana with glides (small や、ゆ、よ p.25) e.g. 'kyo-u' to きょう — combination characters (きゃ、しゅ、ちょ etc.)",
+      "source_pages": "p.25",
+      "format_clues": "dictation — hear romaji, write hiragana with glides",
+      "chapter": 1,
+      "week": 4
+    },
+    {
+      "quiz_number": 7,
+      "date": "2026-02-09",
+      "day": "Monday",
+      "title": "Quiz 7: Ch. 2 Vocab. 1",
+      "what_it_covers": "Ch. 2 Vocab list 1 on Canvas — dictation & meaning",
+      "source_pages": "pp.32-35 (Ch. 2 vocabulary)",
+      "format_clues": "dictation & meaning — hear word, write hiragana and English meaning",
+      "chapter": 2,
+      "week": 5
+    },
+    {
+      "quiz_number": 8,
+      "date": "2026-02-11",
+      "day": "Wednesday",
+      "title": "Quiz 8: Ch. 2 Vocab. 2",
+      "what_it_covers": "Ch. 2 Vocab list 2 on Canvas — dictation & meaning",
+      "source_pages": "pp.32-35 (Ch. 2 vocabulary)",
+      "format_clues": "dictation & meaning — hear word, write hiragana and English meaning",
+      "chapter": 2,
+      "week": 5
+    },
+    {
+      "quiz_number": 9,
+      "date": "2026-02-16",
+      "day": "Monday",
+      "title": "Quiz 9: Ch. 3 Vocab. 1",
+      "what_it_covers": "Ch. 3 Vocab 1 — Verbs from あります to べんきょうします (pp.85-86). No dictation, write the words.",
+      "source_pages": "pp.85-86",
+      "format_clues": "no dictation — write the words (see vocab list, produce hiragana from English/meaning)",
+      "chapter": 3,
+      "week": 6
+    },
+    {
+      "quiz_number": 10,
+      "date": "2026-02-18",
+      "day": "Wednesday",
+      "title": "Quiz 10: Ch. 3 Vocab. 2",
+      "what_it_covers": "Ch. 3 Vocab 2 — Daily activities from おきます to うちにかえります (pp.88-89). No dictation, write the words.",
+      "source_pages": "pp.88-89",
+      "format_clues": "no dictation — write the words",
+      "chapter": 3,
+      "week": 6
+    },
+    {
+      "quiz_number": 11,
+      "date": "2026-02-20",
+      "day": "Friday",
+      "title": "Quiz 11: Ch. 3 Vocab. 3",
+      "what_it_covers": "Ch. 3 Vocab 3 — Time Expressions from あさ to つぎ (pp.84-85). No dictation, write the words.",
+      "source_pages": "pp.84-85",
+      "format_clues": "no dictation — write the words",
+      "chapter": 3,
+      "week": 6
+    },
+    {
+      "quiz_number": 12,
+      "date": "2026-03-02",
+      "day": "Monday",
+      "title": "Quiz 12: Ch. 4 Vocab. 1",
+      "what_it_covers": "Ch. 4 Vocab 1 — Nouns (pp.124-125). No dictation, write the words.",
+      "source_pages": "pp.124-125",
+      "format_clues": "no dictation — write the words",
+      "chapter": 4,
+      "week": 8
+    },
+    {
+      "quiz_number": 13,
+      "date": "2026-03-04",
+      "day": "Wednesday",
+      "title": "Quiz 13: Ch. 4 Vocab. 2",
+      "what_it_covers": "Ch. 4 Vocab 2 — Adjectives (pp.125-126). No dictation, write the words.",
+      "source_pages": "pp.125-126",
+      "format_clues": "no dictation — write the words",
+      "chapter": 4,
+      "week": 8
+    },
+    {
+      "quiz_number": 14,
+      "date": "2026-03-09",
+      "day": "Monday",
+      "title": "Quiz 14: Katakana ア～ト",
+      "what_it_covers": "Katakana characters ア through ト (a-to rows)",
+      "source_pages": "pp.73-76 (Ch. 2.5 Katakana)",
+      "format_clues": "reading/writing katakana characters",
+      "chapter": 2.5,
+      "week": 9
+    },
+    {
+      "quiz_number": 15,
+      "date": "2026-03-11",
+      "day": "Wednesday",
+      "title": "Quiz 15: Ch. 4 Adjective conjugation",
+      "what_it_covers": "Ch. 4 Adjective conjugation (SAM p.100) — i-adjective and na-adjective polite forms",
+      "source_pages": "SAM p.100, textbook pp.146-150",
+      "format_clues": "conjugation — conjugate adjectives into polite present forms",
+      "chapter": 4,
+      "week": 9
+    },
+    {
+      "quiz_number": 16,
+      "date": "2026-03-23",
+      "day": "Monday",
+      "title": "Quiz 16: Katakana ア～ホ",
+      "what_it_covers": "Katakana characters ア through ホ (all katakana through ha-row)",
+      "source_pages": "pp.73-76",
+      "format_clues": "reading/writing katakana characters",
+      "chapter": 2.5,
+      "week": 11
+    },
+    {
+      "quiz_number": 17,
+      "date": "2026-03-25",
+      "day": "Wednesday",
+      "title": "Quiz 17: Ch. 4 Kanji",
+      "what_it_covers": "Ch. 4 Kanji — 大、学、校、先、生 (p.161)",
+      "source_pages": "p.161",
+      "format_clues": "kanji reading and writing",
+      "chapter": 4,
+      "week": 11
+    },
+    {
+      "quiz_number": 18,
+      "date": "2026-03-30",
+      "day": "Monday",
+      "title": "Quiz 18: All katakana",
+      "what_it_covers": "All katakana characters (ア～ン) including voiced, double consonants, and glides",
+      "source_pages": "pp.73-81 (Ch. 2.5)",
+      "format_clues": "reading/writing all katakana",
+      "chapter": 2.5,
+      "week": 12
+    },
+    {
+      "quiz_number": 19,
+      "date": "2026-04-01",
+      "day": "Wednesday",
+      "title": "Quiz 19: Ch. 5 Vocab.",
+      "what_it_covers": "Ch. 5 Vocabulary (Textbook p.170)",
+      "source_pages": "p.170 (pp.166-172)",
+      "format_clues": "vocabulary — write the words",
+      "chapter": 5,
+      "week": 12
+    },
+    {
+      "quiz_number": 20,
+      "date": "2026-04-06",
+      "day": "Monday",
+      "title": "Quiz 20: Ch. 5 Kanji",
+      "what_it_covers": "Ch. 5 Kanji — 山、川、田、人、上、中、下、小、日、本 (p.204)",
+      "source_pages": "p.204",
+      "format_clues": "kanji reading and writing",
+      "chapter": 5,
+      "week": 13
+    },
+    {
+      "quiz_number": 21,
+      "date": "2026-04-08",
+      "day": "Wednesday",
+      "title": "Quiz 21: Ch. 6 Vocab. 1",
+      "what_it_covers": "Ch. 6 Vocab 1 — Household chores and other activities (p.213)",
+      "source_pages": "p.213",
+      "format_clues": "vocabulary — write the words",
+      "chapter": 6,
+      "week": 13
+    },
+    {
+      "quiz_number": 22,
+      "date": "2026-04-13",
+      "day": "Monday",
+      "title": "Quiz 22: Ch. 6 Vocab. 2",
+      "what_it_covers": "Ch. 6 Vocab 2 — Things to do on a day off (pp.215-216)",
+      "source_pages": "pp.215-216",
+      "format_clues": "vocabulary — write the words",
+      "chapter": 6,
+      "week": 14
+    },
+    {
+      "quiz_number": 23,
+      "date": "2026-04-15",
+      "day": "Wednesday",
+      "title": "Quiz 23: Ch. 6 Kanji",
+      "what_it_covers": "Ch. 6 Kanji — 今、私、月、火、水、木、金、土、曜、何、週、末、休 (pp.243-244)",
+      "source_pages": "pp.243-244",
+      "format_clues": "kanji reading and writing",
+      "chapter": 6,
+      "week": 14
+    },
+    {
+      "quiz_number": 24,
+      "date": "2026-04-27",
+      "day": "Monday",
+      "title": "Quiz 24: Ch. 6 Polite past adjectives and the copula verb です",
+      "what_it_covers": "Ch. 6 Polite past adjectives and the copula verb です (SAM p.161) — adjective past tense conjugation",
+      "source_pages": "SAM p.161, textbook pp.227-229",
+      "format_clues": "conjugation — conjugate adjectives into polite past forms",
+      "chapter": 6,
+      "week": 16
+    }
+  ],
+  "exams": [
+    {
+      "quiz_number": "midterm",
+      "date": "2026-02-23",
+      "day": "Monday",
+      "title": "Mid-term Ch.1-Ch.3",
+      "what_it_covers": "Chapters 1-3: Hiragana (all), greetings/introductions vocabulary and grammar, daily routines vocabulary and grammar",
+      "source_pages": "pp.1-122",
+      "format_clues": "comprehensive exam covering Ch.1-Ch.3",
+      "chapter": "1-3",
+      "week": 7
+    },
+    {
+      "quiz_number": "oral",
+      "date": "2026-04-20",
+      "day": "Monday",
+      "title": "Oral Examination",
+      "what_it_covers": "Oral exam covering conversational Japanese from Ch.1-Ch.6. Practice session on 4/17 (Friday).",
+      "source_pages": "pp.1-248",
+      "format_clues": "oral/speaking exam — conversation practice",
+      "chapter": "1-6",
+      "week": 15
+    },
+    {
+      "quiz_number": "final",
+      "date": "2026-05-06",
+      "day": "Wednesday",
+      "title": "Final Examination",
+      "what_it_covers": "Comprehensive final exam Ch.1-Ch.6. Time: 10:00-12:00, Room: AHS 188",
+      "source_pages": "pp.1-248",
+      "format_clues": "comprehensive written final exam",
+      "chapter": "1-6",
+      "week": 17
+    }
+  ],
+  "weekly_content": [
+    {
+      "week": 1,
+      "dates": "1/12-1/16",
+      "chapter": 1,
+      "title": "Ch.1 The Japanese Sound System and Hiragana",
+      "content": [
+        "Course introduction and overview",
+        "Vocabulary pp.29-30",
+        "Hiragana あ～そ (pp.4-8)",
+        "Hiragana た～ほ (pp.8-10)",
+        "Hiragana ま～ん (pp.13-14)",
+        "Hiragana が～ぽ (pp.17-18) — voiced consonants",
+        "Reading hiragana practice",
+        "Forms of address, daily greetings, useful expressions",
+        "Conversation practice"
+      ],
+      "grammar": [],
+      "vocab_sections": ["pp.29-30"],
+      "kanji": []
+    },
+    {
+      "week": 2,
+      "dates": "1/19-1/23",
+      "chapter": 1,
+      "title": "Ch.1 continued — Long vowels, double consonants, glides",
+      "content": [
+        "1/19 MLK Day — No class",
+        "Long vowels ああ～わあ (p.19)",
+        "Small つ: double consonants (pp.21-23)",
+        "Glides きゃ～ぴょ (p.24)",
+        "Reading hiragana / useful expressions / conversation practice (pp.24-28)"
+      ],
+      "grammar": [],
+      "vocab_sections": [],
+      "kanji": []
+    },
+    {
+      "week": 3,
+      "dates": "1/26-1/30",
+      "chapter": 2,
+      "title": "Ch.2 Greetings and Introductions",
+      "content": [
+        "Ch.2 Vocabulary pp.32-35",
+        "Vocabulary practice pp.36-40",
+        "G1: ～は～です (identifying someone/something) pp.46-49",
+        "G2: ～は～ですか (はい/いいえ questions) pp.50-52",
+        "G3: の (indicating noun relationships) pp.53-55",
+        "G4: Question words for personal information pp.56-60"
+      ],
+      "grammar": [
+        "G1: ～は～です (identifying)",
+        "G2: ～は～ですか (yes/no questions)",
+        "G3: の (noun relationships)",
+        "G4: Question words (なに、だれ、なん etc.)"
+      ],
+      "vocab_sections": ["pp.32-35"],
+      "kanji": []
+    },
+    {
+      "week": 4,
+      "dates": "2/02-2/06",
+      "chapter": 2,
+      "title": "Ch.2 continued — も, reading, culture",
+      "content": [
+        "G5: も (listing/describing similarities) pp.61-64",
+        "Listening pp.65-66",
+        "Reading pp.67-70",
+        "Dialogue pp.41-43",
+        "Japanese culture pp.44-45",
+        "Integration pp.70-71",
+        "Ch.1 and Ch.2 Review"
+      ],
+      "grammar": [
+        "G5: も (similarities/also)"
+      ],
+      "vocab_sections": [],
+      "kanji": []
+    },
+    {
+      "week": 5,
+      "dates": "2/09-2/13",
+      "chapter": 3,
+      "title": "Ch.3 Daily Routines",
+      "content": [
+        "Ch.3 Vocabulary pp.84-93",
+        "G1: Polite present form of verbs, particles に、へ、を、で pp.98-102",
+        "G2: ～が あります (presenting objects/events) pp.103-105",
+        "G3: Telling time using particle に pp.106-110",
+        "G4: Adverbs for frequency of action pp.111-113"
+      ],
+      "grammar": [
+        "G1: Polite present verb form + particles に、へ、を、で",
+        "G2: ～が あります (existence of objects/events)",
+        "G3: Time + に (telling time)",
+        "G4: Frequency adverbs (よく、ときどき、あまり etc.)"
+      ],
+      "vocab_sections": ["pp.84-93"],
+      "kanji": []
+    },
+    {
+      "week": 6,
+      "dates": "2/16-2/20",
+      "chapter": 3,
+      "title": "Ch.3 continued — Past tense verbs, reading, culture",
+      "content": [
+        "G5: Polite past form of verbs pp.114-116",
+        "Listening pp.117-118",
+        "Reading pp.119-121",
+        "Dialogues pp.94-95",
+        "Japanese culture pp.96-97",
+        "Integration p.122",
+        "Review Ch.1-Ch.3"
+      ],
+      "grammar": [
+        "G5: Polite past form of verbs (～ました／～ませんでした)"
+      ],
+      "vocab_sections": [],
+      "kanji": []
+    },
+    {
+      "week": 7,
+      "dates": "2/23-2/27",
+      "chapter": "2.5, 4",
+      "title": "Midterm + Katakana + Ch.4 Japanese Cities begins",
+      "content": [
+        "MIDTERM Ch.1-Ch.3 (Monday 2/23)",
+        "Ch. 2.5 Katakana ア～ホ pp.73-76",
+        "Ch. 4 Vocabulary pp.124-130",
+        "Katakana マ～ン pp.77-81",
+        "G1: これ、それ、あれ、どれ (demonstrative pronouns) pp.136-141"
+      ],
+      "grammar": [
+        "G1: これ、それ、あれ、どれ (demonstratives for things)"
+      ],
+      "vocab_sections": ["pp.73-81 (katakana)", "pp.124-130"],
+      "kanji": ["大 (p.161)"]
+    },
+    {
+      "week": 8,
+      "dates": "3/02-3/06",
+      "chapter": 4,
+      "title": "Ch.4 — Locations, adjectives, ね/よ",
+      "content": [
+        "G2: ～は～にあります/います + ここ、そこ、あそこ (locations) pp.142-145",
+        "G3: Adjectives + noun, polite present forms of adjectives pp.146-150",
+        "G4: ～に～があります/います (describing locations) pp.151-154",
+        "G5: ね and よ (sentence-ending particles) pp.155-157",
+        "Listening pp.158-159",
+        "Reading pp.162-163",
+        "Dialogue pp.131-133",
+        "Japanese culture pp.134-135",
+        "Integration p.164"
+      ],
+      "grammar": [
+        "G2: ～は～にあります/います + location words (ここ、そこ、あそこ)",
+        "G3: Adjective + noun, polite present adjective forms (i-adj, na-adj)",
+        "G4: ～に～があります/います (location + existence)",
+        "G5: Sentence-ending particles ね and よ"
+      ],
+      "vocab_sections": ["pp.124-130"],
+      "kanji": ["学、校 (p.161)", "先、生 (p.161)"]
+    },
+    {
+      "week": 9,
+      "dates": "3/09-3/13",
+      "chapter": "4, 5",
+      "title": "Ch.4 Review + Ch.5 Japanese Homes begins",
+      "content": [
+        "Ch. 4 Review",
+        "Ch. 5 Vocabulary pp.166-172",
+        "G1: この、その、あの、どの (demonstrative adjectives) pp.178-181",
+        "G2: Location nouns (中、そと、となり、よこ、ちかく、うしろ、まえ、上、下、みぎ、ひだり)"
+      ],
+      "grammar": [
+        "G1: この、その、あの、どの (demonstrative adjectives for modifying nouns)",
+        "G2: Location nouns (中、外、隣、横、近く、後ろ、前、上、下、右、左)"
+      ],
+      "vocab_sections": ["pp.166-172"],
+      "kanji": ["山、川、田 (p.204)", "人、上、中 (p.204)"]
+    },
+    {
+      "week": 10,
+      "dates": "3/16-3/20",
+      "chapter": null,
+      "title": "Spring Break — No Class",
+      "content": [],
+      "grammar": [],
+      "vocab_sections": [],
+      "kanji": []
+    },
+    {
+      "week": 11,
+      "dates": "3/23-3/27",
+      "chapter": 5,
+      "title": "Ch.5 continued — の pronoun, distance/duration, は vs が",
+      "content": [
+        "G3: noun/adjective + の (pronoun) pp.188-189",
+        "G4: から、まで, ～ぐらい/くらい (distance and duration) pp.190-192",
+        "G5: Topic marker は vs subject marker が, double particles, も pp.193-198",
+        "Listening pp.199-202",
+        "Reading pp.206-208",
+        "Dialogue pp.173-175",
+        "Japanese culture pp.176-177",
+        "Integration p.208"
+      ],
+      "grammar": [
+        "G3: の as pronoun (replacing previously mentioned noun)",
+        "G4: から、まで (from/to), ～ぐらい/くらい (approximately)",
+        "G5: は vs が distinction, double particles, も with other particles"
+      ],
+      "vocab_sections": [],
+      "kanji": ["下、小 (p.204)", "日、本 (p.204)"]
+    },
+    {
+      "week": 12,
+      "dates": "3/30-4/03",
+      "chapter": "5, 6",
+      "title": "Ch.5 Review + Ch.6 Leisure Time begins",
+      "content": [
+        "Ch. 5 Review",
+        "Ch.6 Vocabulary pp.210-216",
+        "G1: Particles と and に pp.222-226",
+        "G2: Polite past adjectives and copula verb です pp.227-229",
+        "G3: て-form of verbs — connecting phrases and making requests pp.230-233",
+        "G4: て-form of verbs and adjectives — connecting phrases pp.234-236"
+      ],
+      "grammar": [
+        "G1: と (with/and) and に (indirect object/purpose)",
+        "G2: Polite past adjectives + でした (copula past)",
+        "G3: て-form of verbs (connecting, requests ～てください)",
+        "G4: て-form of adjectives (connecting adjective phrases)"
+      ],
+      "vocab_sections": ["pp.210-216"],
+      "kanji": ["今、私、月 (p.243)", "火、水、木、金 (p.243)"]
+    },
+    {
+      "week": 13,
+      "dates": "4/06-4/10",
+      "chapter": 6,
+      "title": "Ch.6 continued — Invitations, listening, reading",
+      "content": [
+        "G5: ませんか (extending invitations) pp.237-240",
+        "Listening pp.241-242",
+        "Reading pp.245-246",
+        "Dialogue pp.217-219"
+      ],
+      "grammar": [
+        "G5: ～ませんか (extending invitations — Won't you...?)"
+      ],
+      "vocab_sections": [],
+      "kanji": ["土、曜、何、週 (pp.243-244)", "末、休 (p.244)"]
+    },
+    {
+      "week": 14,
+      "dates": "4/13-4/17",
+      "chapter": 6,
+      "title": "Ch.6 culture, integration, review + Oral exam practice",
+      "content": [
+        "Japanese culture pp.220-221",
+        "Integration pp.247-248",
+        "Ch. 6 Review",
+        "Oral Exam practice (Friday 4/17)"
+      ],
+      "grammar": [],
+      "vocab_sections": [],
+      "kanji": []
+    },
+    {
+      "week": 15,
+      "dates": "4/20-4/24",
+      "chapter": "1-6",
+      "title": "Oral Examination",
+      "content": [
+        "Oral Examination (Monday 4/20 through the week)"
+      ],
+      "grammar": [],
+      "vocab_sections": [],
+      "kanji": []
+    },
+    {
+      "week": 16,
+      "dates": "4/27-5/01",
+      "chapter": "1-6",
+      "title": "Review Week",
+      "content": [
+        "Review Ch.1-Ch.2 (Monday)",
+        "Review Ch.3-Ch.4 (Wednesday)",
+        "Review Ch.5-Ch.6 (Friday)",
+        "Worksheets for each chapter pair"
+      ],
+      "grammar": [],
+      "vocab_sections": [],
+      "kanji": []
+    },
+    {
+      "week": 17,
+      "dates": "5/06",
+      "chapter": "1-6",
+      "title": "Final Examination",
+      "content": [
+        "Final Exam: Wednesday 5/06, 10:00-12:00, AHS 188"
+      ],
+      "grammar": [],
+      "vocab_sections": [],
+      "kanji": []
+    }
+  ]
+}
