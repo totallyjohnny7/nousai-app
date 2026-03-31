@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Universal Study Engine — Prompt Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0a;
+      color: #e8e8e8;
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #F5A623;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      color: #888;
+      font-size: 1rem;
+    }
+
+    .card {
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #F5A623;
+      margin-bottom: 20px;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .step-num {
+      background: #F5A623;
+      color: #0a0a0a;
+      font-weight: 700;
+      font-size: 0.85rem;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step p {
+      color: #ccc;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .step a {
+      color: #F5A623;
+      text-decoration: none;
+    }
+
+    .step a:hover { text-decoration: underline; }
+
+    .prompt-wrapper {
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: #F5A623;
+      color: #0a0a0a;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: background 0.15s;
+      z-index: 10;
+    }
+
+    .copy-btn:hover { background: #ffb84d; }
+    .copy-btn.copied { background: #3ecf8e; }
+
+    .prompt-box {
+      background: #0f0f0f;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 24px;
+      padding-top: 56px;
+      white-space: pre-wrap;
+      font-family: 'DM Mono', 'Fira Code', 'Courier New', monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: #d4d4d4;
+      overflow-x: auto;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .prompt-box .highlight { color: #F5A623; font-weight: 600; }
+    .prompt-box .url { color: #7dd3fc; }
+    .prompt-box .placeholder { color: #a78bfa; }
+    .prompt-box .section-title { color: #34d399; font-weight: 600; }
+
+    .chapters {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .chapter-chip {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.82rem;
+      color: #ccc;
+    }
+
+    .chapter-chip strong {
+      display: block;
+      color: #F5A623;
+      margin-bottom: 4px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 48px;
+      color: #444;
+      font-size: 0.8rem;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1a1a1a; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <h1>Universal Study Engine</h1>
+      <p>Generate AI-powered study nodes from any lecture notes or textbook</p>
+    </header>
+
+    <!-- How to Use -->
+    <div class="card">
+      <div class="card-title">How to Use</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <p>Copy the prompt below using the button.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <p>Open <a href="https://claude.ai" target="_blank">Claude.ai</a> (or any capable LLM). Paste the prompt.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <p>Fill in <span style="color:#a78bfa">COURSE INFO</span> at the top and paste your lecture notes at the bottom where it says <span style="color:#a78bfa">[PASTE YOUR LECTURE NOTES...]</span>.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <p>Send. The AI will fetch the textbook chapters from GitHub, cross-reference with your notes, and output a complete study JSON file ready to import.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Textbook Chapters -->
+    <div class="card">
+      <div class="card-title">Baked-In Textbook Chapters (OCR)</div>
+      <div class="chapters">
+        <div class="chapter-chip"><strong>Ch03</strong> Geology &amp; Paleontology</div>
+        <div class="chapter-chip"><strong>Ch04</strong> Tree of Life / Phylogenetics</div>
+        <div class="chapter-chip"><strong>Ch08</strong> Natural Selection — Empirical Studies</div>
+        <div class="chapter-chip"><strong>Ch13</strong> Origin of Species</div>
+        <div class="chapter-chip"><strong>Ch14</strong> Macroevolution: The Long Run</div>
+        <div class="chapter-chip"><strong>Ch17</strong> Human Evolution</div>
+        <div class="chapter-chip"><strong>Ch18</strong> Evolutionary Medicine</div>
+      </div>
+    </div>
+
+    <!-- The Prompt -->
+    <div class="card">
+      <div class="card-title">The Prompt</div>
+      <div class="prompt-wrapper">
+        <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy Prompt</button>
+        <div class="prompt-box" id="promptBox"></div>
+      </div>
+    </div>
+
+    <footer>
+      Built for NousAI &mdash; Evolutionary Biology Study Engine
+    </footer>
+
+  </div>
+
+  <script>
+    const PROMPT = `Generate a COMPLETE Universal Study Engine JSON file for the following course content. Output ONLY valid JSON — no markdown fences, no commentary, no preamble. Just the raw JSON object.
+
+---
+
+COURSE INFO:
+- Title: [COURSE NAME — e.g. "Evolutionary Biology"]
+- Subtitle: [CHAPTER/UNIT — e.g. "Chapters 10-16"]
+- Instructor: [NAME]
+- Tag: [COURSE CODE — e.g. "BIOL 4230"]
+
+---
+
+KNOWLEDGE BASE — Read these OCR textbook chapters from GitHub before generating. Use them as your primary source of truth:
+
+- Ch03 (Geology & Paleontology): https://raw.githubusercontent.com/totallyjohnny7/ocr-evolution-book/master/Ch03_What_the_Rocks_Say_How_Geology_and_Paleo.md
+- Ch04 (Tree of Life / Phylogenetics): https://raw.githubusercontent.com/totallyjohnny7/ocr-evolution-book/master/Ch04_The_Tree_of_Life_How_Biologists_Use_Phyl.md
+- Ch08 (Natural Selection - Empirical Studies): https://raw.githubusercontent.com/totallyjohnny7/ocr-evolution-book/master/Ch08_Natural_Selection_Empirical_Studies_in_t.md
+- Ch13 (Origin of Species): https://raw.githubusercontent.com/totallyjohnny7/ocr-evolution-book/master/Ch13_The_Origin_of_Species.md
+- Ch14 (Macroevolution): https://raw.githubusercontent.com/totallyjohnny7/ocr-evolution-book/master/Ch14_Macroevolution_The_Long_Run.md
+- Ch17 (Human Evolution): https://raw.githubusercontent.com/totallyjohnny7/ocr-evolution-book/master/Ch17_Human_Evolution_A_New_Kind_of_Ape.md
+- Ch18 (Evolutionary Medicine): https://raw.githubusercontent.com/totallyjohnny7/ocr-evolution-book/master/Ch18_Evolutionary_Medicine.md
+
+Only use chapters relevant to the source material below. Cross-reference the textbook with the lecture notes where both apply.
+
+---
+
+REQUIREMENTS — Every node MUST have ALL fields fully populated:
+
+1. popup
+- heading: Full concept title
+- sections: Minimum 2 — "Definition" + "Key Details". Add more if needed (e.g. "Mechanism", "Types", "Significance")
+- quotes: At least 1 instructor or textbook quote with source
+- examples: At least 1–2 specific real-world examples or case studies
+- warnings: At least 1 common exam mistake or misconception
+- mnemonic: A vivid, sticky memory hook — use acronyms, wordplay, absurd imagery, or story. Make it actually memorable.
+
+2. flashcard
+- front: A question that tests understanding, not just recall
+- back: Full answer including the WHY — exam-worthy
+
+3. quiz
+- question: Application-level MCQ stem (not just vocabulary)
+- correct: Right answer
+- distractors: Exactly 3 plausible wrong answers targeting common misconceptions
+
+4. visual
+- type: Pick the best fit — "side-by-side", "cascade", "timeline", "diagram", "comparison"
+- description: What the visual shows
+- regions: 2–4 labeled zones, 2–5 items each, distinct hex colors
+- arrows: At least 1 arrow showing a key relationship (skip for comparisons)
+- tooltips: 2–5 jargon terms with plain-English definitions
+- mnemonic: Visual-specific memory hook
+- trap: #1 exam trap for this visual
+- equation (if applicable): formula + all variables defined
+
+---
+
+NODE ORGANIZATION:
+- color — use semantically: purple = frameworks, teal = mechanisms, coral = conflict/antagonism, amber = central concepts, blue = evidence, green = formulas, red = costs/dangers, pink = special categories
+- row — row 0 = foundational, higher rows = dependent/downstream
+- id — lowercase-slug format (e.g. "kin-selection", "red-queen")
+
+---
+
+OUTPUT FORMAT:
+{
+  "meta": {
+    "title": "...",
+    "subtitle": "...",
+    "instructor": "...",
+    "tag": "..."
+  },
+  "nodes": [
+    {
+      "id": "concept-slug",
+      "title": "Concept Name",
+      "subtitle": "1-line summary",
+      "color": "amber",
+      "row": 0,
+      "popup": {
+        "heading": "Full Concept Title",
+        "sections": [
+          { "label": "Definition", "body": "..." },
+          { "label": "Key Details", "body": "..." }
+        ],
+        "quotes": ["\"Quote here\" — Source"],
+        "examples": ["Specific example"],
+        "warnings": ["Common mistake"],
+        "mnemonic": "Memory hook"
+      },
+      "flashcard": {
+        "front": "Question?",
+        "back": "Thorough answer including the why"
+      },
+      "quiz": {
+        "question": "MCQ stem?",
+        "correct": "Right answer",
+        "distractors": ["Wrong 1", "Wrong 2", "Wrong 3"]
+      },
+      "visual": {
+        "type": "cascade",
+        "description": "What this shows",
+        "regions": [
+          { "label": "Region Name", "color": "#hexcolor", "items": ["item 1", "item 2"] }
+        ],
+        "arrows": [
+          { "from": "Region A", "to": "Region B", "label": "relationship" }
+        ],
+        "tooltips": [
+          { "term": "jargon", "plain": "Plain English" }
+        ],
+        "mnemonic": "Visual memory hook",
+        "trap": "Exam trap warning",
+        "equation": {
+          "formula": "rB > C",
+          "variables": [
+            { "symbol": "r", "meaning": "Relatedness coefficient" }
+          ]
+        }
+      }
+    }
+  ]
+}
+
+---
+
+GENERATE NODES FOR EVERY MAJOR CONCEPT IN THE SOURCE MATERIAL BELOW.
+Aim for 10–25 nodes. If it could appear on an exam, it gets a node. Every node gets all 4 modes fully populated. Make mnemonics vivid — absurd imagery, stories, and wordplay stick better than plain acronyms.
+
+---
+
+SOURCE MATERIAL:
+
+[PASTE YOUR LECTURE NOTES, SLIDES, OR TRANSCRIPT HERE]
+
+---
+
+Just fill in the course info at the top, paste your notes at the bottom, and send. That's it.`;
+
+    // Render prompt with syntax highlighting
+    function renderPrompt(text) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/(https?:\/\/[^\s\n]+)/g, '<span class="url">$1</span>')
+        .replace(/(\[.*?\])/g, '<span class="placeholder">$1</span>')
+        .replace(/(COURSE INFO:|KNOWLEDGE BASE|REQUIREMENTS|NODE ORGANIZATION:|OUTPUT FORMAT:|SOURCE MATERIAL:)/g, '<span class="section-title">$1</span>');
+    }
+
+    document.getElementById('promptBox').innerHTML = renderPrompt(PROMPT);
+
+    function copyPrompt() {
+      navigator.clipboard.writeText(PROMPT).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy Prompt';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
