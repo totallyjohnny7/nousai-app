@@ -6,17 +6,27 @@
 - **Storage**: IndexedDB (local, instant) + Firebase Firestore (cloud, gzip compressed)
 - **Auth**: Firebase Email/Password (`src/utils/auth.ts`)
 - **Repo**: `C:\Users\johnn\Desktop\NousAI-App`
-- **Production**: https://nousai-app.vercel.app
+- **Production**: https://nousai-app.pages.dev (Cloudflare Pages)
 - **Firebase project**: `nousai-dc038`
 
 ## Deploy
 > **RULE: Never chain commands with `&&`.** Always use separate commands, one per line.
 
+**Option A — Git push (recommended):** Push to `main` → Cloudflare Pages auto-deploys via GitHub integration.
+
+**Option B — CLI:**
 ```bash
-cd NousAI-App
 npm run build
-vercel --prod --yes
+wrangler pages deploy dist
 ```
+
+**Cron worker** (deploy separately when cron logic changes):
+```bash
+cd workers/crons
+npm install
+wrangler deploy
+```
+
 After **every** production deploy — MUST clear PWA cache:
 ```js
 navigator.serviceWorker.getRegistrations().then(r => r.forEach(x => x.unregister()));

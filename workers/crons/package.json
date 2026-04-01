@@ -1,0 +1,17 @@
+{
+  "name": "nousai-crons",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "typescript": "~5.9.3",
+    "wrangler": "^3.0.0"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.7.0"
+  }
+}

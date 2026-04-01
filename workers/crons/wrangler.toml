@@ -1,0 +1,11 @@
+name = "nousai-crons"
+main = "index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = [
+  "0 2 * * 0",   # Weekly cleanup — Sunday 2:00 AM UTC
+  "0 14 * * *",  # Morning notifications — 8:00 AM CST (2:00 PM UTC)
+  "0 2 * * *",   # Evening notifications — 8:00 PM CST (2:00 AM UTC)
+]
